@@ -1,0 +1,42 @@
+[tools]
+node = "24.11.1"
+
+[env]
+_.file = ".env"
+
+[hooks]
+postinstall = [
+  "mise run --force pnpm:setup",
+]
+
+[tasks."pnpm:setup"]
+description = "Activates the pnpm version pinned in package.json (via corepack)"
+sources = ["mise.toml"]
+hide = true
+env = { COREPACK_ENABLE_DOWNLOAD_PROMPT = 0 }
+run = ["corepack enable"]
+
+[tasks.deps]
+description = "Installs all dependencies for the project"
+dir = "{{ config_root }}/heartgarden"
+depends = ["pnpm:setup"]
+env = { COREPACK_ENABLE_DOWNLOAD_PROMPT = 0 }
+run = ["pnpm install"]
+
+[tasks."db:migrate"]
+description = "Sets up the database: pgvector extension + drizzle-kit push + vault SQL migrations"
+dir = "{{ config_root }}/heartgarden"
+depends = ["pnpm:setup"]
+run = ["pnpm run db:vault-setup"]
+
+[tasks.lint]
+description = "Lints the project with ESLint"
+dir = "{{ config_root }}/heartgarden"
+depends = ["pnpm:setup"]
+run = ["pnpm run lint"]
+
+[tasks.format]
+description = "Auto-fixes lint/format issues with ESLint --fix (no separate formatter is configured)"
+dir = "{{ config_root }}/heartgarden"
+depends = ["pnpm:setup"]
+run = ["pnpm exec eslint --fix"]

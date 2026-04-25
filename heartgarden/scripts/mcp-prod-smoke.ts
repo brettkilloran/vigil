@@ -2,7 +2,7 @@
  * End-to-end smoke test: Streamable HTTP MCP (same transport as Claude Desktop remote connector).
  *
  * Usage (from heartgarden/):
- *   HEARTGARDEN_MCP_SERVICE_KEY=your-secret npm run mcp:smoke
+ *   HEARTGARDEN_MCP_SERVICE_KEY=your-secret pnpm run mcp:smoke
  *
  * Optional:
  *   HEARTGARDEN_MCP_URL=https://heartgarden.vercel.app/api/mcp   (default: production URL below)

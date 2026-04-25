@@ -1,9 +1,45 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
+
+/**
+ * Collect every descendant space id under `rootSpaceId` (inclusive) via a single
+ * `WITH RECURSIVE` round-trip. Replaces the prior approach that loaded the full
+ * `spaces` table into memory and walked it. Pairs with the
+ * `spaces_parent_space_id_idx` index (migration `0019`) so each recursive step
+ * is an index lookup. (`REVIEW_2026-04-25_1835` H2.)
+ *
+ * Defense-in-depth: a broken `parent_space_id` cycle (which the schema does not
+ * formally prohibit) would loop forever in the CTE; we cap depth so a corrupt
+ * row can never DoS the request thread.
+ */
+async function fetchSubtreeSpaceIdsViaCte(
+  db: VigilDb,
+  rootSpaceId: string,
+): Promise<Set<string>> {
+  const MAX_DEPTH = 256;
+  const result = await db.execute(sql`
+    WITH RECURSIVE descendants(id, depth) AS (
+      SELECT id, 0 AS depth FROM spaces WHERE id = ${rootSpaceId}
+      UNION ALL
+      SELECT s.id, d.depth + 1
+      FROM spaces s
+      INNER JOIN descendants d ON s.parent_space_id = d.id
+      WHERE d.depth < ${MAX_DEPTH}
+    )
+    SELECT DISTINCT id FROM descendants
+  `);
+  const rows = (result as unknown as { rows?: Array<{ id: string }> }).rows
+    ?? (Array.isArray(result) ? (result as unknown as Array<{ id: string }>) : []);
+  const out = new Set<string>();
+  for (const r of rows) {
+    if (typeof r?.id === "string") out.add(r.id);
+  }
+  return out;
+}
 
 /**
  * True if `candidateSpaceId` equals `playerRootSpaceId` or is a descendant folder space under it.
@@ -34,10 +70,11 @@ export async function spaceIsUnderPlayerRoot(
 
 /** All `spaces` rows in the subtree rooted at `playerRootSpaceId` (for bootstrap / change polls). */
 export async function fetchPlayerSubtreeSpacesFull(db: VigilDb, playerRootSpaceId: string) {
-  const slim = await db
-    .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
-    .from(spaces);
-  const allowedIds = collectDescendantSpaceIds(playerRootSpaceId, slim);
+  // REVIEW_2026-04-25_1835 H2: use a recursive CTE that walks `parent_space_id`
+  // from the player root downward instead of loading the entire `spaces` table.
+  // At hundreds of folders × dozens of branes the previous full-table SELECT was
+  // a per-request hot path (bootstrap, /api/spaces, change-polls).
+  const allowedIds = await fetchSubtreeSpaceIdsViaCte(db, playerRootSpaceId);
   if (!allowedIds.has(playerRootSpaceId) || allowedIds.size === 0) return [];
   return await db.select().from(spaces).where(inArray(spaces.id, [...allowedIds]));
 }
@@ -53,28 +90,20 @@ export async function fetchPlayerSubtreeSpaceRows(
 
 /**
  * Scoped subtree traversal without loading the full spaces table.
- * Uses iterative parent -> children expansion (bounded by tree depth/size).
+ * Uses a `WITH RECURSIVE` CTE so depth `D` becomes one round-trip instead of
+ * `D` (`REVIEW_2026-04-25_1835` H2). Pairs with `spaces_parent_space_id_idx`.
+ *
+ * Defensive note: returns `{rootSpaceId}` even if the root row is missing; that
+ * preserves the historical behaviour of the iterative implementation
+ * (out was seeded with `rootSpaceId` regardless of DB state).
  */
 export async function fetchDescendantSpaceIds(
   db: VigilDb,
   rootSpaceId: string,
 ): Promise<Set<string>> {
-  const out = new Set<string>([rootSpaceId]);
-  let frontier = [rootSpaceId];
-  while (frontier.length > 0) {
-    const children = await db
-      .select({ id: spaces.id })
-      .from(spaces)
-      .where(inArray(spaces.parentSpaceId, frontier));
-    const next: string[] = [];
-    for (const row of children) {
-      if (out.has(row.id)) continue;
-      out.add(row.id);
-      next.push(row.id);
-    }
-    frontier = next;
-  }
-  return out;
+  const ids = await fetchSubtreeSpaceIdsViaCte(db, rootSpaceId);
+  if (ids.size === 0) ids.add(rootSpaceId);
+  return ids;
 }
 
 /** Collect `rootId` and every descendant space id using parent pointers (breadth from DB rows). */

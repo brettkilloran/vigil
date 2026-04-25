@@ -14,7 +14,7 @@
  * from `.env.local`.
  *
  * Run: `node ./scripts/vault-sql-migrate.mjs`
- * Or:  `npm run db:vault-sql` (part of `npm run db:vault-setup`).
+ * Or:  `pnpm run db:vault-sql` (part of `pnpm run db:vault-setup`).
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -28,9 +28,14 @@ const root = join(__dirname, "..");
 
 config({ path: join(root, ".env.local") });
 
-const url = process.env.NEON_DATABASE_URL?.trim();
+/** Mirrors `src/db/postgres-env-url.ts`; inlined so this script stays plain Node. */
+const url = ["NEON_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL"]
+  .map((k) => process.env[k]?.trim())
+  .find((v) => v);
 if (!url) {
-  console.error("NEON_DATABASE_URL missing (.env.local)");
+  console.error(
+    "No Postgres URL set. Provide one of NEON_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or POSTGRES_PRISMA_URL.",
+  );
   process.exit(1);
 }
 

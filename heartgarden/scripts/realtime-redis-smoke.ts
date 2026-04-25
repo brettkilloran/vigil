@@ -1,6 +1,6 @@
 /**
  * Quick check: Redis reachable with HEARTGARDEN_REALTIME_REDIS_URL from .env.local.
- * Usage: npx tsx ./scripts/realtime-redis-smoke.ts
+ * Usage: pnpm exec tsx ./scripts/realtime-redis-smoke.ts
  */
 import { config } from "dotenv";
 import { resolve } from "node:path";

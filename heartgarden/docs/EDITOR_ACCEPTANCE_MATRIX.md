@@ -61,9 +61,9 @@ Use this to prevent regressions and avoid ad-hoc one-off fixes.
 
 | ID  | Behavior                                                                  | Scope           | Coverage  | Evidence                                                                                                                                                                                  |
 | --- | ------------------------------------------------------------------------- | --------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| E1  | hgDoc toolbar commands never execute legacy `execCommand` on hgDoc target | Command routing | Automated | Structural split (`runHgDocFormat` / `runLegacyFormat`) in `ArchitecturalCanvasApp.tsx` + `npm run verify:editor-cutover` + checklist anti-legacy assertion in `e2e/text-editing.spec.ts` |
+| E1  | hgDoc toolbar commands never execute legacy `execCommand` on hgDoc target | Command routing | Automated | Structural split (`runHgDocFormat` / `runLegacyFormat`) in `ArchitecturalCanvasApp.tsx` + `pnpm run verify:editor-cutover` + checklist anti-legacy assertion in `e2e/text-editing.spec.ts` |
 | E2  | `BufferedContentEditable` remains restricted to non-hgDoc surfaces        | Architecture    | Manual    | `BufferedContentEditable` deprecation comment + usage review                                                                                                                              |
-| E3  | New default/task surfaces cannot be wired to legacy editor                | CI policy       | Automated | `npm run verify:editor-cutover` (`scripts/verify-editor-cutover.mjs`)                                                                                                                     |
+| E3  | New default/task surfaces cannot be wired to legacy editor                | CI policy       | Automated | `pnpm run verify:editor-cutover` (`scripts/verify-editor-cutover.mjs`)                                                                                                                     |
 
 
 ## Required Launch Gate

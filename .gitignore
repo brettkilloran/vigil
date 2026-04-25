@@ -1,4 +1,6 @@
 .vercel
+.claude/settings.local.json
+/.env
 
 # Leftover folder after `vigil` → `heartgarden` rename if Windows held locks (safe to delete manually).
 /vigil/

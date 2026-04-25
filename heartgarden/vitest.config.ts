@@ -6,7 +6,7 @@ import { defineConfig } from "vitest/config";
 const dirname =
   typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
-/** API + lib unit tests. Storybook: `npm run dev:storybook` / `npm run preview-storybook`. */
+/** API + lib unit tests. Storybook: `pnpm run dev:storybook` / `pnpm run preview-storybook`. */
 export default defineConfig({
   resolve: {
     alias: {

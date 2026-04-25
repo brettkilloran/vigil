@@ -1,0 +1,23 @@
+---
+description: heartgarden human-agent-GitHub collaboration policy
+alwaysApply: true
+---
+
+# Heartgarden Collaboration Policy
+
+For heartgarden work, read `heartgarden/docs/AGENT_COLLABORATION.md` and `heartgarden/AGENTS.md` before project-scoped GitHub or workflow actions.
+
+Core defaults:
+
+- Brett-directed Cursor work should bias toward action when the work is clear, reversible, and verifiable.
+- Matt is a trusted external collaborator and high-signal peer reviewer. Treat his comments seriously, but compare them to repo evidence and ask Brett before disruptive actions.
+- Agents may make local edits, run checks, open PRs, and leave professional GitHub comments when the scope is clear.
+- Ask Brett before merging, closing PRs/issues, deleting branches, force-pushing, rewriting history, touching production data, changing production env/auth/deploy protection, or starting expensive open-ended loops.
+- Protect dirty work. Check git status before edits and never revert unrelated local changes.
+- GitHub comments should identify the responding agent/model at the top even when posted through Brett's handle, preferably as "`<model> for Brett here.`" Then say status, action taken, checks run, blockers, and any needed human decision. Avoid noisy play-by-play.
+- Explain at the reader's level: Matt can get technical backend/full-stack detail; Brett should get product-designer-friendly plain English, with metaphors when useful.
+- Ask before expensive API/token/build work or long-running open-ended loops unless Brett explicitly triggered the workflow and it is clearly necessary.
+- If blocked by auth/access/context, ask Brett with 2-3 concrete options and a recommendation.
+- For production-affecting changes, prefer local checks, CI green, manual smoke for user-facing flows, human review, and a rollback note. If Brett explicitly triggered deploy, keep moving unless there is a critical error, failed check, deploy failure, or one-way-door risk.
+
+If a workflow preference repeats, improve the harness: update rules, `AGENTS.md`, `docs/AGENT_COLLABORATION.md`, Bugbot notes, skills, scripts, or tests.

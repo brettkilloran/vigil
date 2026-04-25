@@ -12,7 +12,7 @@ related:
 
 **Product and package name:** **heartgarden** (UI metadata, `package.json`, Vercel project name, marketing).
 
-**App directory in git:** **`heartgarden/`** — the Next.js app root. All commands (`npm install`, `npm run check`, Vercel **Root Directory**) use this path.
+**App directory in git:** **`heartgarden/`** — the Next.js app root. All commands (`pnpm install`, `pnpm run check`, Vercel **Root Directory**) use this path.
 
 ## MCP tools
 
@@ -40,4 +40,4 @@ Step-by-step Vercel setup (root directory, env tables, Neon/R2, previews): **`do
 
 **Stale `vigil/` folder on disk (Windows):** The repo app path is **`heartgarden/`**. If a leftover **`vigil`** directory exists at the monorepo root (e.g. locks during a rename), it may be listed in the **root** `.gitignore` as **`/vigil/`**. Close editors/dev servers using it, then delete the folder manually if you want it gone.
 
-**`package-lock.json` looks different after `npm install` on Windows:** Optional Linux-only entries can differ from CI. Before pushing lockfile changes, run **`npm run verify:package-lock-ci`** from **`heartgarden/`** (see **`AGENTS.md`**).
+**Lockfile (`pnpm-lock.yaml`):** pnpm-lock.yaml is platform-independent, so `pnpm install` produces the same lockfile on Windows, macOS, and Linux. Commit it whenever it changes.

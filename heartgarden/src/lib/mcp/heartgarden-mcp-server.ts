@@ -1132,14 +1132,14 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const itemRes = await api(`${BASE}/api/v1/items/${encodeURIComponent(itemId)}`);
       const itemJson = (await itemRes.json()) as { item?: { title?: string } };
       const title = String(itemJson?.item?.title ?? "").trim();
-      if (title.length < 3) {
+      if (title.length === 0) {
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify({
                 ok: true,
-                note: "Title too short for FTS (need ≥3 characters).",
+                note: "Item has no title to search for.",
                 items: [],
               }),
             },
@@ -1149,7 +1149,11 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       const url = new URL("/api/search", BASE);
       url.searchParams.set("spaceId", String(spaceId));
       url.searchParams.set("q", title.slice(0, 200));
-      url.searchParams.set("mode", "fts");
+      // REVIEW_2026-04-25_1835 L3: short titles ("Q", "0G") used to short-circuit
+      // to an empty result. Fall back to trigram fuzzy matching instead so
+      // single- and double-character names still return mentions. Titles ≥ 3
+      // chars stay on the cheaper FTS path.
+      url.searchParams.set("mode", title.length < 3 ? "fuzzy" : "fts");
       const res = await api(url);
       return mcpApiText(res, "mcp_title_mentions_failed");
     }

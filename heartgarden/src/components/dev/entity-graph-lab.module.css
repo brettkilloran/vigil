@@ -1,0 +1,302 @@
+.page {
+  height: 100vh;
+  background: var(--sem-bg-canvas, var(--vigil-canvas));
+  color: var(--vigil-label);
+  overflow: hidden;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.topChrome {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: auto;
+  min-height: var(--chrome-panel-height);
+  border-radius: var(--chrome-panel-radius);
+  padding: var(--chrome-panel-pad-y) var(--chrome-panel-pad-x);
+}
+
+.headerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.controls {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.scenarioButtons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.searchInput {
+  min-width: 260px;
+  min-height: var(--sys-control-height-sm);
+  border: none;
+  border-bottom: 1px solid var(--sem-border-subtle);
+  background: transparent;
+  color: var(--sem-text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 6px 2px;
+  outline: none;
+  border-radius: 0;
+}
+
+.searchInput:focus {
+  border-bottom-color: var(--sem-focus-ring);
+  box-shadow: 0 1px 0 0 var(--sem-focus-ring);
+}
+
+.counts {
+  font-size: 11px;
+  color: var(--sem-text-secondary);
+}
+
+.canvasCard {
+  position: absolute;
+  inset: 0;
+}
+
+.canvasViewport {
+  width: 100%;
+  height: 100%;
+}
+
+.panel {
+  position: absolute;
+  right: 12px;
+  top: 80px;
+  bottom: 12px;
+  width: min(360px, calc(100vw - 28px));
+  z-index: var(--layer-ui-chrome);
+  pointer-events: auto;
+  border-radius: var(--chrome-panel-radius);
+  transform: translateX(10px);
+  opacity: 0;
+  transition:
+    transform var(--sys-motion-duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity var(--sys-motion-duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+.panelVisible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.panelInner {
+  height: 100%;
+  padding: 14px;
+  overflow: auto;
+}
+
+.panelHint {
+  font-size: 12px;
+  color: var(--sem-text-secondary);
+}
+
+.nodeTitle {
+  margin-top: 10px;
+  font-size: 24px;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--sem-text-primary);
+}
+
+.metaRow {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sem-border-subtle);
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--sem-text-secondary);
+}
+
+.neighbors {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.graphRoot {
+  --entity-graph-accent: var(--vigil-snap);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  background: var(--sem-bg-canvas, var(--vigil-canvas));
+}
+
+.graphRootDragging {
+  cursor: grabbing;
+}
+
+.graphLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1000px;
+  height: 1000px;
+  transform-origin: 0 0;
+}
+
+.graphLayerAnimated {
+  transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edgeSvg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.edge {
+  stroke: color-mix(in srgb, var(--vigil-label) 20%, transparent);
+  stroke-width: 1;
+  opacity: 0.5;
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+    stroke 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edgeDimmed {
+  opacity: 0.08;
+}
+
+.edgeActive {
+  stroke: color-mix(in srgb, var(--entity-graph-accent) 70%, white 30%);
+  opacity: 0.95;
+}
+
+.pillNode {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
+  border-radius: 999px;
+  background: color-mix(in srgb, white 18%, transparent);
+  color: var(--sem-text-primary);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    opacity 0.45s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.pillNode:hover {
+  background: color-mix(in srgb, white 28%, transparent);
+  color: var(--sem-text-primary);
+  border-color: color-mix(in srgb, white 58%, var(--sem-border-subtle) 42%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 7px 16px rgba(0, 0, 0, 0.24);
+}
+
+.pillNodeSelected {
+  background: color-mix(in srgb, white 97%, var(--sem-surface-elevated) 3%);
+  color: color-mix(in srgb, black 90%, #0b0b0c 10%);
+  border-color: color-mix(in srgb, var(--entity-graph-accent) 74%, white 26%);
+  font-weight: 700;
+  transform: translate(-50%, -50%) scale(1.12);
+  padding: 8px 14px;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 58%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
+    0 10px 24px color-mix(in srgb, var(--entity-graph-accent) 26%, transparent);
+}
+
+.pillNodeSelected:hover {
+  background: color-mix(in srgb, white 99%, var(--sem-surface-elevated) 1%);
+  color: color-mix(in srgb, black 92%, #09090a 8%);
+}
+
+.pillNodeNeighbor {
+  background: color-mix(in srgb, white 24%, transparent);
+  border-color: color-mix(in srgb, white 46%, var(--sem-border-subtle) 54%);
+}
+
+.pillNodeDimmed {
+  opacity: 0.15;
+  pointer-events: auto;
+}
+
+.pillNodeDimmed:hover {
+  opacity: 0.42;
+}
+
+@media (max-width: 1120px) {
+  .topChrome {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    padding: var(--chrome-panel-pad-y) var(--chrome-panel-pad-x);
+  }
+
+  .controls {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .searchInput {
+    min-width: 180px;
+    flex: 1 1 auto;
+  }
+
+  .panel {
+    right: 10px;
+    left: 10px;
+    width: auto;
+    top: auto;
+    bottom: 10px;
+    max-height: 42vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+
+  .graphLayerAnimated {
+    transition: none;
+  }
+}

@@ -105,7 +105,7 @@ When there are `RISKY` or `NET_NEW` findings to resolve, the agent **must**:
 
 After each batch of fixes (SAFE or approved RISKY/NET_NEW):
 
-1. Re-run the same commands captured in the baseline (at minimum: `npm run check` and `npm run test:unit`, from `heartgarden/`).
+1. Re-run the same commands captured in the baseline (at minimum: `pnpm run check` and `pnpm run test:unit`, from `heartgarden/`).
 2. Compare against the baseline result. A fix is `FIXED` only if **no new failures** appeared that were not present in the baseline.
 3. If new failures appear:
    - Attempt up to **2 targeted fixes**.
@@ -121,7 +121,7 @@ After each batch of fixes (SAFE or approved RISKY/NET_NEW):
 
 When a fix touches visible UI (files matching `src/components/**/*.tsx`, `app/**/page.tsx`, `app/globals.css`, `*.module.css`, Storybook stories):
 
-1. Ensure the local dev server is running (`npm run dev` from `heartgarden/`) or start it per `.cursor/rules/heartgarden-local-dev.mdc`.
+1. Ensure the local dev server is running (`pnpm run dev` from `heartgarden/`) or start it per `.cursor/rules/heartgarden-local-dev.mdc`.
 2. Use the `cursor-ide-browser` MCP to take a **before** screenshot at `http://localhost:3000` (capture the relevant route) **prior** to applying the fix when feasible; otherwise skip the before.
 3. After the fix, navigate to the same route and take an **after** screenshot.
 4. Include both screenshot paths in the closure report under a "UI changes" subsection. Also note any unexpected visual regressions observed.

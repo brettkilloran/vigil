@@ -8,7 +8,7 @@ The current Drizzle schema **does not** include:
 
 If your Neon database was created with an older heartgarden build:
 
-1. **Easiest for development:** drop the old tables (or create a new Neon branch) and run `npm run db:push` so the schema matches [`src/db/schema.ts`](../src/db/schema.ts).
+1. **Easiest for development:** drop the old tables (or create a new Neon branch) and run `pnpm run db:push` so the schema matches [`src/db/schema.ts`](../src/db/schema.ts).
 
 2. **If you must keep data:** export what you need (e.g. JSON export from the app or SQL dump), align the schema manually, then re-import items. There is no automated migrator from tldraw snapshots to the custom canvas model.
 

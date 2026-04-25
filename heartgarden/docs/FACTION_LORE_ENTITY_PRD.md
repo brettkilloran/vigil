@@ -129,7 +129,7 @@ Existing seeds: **v1** centered letterhead, **v2** asym + monogram, **v3** frame
 2. Authors can **edit charter prose** with **bold, lists, links, and blocks** without breaking the identity strip.
 3. **Roster** edits survive reload, sync, and import/export of `content_json`.
 4. Focus mode feels like **one document**, not nested cards.
-5. **`npm run check`** + lab page smoke path stay green.
+5. **`pnpm run check`** + lab page smoke path stay green.
 
 ---
 

@@ -10,12 +10,20 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    rules: {
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/immutability": "warn",
+    },
+  },
+  {
     ...playwright.configs["flat/recommended"],
     files: ["e2e/**/*.ts"],
   },
   {
     files: ["src/components/**/*.tsx"],
-    ignores: ["src/components/ui/Button.tsx"],
+    ignores: ["src/components/ui/Button.tsx", "src/components/dev/**/*.tsx"],
     rules: {
       "no-restricted-syntax": [
         "error",

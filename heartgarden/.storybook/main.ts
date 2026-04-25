@@ -62,8 +62,8 @@ const config: StorybookConfig = {
     disableTelemetry: true,
   },
   /**
-   * Default npm scripts bind **localhost** (not 0.0.0.0) so Windows HMR / dev-server client URLs stay
-   * consistent. Use `npm run storybook:lan` when you need the LAN URL.
+   * Default pnpm scripts bind **localhost** (not 0.0.0.0) so Windows HMR / dev-server client URLs stay
+   * consistent. Use `pnpm run storybook:lan` when you need the LAN URL.
    */
   webpackFinal: async (cfg: Configuration) => {
     cfg.devServer = {

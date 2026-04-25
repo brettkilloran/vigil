@@ -1,15 +1,16 @@
 # Bugbot review notes — vigil / heartgarden
 
 Project-specific guidance for Cursor Bugbot when reviewing PRs against this repo.
-The canonical agent doc is `heartgarden/AGENTS.md`; this file is a short, review-focused projection of it.
+The canonical agent doc is `heartgarden/AGENTS.md`; collaboration policy lives in `heartgarden/docs/AGENT_COLLABORATION.md`. This file is a short, review-focused projection of both.
 
 ## Read order before flagging anything
 
 1. `heartgarden/AGENTS.md` — onboarding + architecture reality
-2. `heartgarden/docs/API.md` — HTTP routes
-3. `heartgarden/docs/FEATURES.md` — shipped behavior → code
-4. `heartgarden/docs/CODEMAP.md` — subsystem → files
-5. `heartgarden/docs/BACKLOG.md` — open engineering work (SOT)
+2. `heartgarden/docs/AGENT_COLLABORATION.md` — human / agent / GitHub workflow
+3. `heartgarden/docs/API.md` — HTTP routes
+4. `heartgarden/docs/FEATURES.md` — shipped behavior → code
+5. `heartgarden/docs/CODEMAP.md` — subsystem → files
+6. `heartgarden/docs/BACKLOG.md` — open engineering work (SOT)
 
 If a PR touches behavior covered by one of those docs and the doc isn't updated, mention it.
 
@@ -20,6 +21,9 @@ If a PR touches behavior covered by one of those docs and the doc isn't updated,
 - **Comments:** the repo's Cursor rules ban narrating comments (e.g. `// increment counter`, `// import the module`). Flag obvious narration introduced in a diff. Comments that explain *why* (trade-offs, constraints, gotchas) are fine and encouraged.
 - **CSS modules:** `*.module.css` files must not contain `:root { ... }` selectors — module scoping breaks them silently. Globals belong in `app/globals.css`.
 - **No Turbopack in dev:** `next dev --webpack` is the supported local script (`pnpm run dev`). If a PR adds `--turbo` to dev/build, flag it.
+- **Agent PR behavior:** large PRs are acceptable when coherent and verified. Do not gate on size alone. Do flag agent PRs that claim success without checks, hide skipped verification, mix unrelated risky changes without explanation, or touch one-way-door areas without explicit human approval.
+- **External collaborator branches:** if a PR appears to push into Matt's branch or close/obsolete Matt's work, check that Brett or Matt explicitly requested it. Prefer separate PRs for unrelated repo-maintenance fixes.
+- **Agent identity in comments:** agent-authored GitHub comments should identify the responding agent/model at the top even when posted through Brett's handle, preferably in a compact "for Brett" form.
 
 ## Subsystems to be careful with
 
@@ -46,6 +50,7 @@ When code changes touch these surfaces, the matching doc must be updated in the 
 ## What *not* to flag
 
 - Large PRs with broad rename / migration scope are normal here (e.g. dev-env migrations, naming sweeps). Don't gate purely on size.
+- Agent-authored GitHub comments that are brief status updates are expected when they identify the agent/model and state action/checks/blockers clearly. Don't flag them for being generated unless they are misleading or noisy.
 - The legacy folder name `heartgarden/app/_components/VigilApp.tsx` is intentionally not renamed — the file name is historical, the contents are the heartgarden shell.
 - `vigil:*` strings (links, CSS tokens, localStorage keys, MCP tool aliases) are stable contracts. Renames are out of scope.
 - TODO / FIXME comments referencing an issue id (e.g. `TODO(#123): ...`) are tracked work, not lint targets.

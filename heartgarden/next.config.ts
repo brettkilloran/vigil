@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
    * listed; it pulls `pdfjs-dist` transitively, but the route imports `pdfjs-dist` directly.
    */
   serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
+  turbopack: {},
+  webpack: (config, { isServer }) => {
+    if (isServer && Array.isArray(config.externals)) {
+      config.externals.push(/@napi-rs/);
+    }
+    return config;
+  },
   /**
    * Expose Vercel’s commit SHA to the client bundle so boot / about strings can show a unique
    * deploy id alongside semver from `package.json` (see `src/lib/app-version.ts`).

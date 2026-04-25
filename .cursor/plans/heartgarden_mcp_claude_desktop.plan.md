@@ -3,7 +3,7 @@
 **Status:** draft execution plan  
 **Product goal:** A paid Claude user can add Heartgarden as a **remote MCP connector** in **Claude Desktop** and reliably use **`heartgarden_*` tools** against the deployed app (e.g. `heartgarden.vercel.app`), authenticated with **`HEARTGARDEN_MCP_SERVICE_KEY`**.
 
-**Non-goals (for this plan):** OAuth/DCR for third-party IdPs (only if product later requires it); replacing stdio **`npm run mcp`** for local dev.
+**Non-goals (for this plan):** OAuth/DCR for third-party IdPs (only if product later requires it); replacing stdio **`pnpm run mcp`** for local dev.
 
 ---
 
@@ -69,7 +69,7 @@ Per **Anthropic docs** (remote connectors):
 
 1. **Contract tests** (existing + extend): keep **`heartgarden/app/api/mcp/route.test.ts`** and service-key tests green; add cases for **POST initialize** mock if feasible without full SDK integration (or lightweight integration test hitting handler with **fake** key in test env).
 2. **MCP Inspector** (optional): [MCP Inspector](https://github.com/modelcontextprotocol/inspector) against **`https://heartgarden.vercel.app/api/mcp?token=…`** — initialize OK, tools listed.
-3. **Shipped:** **`npm run mcp:smoke`** → **`heartgarden/scripts/mcp-prod-smoke.ts`** (SDK **`StreamableHTTPClientTransport`** + **`Client`**; env **`HEARTGARDEN_MCP_SERVICE_KEY`**, optional **`HEARTGARDEN_MCP_URL`**).
+3. **Shipped:** **`pnpm run mcp:smoke`** → **`heartgarden/scripts/mcp-prod-smoke.ts`** (SDK **`StreamableHTTPClientTransport`** + **`Client`**; env **`HEARTGARDEN_MCP_SERVICE_KEY`**, optional **`HEARTGARDEN_MCP_URL`**).
 
 **Deliverable:** `mcp:smoke` + docs (**`docs/API.md`**, **`AGENTS.md`**, **`docs/DEPLOY_VERCEL.md`**); CI optional (secret not in CI).
 
@@ -103,7 +103,7 @@ If WS-B proves our endpoint **initialize + tools/list** works but Desktop still 
 2. **Smoke:** `GET https://<host>/api/mcp` **without** token → **401** (not 404).
 3. **Smoke:** `POST` `initialize` + `tools/list` with valid token and correct headers → **200**, JSON-RPC **result** (run script or Inspector).
 4. **Claude Desktop:** Add connector → open chat → invoke **one tool** → success.
-5. **Regression:** **`npm run mcp`** (stdio) still works locally against dev or prod URL per **`AGENTS.md`**.
+5. **Regression:** **`pnpm run mcp`** (stdio) still works locally against dev or prod URL per **`AGENTS.md`**.
 
 ---
 

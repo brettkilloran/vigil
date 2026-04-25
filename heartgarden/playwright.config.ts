@@ -3,10 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * E2E + visual regression for heartgarden.
  *
- * - `npm run test:e2e` — builds once, then headless Chromium against `next start` on **:3001**
- *   (avoids Next’s single `next dev` lock per repo while you keep `npm run dev` on :3000).
- * - `npm run test:e2e:visual` — screenshot baselines only (run locally or in Linux CI after UI changes).
- * - `npm run test:e2e:update` — refresh screenshot baselines (`--update-snapshots`).
+ * - `pnpm run test:e2e` — builds once, then headless Chromium against `next start` on **:3001**
+ *   (avoids Next’s single `next dev` lock per repo while you keep `pnpm run dev` on :3000).
+ * - `pnpm run test:e2e:visual` — screenshot baselines only (run locally or in Linux CI after UI changes).
+ * - `pnpm run test:e2e:update` — refresh screenshot baselines (`--update-snapshots`).
  * - **CI (`CI=1`):** `e2e/visual/**` is skipped — Playwright compares against `*-chromium-linux.png` etc.;
  *   baselines committed from Windows/macOS do not match Ubuntu, which caused recurring CI failures.
  */
@@ -22,7 +22,7 @@ export default defineConfig({
     ["html", { open: "never", outputFolder: "playwright-report" }],
   ],
   use: {
-    /** Dedicated port so `npm run dev` on :3000 can run alongside e2e. */
+    /** Dedicated port so `pnpm run dev` on :3000 can run alongside e2e. */
     baseURL: "http://127.0.0.1:3001",
     /** PWA `sw.js` can intercept `/api/*` in production builds. */
     serviceWorkers: "block",
@@ -40,7 +40,7 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: "npm run build && npx next start --hostname 127.0.0.1 --port 3001",
+    command: "pnpm run build && pnpm exec next start --hostname 127.0.0.1 --port 3001",
     url: "http://127.0.0.1:3001",
     reuseExistingServer: !process.env.CI,
     timeout: 300_000,

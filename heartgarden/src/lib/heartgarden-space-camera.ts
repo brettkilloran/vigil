@@ -25,10 +25,18 @@ import type { CameraState } from "@/src/model/canvas-types";
 const STORAGE_KEY = "heartgarden-space-camera-v1";
 
 const MAX_ZOOM = 8;
+/**
+ * Cap the per-browser-profile camera-state map. A long-lived profile that visits
+ * hundreds of spaces would otherwise grow this entry without bound until
+ * `setItem` starts throwing `QuotaExceededError`. (`REVIEW_2026-04-25_1835` M6.)
+ */
+const MAX_CAMERA_ENTRIES = 200;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
+
+type CameraEntry = { x: number; y: number; zoom: number; lastSeenAt: number };
 
 export function readSpaceCamera(spaceId: string): CameraState | null {
   if (typeof window === "undefined") return null;
@@ -55,7 +63,7 @@ export function writeSpaceCamera(spaceId: string, camera: CameraState): void {
   if (typeof window === "undefined") return;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    const map: Record<string, { x: number; y: number; zoom: number }> = {};
+    const map: Record<string, CameraEntry> = {};
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       if (isRecord(parsed)) {
@@ -66,14 +74,29 @@ export function writeSpaceCamera(spaceId: string, camera: CameraState): void {
             typeof v.y === "number" &&
             typeof v.zoom === "number"
           ) {
-            map[k] = { x: v.x, y: v.y, zoom: v.zoom };
+            const lastSeenAt =
+              typeof v.lastSeenAt === "number" && Number.isFinite(v.lastSeenAt)
+                ? v.lastSeenAt
+                : 0;
+            map[k] = { x: v.x, y: v.y, zoom: v.zoom, lastSeenAt };
           }
         }
       }
     }
-    map[spaceId] = { x: camera.x, y: camera.y, zoom: camera.zoom };
+    const now = Date.now();
+    map[spaceId] = { x: camera.x, y: camera.y, zoom: camera.zoom, lastSeenAt: now };
+
+    const entries = Object.entries(map);
+    if (entries.length > MAX_CAMERA_ENTRIES) {
+      // Drop oldest by lastSeenAt; current write always survives (just stamped with `now`).
+      entries.sort((a, b) => b[1].lastSeenAt - a[1].lastSeenAt);
+      const trimmed: Record<string, CameraEntry> = {};
+      for (const [k, v] of entries.slice(0, MAX_CAMERA_ENTRIES)) trimmed[k] = v;
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+      return;
+    }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
   } catch {
-    /* quota / private mode */
+    /* quota / private mode — silent: see `REVIEW_2026-04-25_1835` M6 */
   }
 }

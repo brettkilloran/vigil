@@ -272,12 +272,20 @@ export async function assertSpaceReparentAllowed(
   return { ok: true };
 }
 
-export async function listItemsForSpace(db: VigilDb, spaceId: string) {
-  return db
+export async function listItemsForSpace(
+  db: VigilDb,
+  spaceId: string,
+  options: { limit?: number; offset?: number } = {},
+) {
+  const q = db
     .select()
     .from(items)
     .where(eq(items.spaceId, spaceId))
     .orderBy(asc(items.zIndex), asc(items.createdAt));
+  if (options.limit != null && Number.isFinite(options.limit) && options.limit > 0) {
+    return q.limit(options.limit).offset(Math.max(0, options.offset ?? 0));
+  }
+  return q;
 }
 
 /** Active space plus all descendant spaces (for canvas items that live in child spaces). */
@@ -381,12 +389,15 @@ function normalizeLimit(limit: number | undefined, fallback: number, max: number
   return Math.min(value, max);
 }
 
-function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
+/**
+ * Per-item attribute predicates (everything in `SearchFilters` *except* the
+ * `space*` filters, which also apply to the embeddings/mentions legs whose own
+ * tables already carry `space_id`). Exported so the vector + mention legs of
+ * `hybridRetrieveItems` can apply the same eligibility predicate as the lexical
+ * leg, joining to `items` once. (`REVIEW_2026-04-25_1835` H5.)
+ */
+export function searchItemAttributeWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
   const clauses: ReturnType<typeof sql>[] = [];
-  if (filters.spaceIds?.length) clauses.push(inArray(items.spaceId, filters.spaceIds));
-  else if (filters.spaceId) clauses.push(eq(items.spaceId, filters.spaceId));
-  if (filters.excludeSpaceIds?.length) clauses.push(notInArray(items.spaceId, filters.excludeSpaceIds));
-  if (filters.excludeSpaceId) clauses.push(ne(items.spaceId, filters.excludeSpaceId));
   if (filters.itemTypes?.length) clauses.push(inArray(items.itemType, filters.itemTypes));
   if (filters.entityTypes?.length) clauses.push(inArray(items.entityType, filters.entityTypes));
   if (filters.updatedAfter) clauses.push(sql`${items.updatedAt} >= ${filters.updatedAfter}`);
@@ -424,6 +435,16 @@ function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
   return clauses;
 }
 
+function searchWhereClauses(filters: SearchFilters): ReturnType<typeof sql>[] {
+  const clauses: ReturnType<typeof sql>[] = [];
+  if (filters.spaceIds?.length) clauses.push(inArray(items.spaceId, filters.spaceIds));
+  else if (filters.spaceId) clauses.push(eq(items.spaceId, filters.spaceId));
+  if (filters.excludeSpaceIds?.length) clauses.push(notInArray(items.spaceId, filters.excludeSpaceIds));
+  if (filters.excludeSpaceId) clauses.push(ne(items.spaceId, filters.excludeSpaceId));
+  clauses.push(...searchItemAttributeWhereClauses(filters));
+  return clauses;
+}
+
 function applySortForNonRanked(sort: SearchSort | undefined) {
   if (sort === "created") return [desc(items.createdAt)];
   if (sort === "title") return [asc(items.title), desc(items.updatedAt)];
@@ -431,10 +452,13 @@ function applySortForNonRanked(sort: SearchSort | undefined) {
 }
 
 function buildPrefixTsQuery(query: string): string | null {
+  // Keep Unicode letters/digits + `_-` so accented Latin, CJK, and other scripts survive
+  // tokenization. Stripping to ASCII alphanumerics dropped non-English suggest queries
+  // entirely (`REVIEW_2026-04-25_1835` H17).
   const tokens = query
     .toLowerCase()
     .split(/\s+/)
-    .map((token) => token.replace(/[^a-z0-9_-]/g, ""))
+    .map((token) => token.replace(/[^\p{L}\p{N}_-]/gu, ""))
     .filter(Boolean);
   if (tokens.length === 0) return null;
   const parts = tokens.map((token, index) =>

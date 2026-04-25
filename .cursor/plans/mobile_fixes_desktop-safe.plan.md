@@ -25,7 +25,7 @@ todos:
   - id: interaction-discoverability
     content: "Cmdk row highlight on pointer enter; icon-only chrome labels / overflow menu on narrow widths"
   - id: verify
-    content: Run npm run check + test:e2e:visual; manual wide-window smoke; device or Playwright 390x844 for gestures + interaction checklist
+    content: Run pnpm run check + test:e2e:visual; manual wide-window smoke; device or Playwright 390x844 for gestures + interaction checklist
 ---
 
 # Mobile fixes without desktop regression (including pinch zoom and touch navigation)
@@ -36,7 +36,7 @@ todos:
 - **Safe-area and `dvh`**: use **`max(24px, env(safe-area-inset-*))`** / **`max(28px, env(safe-area-inset-bottom))`**—on desktop, insets are **0** (no shift).
 - **Canvas gestures**: extend **[`ArchitecturalCanvasApp.tsx`](heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx)** so **single-pointer `isPrimary` paths** (lasso, pan, node drag, connections) remain the **default on desktop**; multi-pointer logic activates only when **two active pointers** are on the viewport/canvas hit surface (see hit-test helper [`isCanvasPointerMarqueeOrPanSurface`](heartgarden/src/components/foundation/ArchitecturalCanvasApp.tsx)).
 - **Interaction fixes** (Lore, ContextMenu): **`pointerdown`** so mouse + touch stay consistent.
-- **Verify** with **`npm run check`**, **`npm run test:e2e:visual`**, **wide-window manual smoke**, and **390×844 + real device** for touch/pinch.
+- **Verify** with **`pnpm run check`**, **`pnpm run test:e2e:visual`**, **wide-window manual smoke**, and **390×844 + real device** for touch/pinch.
 - **Interaction backlog:** See **§7** for double-tap vs dblclick, long-press menus, modifier-free multi-select, virtual keyboard, overscroll/back, and discoverability—address after core layout + gestures, with **narrow/hover media queries** or **touch-specific branches** so desktop stays unchanged.
 
 ---
@@ -178,7 +178,7 @@ These are **not all blockers** for a first mobile pass; they are a **thorough ch
 
 ## 8. Tests and guardrails
 
-- **`npm run check`**, **`npm run test:e2e:visual`** (desktop baselines).
+- **`pnpm run check`**, **`pnpm run test:e2e:visual`** (desktop baselines).
 - **Wide window:** lasso, pan tool, wheel zoom, node drag, context menu, double-click focus, modifier multi-select.
 - **Narrow / device:** boot layout, Lore + cmdk scroll lock, **pinch + two-finger pan**, **long-press menu**, **focus editor + keyboard open**, **no accidental pull-refresh**, **palette from visible button**.
 

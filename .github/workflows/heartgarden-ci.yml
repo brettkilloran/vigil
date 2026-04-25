@@ -1,8 +1,5 @@
-# CI for the heartgarden Next.js app (app root directory `heartgarden/` — see heartgarden/docs/NAMING.md).
+# CI for the heartgarden Next.js app
 name: heartgarden CI
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
   push:
@@ -14,62 +11,68 @@ on:
       - "heartgarden/**"
       - ".github/workflows/heartgarden-ci.yml"
 
-defaults:
-  run:
-    working-directory: heartgarden
-
 jobs:
   check-and-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract Node version from mise.toml
+        id: versions
+        run: |
+          NODE_VERSION=$(grep '^node' mise.toml | cut -d'"' -f2)
+          echo "node=$NODE_VERSION" >> $GITHUB_OUTPUT
+
+      - uses: pnpm/action-setup@v5
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: heartgarden/package-lock.json
+          package_json_file: heartgarden/package.json
+          run_install: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.versions.outputs.node }}
+          cache: pnpm
+          cache-dependency-path: heartgarden/pnpm-lock.yaml
+
       - name: CI diagnostics
+        working-directory: heartgarden
         run: |
           echo "::group::Environment"
           echo "Node: $(node -v)"
-          echo "npm: $(npm -v)"
+          echo "pnpm: $(pnpm -v)"
           echo "Runner OS: $RUNNER_OS"
           echo "Ref: $GITHUB_REF"
           echo "::endgroup::"
+
       - name: Install dependencies
         env:
+          # TODO kill adding .git/hooks to dev envs
           # Avoid mutating .git/hooks in CI; prepare script respects this (see heartgarden/scripts/install-git-hooks.mjs).
           SKIP_INSTALL_GIT_HOOKS: "1"
-        run: |
-          echo "::group::Install dependencies"
-          npm ci
-          echo "::endgroup::"
+        working-directory: heartgarden
+        run: pnpm install --frozen-lockfile
+
       - name: Verify foundation sync
-        run: |
-          echo "::group::Verify foundation sync"
-          npm run verify:foundation-sync
-          echo "::endgroup::"
+        working-directory: heartgarden
+        run: pnpm run verify:foundation-sync
+
       - name: Lint and build
-        run: |
-          echo "::group::Lint and build"
-          npm run check
-          echo "::endgroup::"
+        working-directory: heartgarden
+        run: pnpm run check
+
       - name: Build Storybook
-        run: |
-          echo "::group::Build Storybook (regression guard for .storybook + stories)"
-          npm run build-storybook
-          echo "::endgroup::"
+        working-directory: heartgarden
+        run: pnpm run build-storybook
+
       - name: Install Playwright Chromium
-        run: |
-          echo "::group::Install Playwright Chromium"
-          npx playwright install --with-deps chromium
-          echo "::endgroup::"
+        working-directory: heartgarden
+        run: pnpm exec playwright install --with-deps chromium
+
       # Playwright skips e2e/visual on CI (platform-specific screenshots); smoke + interaction tests only.
       - name: E2E tests
-        run: |
-          echo "::group::E2E tests"
-          npm run test:e2e
-          echo "::endgroup::"
+        working-directory: heartgarden
+        run: pnpm run test:e2e
         env:
           CI: "1"

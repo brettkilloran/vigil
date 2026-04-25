@@ -270,6 +270,25 @@ export async function POST(req: Request) {
     );
   }
 
+  // Reject obviously-too-large uploads before buffering them. The body still includes
+  // multipart framing so the actual file may be a touch smaller than `Content-Length`,
+  // but rejecting at the cap removes the worst case where we allocate hundreds of MB
+  // before the post-decode size check fires. (`REVIEW_2026-04-25_1835` L1.)
+  const contentLengthRaw = req.headers.get("content-length");
+  if (contentLengthRaw) {
+    const declaredBytes = Number(contentLengthRaw);
+    if (Number.isFinite(declaredBytes) && declaredBytes > MAX_UPLOAD_BYTES) {
+      return Response.json(
+        {
+          ok: false,
+          error: "File too large",
+          detail: `Max upload size is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.`,
+        },
+        { status: 413 },
+      );
+    }
+  }
+
   let form: FormData;
   try {
     form = await req.formData();

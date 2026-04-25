@@ -21,11 +21,11 @@ Schema and extensions apply **on Neon**, not inside Vercel’s build. Use this w
 
    ```bash
    set NEON_DATABASE_URL=postgresql://...   # Windows PowerShell: $env:NEON_DATABASE_URL="..."
-   npm run db:ensure-pgvector
-   npm run db:vault-setup
+   pnpm run db:ensure-pgvector
+   pnpm run db:vault-setup
    ```
 
-   Or, if you prefer interactive schema push without the vault bundle: **`npm run db:push`** after **`db:ensure-pgvector`** — see [`MIGRATION.md`](./MIGRATION.md) for upgrades.
+   Or, if you prefer interactive schema push without the vault bundle: **`pnpm run db:push`** after **`db:ensure-pgvector`** — see [`MIGRATION.md`](./MIGRATION.md) for upgrades.
 
 4. Paste **`NEON_DATABASE_URL`** into Vercel → **Production** environment only (see [`DEPLOY_VERCEL_CHECKLIST.md`](./DEPLOY_VERCEL_CHECKLIST.md)).
 
@@ -39,7 +39,7 @@ Schema and extensions apply **on Neon**, not inside Vercel’s build. Use this w
 
 ## 3. After every schema / migration change
 
-**`npm run db:vault-setup`** replays **every** `.sql` file under **`drizzle/migrations/`** in lex order (each is idempotent). Run it against **every** target DB URL that should match the new code — local, Preview branch, Production — before redeploying code that depends on the new schema. Skipping Production is what causes **`/api/bootstrap`** to 500 with **`column … does not exist`**. The manual GitHub Actions workflow below is the hands‑off way to do this for a chosen URL.
+**`pnpm run db:vault-setup`** replays **every** `.sql` file under **`drizzle/migrations/`** in lex order (each is idempotent). Run it against **every** target DB URL that should match the new code — local, Preview branch, Production — before redeploying code that depends on the new schema. Skipping Production is what causes **`/api/bootstrap`** to 500 with **`column … does not exist`**. The manual GitHub Actions workflow below is the hands‑off way to do this for a chosen URL.
 
 ## 4. GitHub Actions (optional)
 
@@ -47,4 +47,4 @@ To apply vault SQL from CI against a chosen database, use **`.github/workflows/h
 
 ## 5. After deploy
 
-- Vault reindex (optional): with the **deployed** app URL, run **`npm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** set to your Vercel origin (see [`FOLLOW_UP.md`](./FOLLOW_UP.md)).
+- Vault reindex (optional): with the **deployed** app URL, run **`pnpm run vault:reindex`** locally with **`HEARTGARDEN_APP_URL`** set to your Vercel origin (see [`FOLLOW_UP.md`](./FOLLOW_UP.md)).

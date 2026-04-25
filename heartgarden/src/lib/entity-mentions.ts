@@ -228,13 +228,25 @@ export async function rescanItemEntityMentions(
     })
     .from(entityMentions)
     .where(eq(entityMentions.sourceItemId, itemId));
-  const previousKeyToId = new Map<string, string>(
-    previous.map((p) => [`${p.targetItemId}::${p.matchedTerm}::${p.sourceKind}`, p.id]),
-  );
   const nextKeys = new Set<string>();
   const touchedSpaceIds = new Set<string>([sourceSpaceId]);
 
-  const applyMentionRow = async (args: {
+  // REVIEW_2026-04-25_1835 M4: collect all upsert payloads first, then issue a
+  // single `INSERT ... ON CONFLICT ... DO UPDATE` (and a single set-based
+  // `DELETE`) at the end of the rescan. The previous per-row UPDATE/INSERT
+  // pattern wrote N+1 statements per item × matched-term × target — at a
+  // 1k-vocab brane that's thousands of round-trips per rescan.
+  type MentionUpsertRow = {
+    targetItemId: string;
+    matchedTerm: string;
+    sourceKind: MentionSourceKind;
+    mentionCount: number;
+    snippet: string | null;
+    headingPath: string | null;
+  };
+  const pendingUpserts: MentionUpsertRow[] = [];
+
+  const applyMentionRow = (args: {
     targetItemId: string;
     targetSpaceId: string;
     matchedTerm: string;
@@ -246,30 +258,13 @@ export async function rescanItemEntityMentions(
     const key = `${args.targetItemId}::${args.matchedTerm}::${args.sourceKind}`;
     nextKeys.add(key);
     touchedSpaceIds.add(args.targetSpaceId);
-    const existingId = previousKeyToId.get(key);
-    if (existingId) {
-      await db
-        .update(entityMentions)
-        .set({
-          mentionCount: args.mentionCount,
-          snippet: args.snippet ?? sql<string | null>`null`,
-          headingPath: args.headingPath ?? sql<string | null>`null`,
-          sourceSpaceId,
-          updatedAt: new Date(),
-        })
-        .where(eq(entityMentions.id, existingId));
-      return;
-    }
-    await db.insert(entityMentions).values({
-      sourceItemId: itemId,
+    pendingUpserts.push({
       targetItemId: args.targetItemId,
       matchedTerm: args.matchedTerm,
-      mentionCount: args.mentionCount,
-      braneId: sourceBraneId,
-      sourceSpaceId,
       sourceKind: args.sourceKind,
-      ...(args.snippet ? { snippet: args.snippet } : {}),
-      ...(args.headingPath ? { headingPath: args.headingPath } : {}),
+      mentionCount: args.mentionCount,
+      snippet: args.snippet,
+      headingPath: args.headingPath,
     });
   };
 
@@ -310,7 +305,7 @@ export async function rescanItemEntityMentions(
       if (targetItemId === itemId) continue;
       const targetSpaceId = targetSpaceById.get(targetItemId);
       if (!targetSpaceId) continue;
-      await applyMentionRow({
+      applyMentionRow({
         targetItemId,
         targetSpaceId,
         matchedTerm: matched.term,
@@ -328,7 +323,7 @@ export async function rescanItemEntityMentions(
   if (!restrictToTerms) {
     const semanticNeighbors = await computeSemanticNeighborsForItem(db, itemId, sourceBraneId);
     for (const semantic of semanticNeighbors) {
-      await applyMentionRow({
+      applyMentionRow({
         targetItemId: semantic.targetItemId,
         targetSpaceId: semantic.targetSpaceId,
         matchedTerm: SEMANTIC_MENTION_TOKEN,
@@ -340,17 +335,59 @@ export async function rescanItemEntityMentions(
     }
   }
 
+  // REVIEW_2026-04-25_1835 M4: bulk upsert + bulk delete in one transaction.
+  const idsToDelete: string[] = [];
   for (const prev of previous) {
     if (restrictToTerms) {
-      // Only delete rows whose matchedTerm is in scope; preserve unrelated
-      // mentions (and all semantic mentions).
       if (prev.sourceKind === "semantic") continue;
       if (!restrictToTerms.has(prev.matchedTerm)) continue;
     }
     const key = `${prev.targetItemId}::${prev.matchedTerm}::${prev.sourceKind}`;
     if (nextKeys.has(key)) continue;
-    await db.delete(entityMentions).where(eq(entityMentions.id, prev.id));
+    idsToDelete.push(prev.id);
   }
+
+  await db.transaction(async (tx) => {
+    if (pendingUpserts.length > 0) {
+      // Drizzle's `onConflictDoUpdate` with `excluded.*` to update mentionCount,
+      // snippet, heading_path, source_space_id, updated_at in one shot.
+      const now = new Date();
+      const values = pendingUpserts.map((row) => ({
+        sourceItemId: itemId,
+        targetItemId: row.targetItemId,
+        matchedTerm: row.matchedTerm,
+        mentionCount: row.mentionCount,
+        snippet: row.snippet,
+        headingPath: row.headingPath,
+        braneId: sourceBraneId,
+        sourceSpaceId,
+        sourceKind: row.sourceKind,
+        createdAt: now,
+        updatedAt: now,
+      }));
+      await tx
+        .insert(entityMentions)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [
+            entityMentions.sourceItemId,
+            entityMentions.targetItemId,
+            entityMentions.matchedTerm,
+            entityMentions.sourceKind,
+          ],
+          set: {
+            mentionCount: sql`excluded.mention_count`,
+            snippet: sql`excluded.snippet`,
+            headingPath: sql`excluded.heading_path`,
+            sourceSpaceId: sql`excluded.source_space_id`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        });
+    }
+    if (idsToDelete.length > 0) {
+      await tx.delete(entityMentions).where(inArray(entityMentions.id, idsToDelete));
+    }
+  });
 
   for (const spaceId of touchedSpaceIds) {
     invalidateItemLinksRevisionForSpace(spaceId);

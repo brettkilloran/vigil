@@ -44,7 +44,7 @@ if (!bad) {
 
 if (bad) {
    
-  console.error("\nFix: stop dev servers, then from heartgarden/ run: npm run reinstall\n");
+  console.error("\nFix: stop dev servers, then from heartgarden/ run: pnpm run reinstall\n");
   process.exit(1);
 }
 

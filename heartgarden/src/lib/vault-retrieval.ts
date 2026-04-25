@@ -17,6 +17,8 @@ import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { linkExpansionDepriorityRank } from "@/src/lib/item-link-meta";
 import type { VigilDb } from "@/src/lib/spaces";
 import {
+  searchItemAttributeWhereClauses,
+  searchItemsFTS,
   searchItemsFTSWithSnippets,
   searchItemsFuzzy,
   type SearchFilters,
@@ -99,6 +101,13 @@ export type HybridRetrieveOptions = {
   rrfLexicalWeight?: number;
   rrfVectorWeight?: number;
   rrfMentionWeight?: number;
+  /**
+   * When false, skip `ts_headline` snippet generation in the lexical leg.
+   * Default: true (back-compat with lore-engine / lore-import-plan-build / lore-consistency-check
+   * which read `itemIdToFtsSnippet`). Callers that only consume `rows` (e.g. `/api/search`)
+   * can pass `false` to avoid expensive headline computation. (`REVIEW_2026-04-25_1835` M5.)
+   */
+  includeSnippets?: boolean;
 };
 
 function tokenizeMentionQuery(query: string): string[] {
@@ -166,6 +175,10 @@ export async function searchItemChunksByVector(
     whereParts.push(notInArray(itemEmbeddings.spaceId, filters.excludeSpaceIds));
   }
   if (filters.excludeSpaceId) whereParts.push(ne(itemEmbeddings.spaceId, filters.excludeSpaceId));
+  // REVIEW_2026-04-25_1835 H5: apply non-space filters (item-type, entity-kind,
+  // historical, campaign-epoch, hasLinks, inStack) on the embedding leg too,
+  // so hybrid + semantic results obey the same eligibility set as lexical.
+  whereParts.push(...searchItemAttributeWhereClauses(filters));
 
   const whereClause = whereParts.length ? and(...whereParts) : undefined;
 
@@ -229,6 +242,7 @@ export async function hybridRetrieveItems(
   const rrfLexicalWeight = options.rrfLexicalWeight ?? defaultRrfLexicalWeightFromEnv;
   const rrfVectorWeight = options.rrfVectorWeight ?? defaultRrfVectorWeightFromEnv;
   const rrfMentionWeight = options.rrfMentionWeight ?? defaultRrfMentionWeightFromEnv;
+  const includeSnippets = options.includeSnippets !== false;
 
   const itemIdToChunks = new Map<string, string[]>();
   const itemIdToChunkMatches = new Map<string, VectorChunkMatch[]>();
@@ -238,9 +252,13 @@ export async function hybridRetrieveItems(
     return { rows: [], itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet };
   }
 
-  const ftsRows = await searchItemsFTSWithSnippets(db, q, { ...filters, limit: ftsLimit });
-  for (const r of ftsRows) {
-    if (r.snippet) itemIdToFtsSnippet.set(r.item.id, r.snippet);
+  const ftsRows = includeSnippets
+    ? await searchItemsFTSWithSnippets(db, q, { ...filters, limit: ftsLimit })
+    : await searchItemsFTS(db, q, { ...filters, limit: ftsLimit });
+  if (includeSnippets) {
+    for (const r of ftsRows) {
+      if (r.snippet) itemIdToFtsSnippet.set(r.item.id, r.snippet);
+    }
   }
 
   let lexicalRows: SearchRow[] = ftsRows;
@@ -291,12 +309,26 @@ export async function hybridRetrieveItems(
   let mentionOrderedIds: string[] = [];
   const mentionTerms = tokenizeMentionQuery(q);
   if (mentionTerms.length > 0) {
-    const mentionRows = await db
-      .select({
-        itemId: entityMentions.sourceItemId,
-        mentionCount: sql<number>`sum(${entityMentions.mentionCount})::int`,
-      })
-      .from(entityMentions)
+    // REVIEW_2026-04-25_1835 H5: join to `items` and apply the same item-attribute
+    // filter set as the lexical leg so item-type / entity-kind / canonical-kind /
+    // historical / campaign-epoch toggles cannot leak through the mention path.
+    const itemAttributeClauses = searchItemAttributeWhereClauses(filters);
+    const needItemsJoin = itemAttributeClauses.length > 0;
+    const mentionRowsBase = needItemsJoin
+      ? db
+          .select({
+            itemId: entityMentions.sourceItemId,
+            mentionCount: sql<number>`sum(${entityMentions.mentionCount})::int`,
+          })
+          .from(entityMentions)
+          .innerJoin(items, eq(items.id, entityMentions.sourceItemId))
+      : db
+          .select({
+            itemId: entityMentions.sourceItemId,
+            mentionCount: sql<number>`sum(${entityMentions.mentionCount})::int`,
+          })
+          .from(entityMentions);
+    const mentionRows = await mentionRowsBase
       .where(
         and(
           inArray(entityMentions.matchedTerm, mentionTerms),
@@ -310,6 +342,7 @@ export async function hybridRetrieveItems(
             : filters.excludeSpaceId
               ? [ne(entityMentions.sourceSpaceId, filters.excludeSpaceId)]
               : []),
+          ...itemAttributeClauses,
         ),
       )
       .groupBy(entityMentions.sourceItemId)

@@ -45,7 +45,7 @@ We **treat the archived master plan** as **historical product intent** (gestures
 
 **Status:** Phases **1–4** largely done in substance (including **Neon architectural bridge**, palette, search APIs, MCP). **Lore Q&A v1** (Anthropic + DB text retrieval) is **landed** — see **`docs/BUILD_PLAN.md`**. **Phase 5:** entity meta, timeline, graph, local **Links** + **title mentions**, MCP tools (see `src/lib/mcp/heartgarden-mcp-server.ts`); LLM-heavy items remain (see **`docs/FOLLOW_UP.md`**). **Phase 6–7:** **Vercel-style spike** plus **wholesale visual revamp** (icons, toolbar grouping, palette/graph/scratch/panels) per **`docs/VISUAL_REVAMP_PLAN.md`** are largely landed; optional Spatial sheen / motion and type-scale audit remain nice-to-haves. **Phase 8:** **viewport culling** and **canvas minimap** are landed; PWA shell + export/import; deeper prefs / offline caching still open (**`docs/FOLLOW_UP.md`**). **Soft collab** (delta sync, optional presence, follow view) is documented in **`docs/PLAYER_LAYER.md`** and **`docs/FEATURES.md`**.
 
-**After UX / seed / stacking fixes:** Re-run **`npm run check`** and any affected e2e; the **phase map is unchanged** — updates belong in **`BUILD_PLAN.md`** when you close a tranche.
+**After UX / seed / stacking fixes:** Re-run **`pnpm run check`** and any affected e2e; the **phase map is unchanged** — updates belong in **`BUILD_PLAN.md`** when you close a tranche.
 
 ## Phase map (use for roadmaps and todos)
 
@@ -76,4 +76,4 @@ We **treat the archived master plan** as **historical product intent** (gestures
 2. Prefer code that follows the custom-canvas architecture (**`ArchitecturalCanvasApp`**); **tldraw is gone** from this repo.
 3. **Canvas graph state** lives in **`ArchitecturalCanvasApp`** (in-component React state + undo/redo). **Do not** assume any external store is the shell’s item graph SoT — see **`docs/CODEMAP.md`** (panels use local state + prefs helpers).
 4. When touching schema, align migrations with **`src/db/schema.ts`** and the master plan (stacks, search, embeddings, links).
-5. **Neon vault ops:** **`npm run db:vault-setup`** (extension + Drizzle push + vault SQL), **`npm run vault:reindex`** (needs running app). Human checklist + CI workflow: **`docs/FOLLOW_UP.md`**; script table: **`README.md`**.
+5. **Neon vault ops:** **`pnpm run db:vault-setup`** (extension + Drizzle push + vault SQL), **`pnpm run vault:reindex`** (needs running app). Human checklist + CI workflow: **`docs/FOLLOW_UP.md`**; script table: **`README.md`**.

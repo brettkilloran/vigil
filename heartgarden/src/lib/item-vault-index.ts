@@ -13,7 +13,7 @@ import {
   buildItemVaultCorpus,
   itemSearchableSourceFromRow,
 } from "@/src/lib/item-searchable-text";
-import { chunkVaultSections } from "@/src/lib/vault-chunk";
+import { chunkVaultSections, vaultMaxChunksPerItem } from "@/src/lib/vault-chunk";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 export type ItemRow = typeof items.$inferSelect;
@@ -46,10 +46,38 @@ export function buildLoreMetaAnthropicBody(row: Pick<ItemRow, "title" | "content
   return parts.join("\n\n");
 }
 
-/** SHA-256 hex of the exact note text sent to Anthropic (after trim + length cap). */
-export function computeLoreMetaSourceHash(row: Pick<ItemRow, "title" | "contentText">): string {
+/**
+ * Returns the prompt-version token folded into the lore-meta source hash. Bump
+ * `HEARTGARDEN_LORE_META_PROMPT_VERSION` whenever the system prompt or output schema
+ * in `extractLoreItemMeta` changes; that invalidates every existing item's stored
+ * hash so the next reindex refreshes lore meta.
+ */
+export function loreMetaPromptVersion(): string {
+  const raw = (process.env.HEARTGARDEN_LORE_META_PROMPT_VERSION ?? "").trim();
+  return raw || "v1";
+}
+
+/** Resolve the Anthropic lore-meta model the same way `reindexItemVault` does. */
+export function resolveLoreMetaModel(): string {
+  const raw = (process.env.ANTHROPIC_LORE_MODEL ?? "").trim();
+  return raw || DEFAULT_LORE_MODEL;
+}
+
+/**
+ * SHA-256 hex of the exact note text sent to Anthropic (after trim + length cap),
+ * version-prefixed with the prompt + model so changing either naturally invalidates
+ * stale stored hashes. (`REVIEW_2026-04-25_1835` H8.)
+ *
+ * `model` defaults to the resolved env model when omitted (back-compat with callers
+ * that did not previously supply one).
+ */
+export function computeLoreMetaSourceHash(
+  row: Pick<ItemRow, "title" | "contentText">,
+  model: string = resolveLoreMetaModel(),
+): string {
   const forApi = normalizeLoreMetaInputText(buildLoreMetaAnthropicBody(row));
-  return sha256Hex(forApi);
+  const versioned = `${loreMetaPromptVersion()}|${model}|${forApi}`;
+  return sha256Hex(versioned);
 }
 
 /** When set, always call Anthropic for lore meta even if the source hash matches (e.g. after changing `ANTHROPIC_LORE_MODEL`). */
@@ -118,15 +146,17 @@ export async function reindexItemVault(
   const anthropicKey = (process.env.ANTHROPIC_API_KEY ?? "").trim();
   if (wantMeta && anthropicKey) {
     const body = buildLoreMetaAnthropicBody(row);
-    const sourceHash = computeLoreMetaSourceHash(row);
+    // REVIEW_2026-04-25_1835 H8: hash inputs include the prompt-version + resolved
+    // model name, so changing either invalidates stored hashes and the next
+    // reindex naturally refreshes lore meta.
+    const model = resolveLoreMetaModel();
+    const sourceHash = computeLoreMetaSourceHash(row, model);
     const skipAnthropic =
       !loreMetaIgnoreSourceHashEnv() &&
       row.loreMetaSourceHash != null &&
       row.loreMetaSourceHash === sourceHash;
 
     if (!skipAnthropic) {
-      const model =
-        (process.env.ANTHROPIC_LORE_MODEL ?? DEFAULT_LORE_MODEL).trim() || DEFAULT_LORE_MODEL;
       const meta = await extractLoreItemMeta(anthropicKey, model, body);
       loreSummaryEff = meta.summary || null;
       loreAliasesEff = meta.aliases.length ? meta.aliases : null;
@@ -148,7 +178,20 @@ export async function reindexItemVault(
   const sections = isHgDocContentJson(contentJson)
     ? deriveSectionsFromHgDoc(readHgDocFromContentJson(contentJson), row.title || "Untitled")
     : fallbackSingleSection(row.contentText ?? corpus, row.title || "Untitled");
-  const chunks = chunkVaultSections(sections);
+  const allChunks = chunkVaultSections(sections);
+  // REVIEW_2026-04-25_1835 H6: hard ceiling on per-item chunk count to keep one
+  // very-long note from dominating OpenAI embedding spend on every edit. Sections
+  // past the cap still appear in lexical FTS via `search_blob`.
+  const chunkCap = vaultMaxChunksPerItem();
+  const chunks = allChunks.length > chunkCap ? allChunks.slice(0, chunkCap) : allChunks;
+  const chunksTruncated = allChunks.length > chunkCap;
+  if (chunksTruncated) {
+    console.warn("[vault-index] chunks truncated", {
+      itemId: row.id,
+      total: allChunks.length,
+      kept: chunks.length,
+    });
+  }
 
   /** No vector rows: persist lexical row only. */
   if (chunks.length === 0) {

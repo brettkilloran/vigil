@@ -4,6 +4,23 @@ import type { HgDocSection } from "@/src/lib/hg-doc/derive-sections";
 export const VAULT_CHUNK_TARGET_CHARS = 820;
 /** Overlap between consecutive chunks to preserve boundary concepts. */
 export const VAULT_CHUNK_OVERLAP_CHARS = 130;
+/**
+ * Hard ceiling on per-item chunk count. Long lore docs (100k+ chars) would
+ * otherwise produce 100+ chunks each, multiplying OpenAI embedding spend on
+ * every edit. The cap keeps a single item's reindex bounded; sections beyond
+ * the cap still appear in lexical FTS via `search_blob` but lose vector
+ * recall. Override via `HEARTGARDEN_VAULT_MAX_CHUNKS_PER_ITEM`.
+ * (`REVIEW_2026-04-25_1835` H6.)
+ */
+export const VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM = 64;
+
+export function vaultMaxChunksPerItem(): number {
+  const raw = (process.env.HEARTGARDEN_VAULT_MAX_CHUNKS_PER_ITEM ?? "").trim();
+  if (!raw) return VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return VAULT_DEFAULT_MAX_CHUNKS_PER_ITEM;
+  return Math.min(512, Math.max(1, Math.floor(parsed)));
+}
 
 export type VaultChunk = {
   headingPath: string[];
