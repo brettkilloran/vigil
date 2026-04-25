@@ -123,5 +123,9 @@
     "typescript": "^5",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": ["sharp", "unrs-resolver"],
+    "onlyBuiltDependencies": ["core-js-pure", "esbuild", "gitleaks-secret-scanner"]
   }
 }
