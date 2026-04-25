@@ -12,6 +12,17 @@ const nextConfig: NextConfig = {
    */
   serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
   /**
+   * pnpm's symlinked node_modules can cause serverExternalPackages to miss
+   * platform-specific native binaries (e.g. @napi-rs/canvas-linux-x64-gnu).
+   * Explicitly externalize any .node binary and the whole @napi-rs scope.
+   */
+  webpack: (config, { isServer }) => {
+    if (isServer && Array.isArray(config.externals)) {
+      config.externals.push(/@napi-rs/);
+    }
+    return config;
+  },
+  /**
    * Expose Vercel’s commit SHA to the client bundle so boot / about strings can show a unique
    * deploy id alongside semver from `package.json` (see `src/lib/app-version.ts`).
    */
