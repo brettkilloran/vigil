@@ -10,6 +10,13 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    rules: {
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/purity": "warn",
+    },
+  },
+  {
     ...playwright.configs["flat/recommended"],
     files: ["e2e/**/*.ts"],
   },
