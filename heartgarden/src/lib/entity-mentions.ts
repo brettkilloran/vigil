@@ -228,9 +228,6 @@ export async function rescanItemEntityMentions(
     })
     .from(entityMentions)
     .where(eq(entityMentions.sourceItemId, itemId));
-  const previousKeyToId = new Map<string, string>(
-    previous.map((p) => [`${p.targetItemId}::${p.matchedTerm}::${p.sourceKind}`, p.id]),
-  );
   const nextKeys = new Set<string>();
   const touchedSpaceIds = new Set<string>([sourceSpaceId]);
 

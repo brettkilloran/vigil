@@ -3634,7 +3634,7 @@ export function ArchitecturalCanvasApp({
       window.removeEventListener("keyup", onKeyUp);
       delete document.body.dataset.hgAltHeld;
     };
-  }, []);
+  }, [setAltHighlightRect]);
 
   useEffect(() => {
     if (!altHeld || !activeBraneId) return;
