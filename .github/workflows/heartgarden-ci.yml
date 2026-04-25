@@ -58,9 +58,17 @@ jobs:
         working-directory: heartgarden
         run: pnpm run verify:foundation-sync
 
-      - name: Lint and build
+      - name: Biome check (ultracite)
         working-directory: heartgarden
         run: pnpm run check
+
+      - name: Type check
+        working-directory: heartgarden
+        run: pnpm run check-types
+
+      - name: Build
+        working-directory: heartgarden
+        run: pnpm run build
 
       - name: Build Storybook
         working-directory: heartgarden
