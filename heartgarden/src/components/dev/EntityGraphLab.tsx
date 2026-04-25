@@ -2,10 +2,26 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { EntityGraphPixiCanvas } from "@/src/components/dev/EntityGraphPixiCanvas";
 import { EntityGraphPillCanvas } from "@/src/components/dev/EntityGraphPillCanvas";
+import { EntityGraphRfgCanvas } from "@/src/components/dev/EntityGraphRfgCanvas";
+import { EntityGraphSigmaCanvas } from "@/src/components/dev/EntityGraphSigmaCanvas";
+import type {
+  CameraAction,
+  GraphEdgeHover,
+  LayoutMap,
+  RendererMode,
+} from "@/src/components/dev/entity-graph-renderer-types";
 import styles from "@/src/components/dev/entity-graph-lab.module.css";
 import { Button } from "@/src/components/ui/Button";
-import { computeStableLayout } from "@/src/lib/entity-graph-stable-layout";
+import {
+  solveStableLayoutInWorker,
+  solveStableLayoutIncrementalInWorker,
+  solveStableLayoutStreamingInWorker,
+} from "@/src/lib/entity-graph-layout-client";
+import { buildEntityGraphModel } from "@/src/lib/entity-graph-model";
+import { getRelationStyle } from "@/src/lib/entity-graph-relation-style";
+import { buildSyntheticScenario } from "@/src/lib/entity-graph-synthetic";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 import {
   HEARTGARDEN_GLASS_PANEL,
@@ -85,37 +101,112 @@ function byTitle(a: GraphNode, b: GraphNode): number {
   return a.title.localeCompare(b.title);
 }
 
-export function EntityGraphLab() {
+const STRESS_1K = buildSyntheticScenario("stress-1k", "Stress 1k", 1000, 2500, 1);
+const STRESS_10K = buildSyntheticScenario("stress-10k", "Stress 10k", 10000, 25000, 2);
+
+const ALL_SCENARIOS: GraphScenario[] = [...SCENARIOS, STRESS_1K, STRESS_10K];
+
+function nextAction(
+  key: number,
+  type: CameraAction,
+): {
+  key: number;
+  type: CameraAction;
+} {
+  return { key: key + 1, type };
+}
+
+export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: RendererMode }) {
+  const storageKey = "heartgarden:entity-graph-lab:v1";
   const [scenarioKey, setScenarioKey] = useState(SCENARIOS[0]?.key ?? "");
   const [filter, setFilter] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [layout, setLayout] = useState<Map<string, { x: number; y: number }>>(new Map());
-  const [cameraResetKey, setCameraResetKey] = useState(0);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<GraphEdgeHover | null>(null);
+  const [layout, setLayout] = useState<LayoutMap>(new Map());
+  const [cameraAction, setCameraAction] = useState<{ key: number; type: CameraAction }>({
+    key: 0,
+    type: "reset",
+  });
+  const [showHint, setShowHint] = useState(true);
+  const [fps, setFps] = useState(0);
+  const [layoutMs, setLayoutMs] = useState(0);
+  const [neighborFocusIndex, setNeighborFocusIndex] = useState(0);
+  const [hoveredNeighborId, setHoveredNeighborId] = useState<string | null>(null);
+  const [multiSelectedIds, setMultiSelectedIds] = useState<Set<string>>(new Set());
+  const undoRef = useRef<Array<{ selectedId: string | null; selectedEdgeId: string | null }>>([]);
+  const redoRef = useRef<Array<{ selectedId: string | null; selectedEdgeId: string | null }>>([]);
 
-  const layoutByScenarioRef = useRef<Map<string, Map<string, { x: number; y: number }>>>(new Map());
-  const pinnedByScenarioRef = useRef<Map<string, Map<string, { x: number; y: number }>>>(new Map());
+  const layoutByScenarioRef = useRef<Map<string, LayoutMap>>(new Map());
+  const pinnedByScenarioRef = useRef<Map<string, LayoutMap>>(new Map());
 
   const scenario = useMemo(
-    () => SCENARIOS.find((candidate) => candidate.key === scenarioKey) ?? SCENARIOS[0],
+    () => ALL_SCENARIOS.find((candidate) => candidate.key === scenarioKey) ?? ALL_SCENARIOS[0],
     [scenarioKey],
   );
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        scenarioKey?: string;
+        pinnedByScenario?: Record<string, Array<[string, { x: number; y: number }]>>;
+      };
+      if (parsed.scenarioKey) setScenarioKey(parsed.scenarioKey);
+      if (parsed.pinnedByScenario) {
+        const restored = new Map<string, LayoutMap>();
+        for (const [key, entries] of Object.entries(parsed.pinnedByScenario)) {
+          restored.set(key, new Map(entries));
+        }
+        pinnedByScenarioRef.current = restored;
+      }
+    } catch {
+      // Ignore malformed local storage payloads.
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
     if (!scenario) return;
+    let cancelled = false;
     const cached = layoutByScenarioRef.current.get(scenario.key);
     if (cached) {
       setLayout(new Map(cached));
       return;
     }
-    const pins = pinnedByScenarioRef.current.get(scenario.key);
-    const next = computeStableLayout(scenario.nodes, scenario.edges, {
+    const started = performance.now();
+    const pins = pinnedByScenarioRef.current.get(scenario.key) ?? new Map();
+    void solveStableLayoutIncrementalInWorker(scenario.nodes, scenario.edges, {
       width: 1000,
       height: 1000,
       pinned: pins,
+    }).then((next) => {
+      if (cancelled) return;
+      layoutByScenarioRef.current.set(scenario.key, new Map(next));
+      setLayout(next);
+      setLayoutMs(Math.round(performance.now() - started));
     });
-    layoutByScenarioRef.current.set(scenario.key, new Map(next));
-    setLayout(next);
+    return () => {
+      cancelled = true;
+    };
   }, [scenario]);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    let frames = 0;
+    const loop = (now: number) => {
+      frames += 1;
+      if (now - last >= 500) {
+        setFps(Math.round((frames * 1000) / (now - last)));
+        frames = 0;
+        last = now;
+      }
+      raf = window.requestAnimationFrame(loop);
+    };
+    raf = window.requestAnimationFrame(loop);
+    return () => window.cancelAnimationFrame(raf);
+  }, []);
 
   const visibleNodes = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -139,13 +230,7 @@ export function EntityGraphLab() {
   );
 
   const visibleEdgeIds = useMemo(() => new Set(visibleEdges.map((edge) => edge.id)), [visibleEdges]);
-
-  useEffect(() => {
-    if (!selectedId) return;
-    if (!visibleNodeIds.has(selectedId)) {
-      setSelectedId(null);
-    }
-  }, [selectedId, visibleNodeIds]);
+  const model = useMemo(() => buildEntityGraphModel(visibleNodes, visibleEdges), [visibleNodes, visibleEdges]);
 
   const selectedNode = useMemo(
     () => scenario?.nodes.find((node) => node.id === selectedId) ?? null,
@@ -154,13 +239,8 @@ export function EntityGraphLab() {
 
   const neighborIds = useMemo(() => {
     if (!selectedNode) return [];
-    const connectedIds = new Set<string>();
-    for (const edge of visibleEdges) {
-      if (edge.source === selectedNode.id) connectedIds.add(edge.target);
-      if (edge.target === selectedNode.id) connectedIds.add(edge.source);
-    }
-    return Array.from(connectedIds);
-  }, [selectedNode, visibleEdges]);
+    return Array.from(model.neighborIdsByNode.get(selectedNode.id) ?? []);
+  }, [model.neighborIdsByNode, selectedNode]);
 
   const neighborIdSet = useMemo(() => new Set(neighborIds), [neighborIds]);
 
@@ -169,40 +249,66 @@ export function EntityGraphLab() {
     return visibleNodes.filter((node) => neighborIdSet.has(node.id)).sort(byTitle);
   }, [selectedNode, visibleNodes, neighborIdSet]);
 
+  useEffect(() => {
+    setNeighborFocusIndex(0);
+  }, [filter, scenarioKey, selectedId]);
+
   const activeEdgeIds = useMemo(() => {
     if (!selectedNode) return new Set<string>();
-    const ids = new Set<string>();
-    for (const edge of visibleEdges) {
-      if (edge.source === selectedNode.id || edge.target === selectedNode.id) {
-        ids.add(edge.id);
-      }
-    }
-    return ids;
-  }, [selectedNode, visibleEdges]);
+    return new Set(model.edgeIdsByNode.get(selectedNode.id) ?? []);
+  }, [model.edgeIdsByNode, selectedNode]);
 
-  const applyLayoutForScenario = (nextLayout: Map<string, { x: number; y: number }>) => {
+  const applyLayoutForScenario = (nextLayout: LayoutMap) => {
     if (!scenario) return;
     layoutByScenarioRef.current.set(scenario.key, new Map(nextLayout));
     setLayout(new Map(nextLayout));
   };
 
-  const handleReSolve = () => {
+  const handleReSolve = async () => {
     if (!scenario) return;
-    const pins = pinnedByScenarioRef.current.get(scenario.key);
-    const next = computeStableLayout(scenario.nodes, scenario.edges, {
+    const started = performance.now();
+    const pins = pinnedByScenarioRef.current.get(scenario.key) ?? new Map();
+    const next = await solveStableLayoutStreamingInWorker(
+      scenario.nodes,
+      scenario.edges,
+      {
       width: 1000,
       height: 1000,
       pinned: pins,
-    });
+      },
+      (progress) => {
+        applyLayoutForScenario(progress);
+      },
+    );
     applyLayoutForScenario(next);
+    setLayoutMs(Math.round(performance.now() - started));
   };
 
   const handlePinNode = (id: string, position: { x: number; y: number }) => {
     if (!scenario) return;
     const perScenario = pinnedByScenarioRef.current.get(scenario.key) ?? new Map();
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) {
+      perScenario.delete(id);
+      pinnedByScenarioRef.current.set(scenario.key, perScenario);
+      return;
+    }
     perScenario.set(id, position);
     pinnedByScenarioRef.current.set(scenario.key, perScenario);
   };
+
+  useEffect(() => {
+    const serializable: Record<string, Array<[string, { x: number; y: number }]>> = {};
+    for (const [key, pins] of pinnedByScenarioRef.current.entries()) {
+      serializable[key] = Array.from(pins.entries());
+    }
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        scenarioKey,
+        pinnedByScenario: serializable,
+      }),
+    );
+  }, [layout, scenarioKey, storageKey]);
 
   const visibleLayout = useMemo(() => {
     const next = new Map<string, { x: number; y: number }>();
@@ -213,8 +319,6 @@ export function EntityGraphLab() {
     return next;
   }, [layout, visibleNodes]);
 
-  if (!scenario) return null;
-
   const selectedVisible = selectedId ? visibleNodeIds.has(selectedId) : false;
   const selectedCount = selectedNeighbors.length;
   const selectedType = selectedNode?.entityType ?? selectedNode?.itemType ?? "node";
@@ -222,6 +326,111 @@ export function EntityGraphLab() {
   const selectedDescription = selectedNode
     ? `${selectedNode.itemType}${selectedNode.entityType ? ` · ${selectedNode.entityType}` : ""}`
     : "Select a node to inspect connected context.";
+  const rendererLabel = rendererMode.toUpperCase();
+  const edgeById = useMemo(() => new Map(visibleEdges.map((edge) => [edge.id, edge])), [visibleEdges]);
+  const selectedEdge = selectedEdgeId ? edgeById.get(selectedEdgeId) ?? null : null;
+  const applyFocus = (nextSelectedId: string | null, nextEdgeId: string | null) => {
+    undoRef.current.push({ selectedId, selectedEdgeId });
+    redoRef.current = [];
+    setSelectedId(nextSelectedId);
+    setSelectedEdgeId(nextEdgeId);
+  };
+
+  const relationGroups = useMemo(() => {
+    const groups = new Map<string, GraphNode[]>();
+    if (!selectedNode) return groups;
+    for (const neighbor of selectedNeighbors) {
+      const edge = visibleEdges.find(
+        (candidate) =>
+          (candidate.source === selectedNode.id && candidate.target === neighbor.id) ||
+          (candidate.source === neighbor.id && candidate.target === selectedNode.id),
+      );
+      const key = edge?.linkType ?? "related_to";
+      const list = groups.get(key) ?? [];
+      list.push(neighbor);
+      groups.set(key, list);
+    }
+    for (const list of groups.values()) {
+      list.sort(byTitle);
+    }
+    return groups;
+  }, [selectedNeighbors, selectedNode, visibleEdges]);
+
+  const shortestPathHops = useMemo(() => {
+    if (!selectedNode || !hoveredNeighborId) return null;
+    if (hoveredNeighborId === selectedNode.id) return 0;
+    const queue: Array<{ id: string; depth: number }> = [{ id: selectedNode.id, depth: 0 }];
+    const seen = new Set<string>([selectedNode.id]);
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const neighbors = model.neighborIdsByNode.get(current.id) ?? new Set<string>();
+      for (const neighbor of neighbors) {
+        if (seen.has(neighbor)) continue;
+        if (neighbor === hoveredNeighborId) return current.depth + 1;
+        seen.add(neighbor);
+        queue.push({ id: neighbor, depth: current.depth + 1 });
+      }
+    }
+    return null;
+  }, [hoveredNeighborId, model.neighborIdsByNode, selectedNode]);
+
+  const mutualNeighborCount = useMemo(() => {
+    if (!selectedNode || !hoveredNeighborId) return 0;
+    const a = model.neighborIdsByNode.get(selectedNode.id) ?? new Set<string>();
+    const b = model.neighborIdsByNode.get(hoveredNeighborId) ?? new Set<string>();
+    let count = 0;
+    for (const id of a) {
+      if (b.has(id)) count += 1;
+    }
+    return count;
+  }, [hoveredNeighborId, model.neighborIdsByNode, selectedNode]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          const next = redoRef.current.pop();
+          if (!next) return;
+          undoRef.current.push({ selectedId, selectedEdgeId });
+          setSelectedId(next.selectedId);
+          setSelectedEdgeId(next.selectedEdgeId);
+          return;
+        }
+        const prev = undoRef.current.pop();
+        if (!prev) return;
+        redoRef.current.push({ selectedId, selectedEdgeId });
+        setSelectedId(prev.selectedId);
+        setSelectedEdgeId(prev.selectedEdgeId);
+        return;
+      }
+      if (!selectedNode || selectedNeighbors.length === 0) return;
+      if (event.key === "j" || event.key === "J") {
+        event.preventDefault();
+        setNeighborFocusIndex((idx) => (idx + 1) % selectedNeighbors.length);
+      } else if (event.key === "k" || event.key === "K") {
+        event.preventDefault();
+        setNeighborFocusIndex((idx) => (idx - 1 + selectedNeighbors.length) % selectedNeighbors.length);
+      } else if (event.key === "Enter") {
+        const next = selectedNeighbors[neighborFocusIndex];
+        if (next) {
+          event.preventDefault();
+          applyFocus(next.id, null);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [neighborFocusIndex, selectedEdgeId, selectedId, selectedNeighbors, selectedNode]);
+
+  const CanvasComponent =
+    rendererMode === "pixi"
+      ? EntityGraphPixiCanvas
+      : rendererMode === "sigma"
+        ? EntityGraphSigmaCanvas
+        : rendererMode === "rfg"
+          ? EntityGraphRfgCanvas
+          : EntityGraphPillCanvas;
 
   return (
     <main className={styles.page}>
@@ -231,17 +440,21 @@ export function EntityGraphLab() {
             {visibleNodes.length === 0 ? (
               <div className="p-4 text-sm text-[var(--vigil-muted)]">No nodes match this filter.</div>
             ) : (
-              <EntityGraphPillCanvas
+              <CanvasComponent
                 nodes={visibleNodes}
                 edges={visibleEdges}
                 layout={visibleLayout}
                 selectedId={selectedVisible ? selectedId : null}
                 neighborIds={selectedVisible ? neighborIdSet : new Set<string>()}
                 activeEdgeIds={selectedVisible ? activeEdgeIds : new Set<string>()}
-                onSelect={setSelectedId}
+                degreeByNode={model.degreeByNode}
+                onSelect={(id) => applyFocus(id, selectedEdgeId)}
                 onLayoutChange={applyLayoutForScenario}
                 onNodePin={handlePinNode}
-                cameraResetKey={cameraResetKey}
+                cameraActionKey={cameraAction.key}
+                cameraActionType={cameraAction.type}
+                onEdgeHover={setHoveredEdge}
+                onEdgeSelect={(id) => applyFocus(selectedId, id)}
               />
             )}
           </div>
@@ -250,13 +463,14 @@ export function EntityGraphLab() {
         <header className={cx(HEARTGARDEN_GLASS_PANEL, styles.topChrome)}>
           <div className={styles.headerRow}>
             <span className={HEARTGARDEN_METADATA_LABEL}>Entity graph lab</span>
+            <span className={styles.summary}>{scenario.summary}</span>
             <div className={styles.controls}>
               <div
                 className={styles.scenarioButtons}
                 role="toolbar"
                 aria-label="Graph scenario selector"
               >
-                {SCENARIOS.map((item) => (
+                {ALL_SCENARIOS.map((item) => (
                   <Button
                     key={item.key}
                     size="sm"
@@ -265,8 +479,8 @@ export function EntityGraphLab() {
                     isActive={item.key === scenario.key}
                     onClick={() => {
                       setScenarioKey(item.key);
-                      setSelectedId(null);
-                      setCameraResetKey((current) => current + 1);
+                      applyFocus(null, null);
+                      setCameraAction((current) => nextAction(current.key, "reset"));
                     }}
                     aria-label={`Switch to ${item.label} scenario`}
                   >
@@ -284,6 +498,7 @@ export function EntityGraphLab() {
               <span className={styles.counts}>
                 {visibleLayout.size} nodes · {visibleEdgeIds.size} edges
               </span>
+              <span className={styles.counts}>Renderer: {rendererLabel}</span>
               <Button
                 size="sm"
                 variant="default"
@@ -297,12 +512,76 @@ export function EntityGraphLab() {
                 size="sm"
                 variant="default"
                 tone="glass"
-                onClick={() => setCameraResetKey((current) => current + 1)}
+                onClick={() => setCameraAction((current) => nextAction(current.key, "reset"))}
                 aria-label="Reset camera position and zoom"
               >
                 Reset camera
               </Button>
+              <Button
+                size="sm"
+                variant="default"
+                tone="glass"
+                onClick={() => setCameraAction((current) => nextAction(current.key, "frame-all"))}
+                aria-label="Frame all visible nodes"
+              >
+                Frame all
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                tone="glass"
+                onClick={() => setCameraAction((current) => nextAction(current.key, "frame-selection"))}
+                aria-label="Frame selected node and neighbors"
+                disabled={!selectedNode}
+              >
+                Frame selection
+              </Button>
+              {filter.trim().length > 0 ? (
+                <Button
+                  size="sm"
+                  variant="subtle"
+                  tone="menu"
+                  onClick={() => setFilter("")}
+                  aria-label="Clear current graph filter"
+                >
+                  Clear filter
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant="subtle"
+                tone="menu"
+                onClick={() => {
+                  pinnedByScenarioRef.current.clear();
+                  layoutByScenarioRef.current.clear();
+                  window.localStorage.removeItem(storageKey);
+                  void handleReSolve();
+                }}
+                aria-label="Reset persisted graph pins and cached layouts"
+              >
+                Reset lab
+              </Button>
             </div>
+            {showHint ? (
+              <button
+                type="button"
+                className={styles.hintStrip}
+                onClick={() => setShowHint(false)}
+                aria-label="Hide graph interaction hint"
+              >
+                drag canvas · wheel zoom · shift-drag node · alt-click selected node to unpin · esc clears focus
+              </button>
+            ) : (
+              <Button
+                size="sm"
+                variant="subtle"
+                tone="menu"
+                onClick={() => setShowHint(true)}
+                aria-label="Show graph interaction hints"
+              >
+                ?
+              </Button>
+            )}
           </div>
         </header>
 
@@ -317,24 +596,62 @@ export function EntityGraphLab() {
                   <span className={HEARTGARDEN_METADATA_LABEL}>Connections</span>
                   <strong>{selectedCount}</strong>
                 </div>
-                <div className={styles.neighbors}>
+                <div className={styles.relationGroups}>
+                  {Array.from(relationGroups.entries()).map(([relation, nodesForRelation]) => (
+                    <div key={relation} className={styles.relationGroup}>
+                      <span className={HEARTGARDEN_METADATA_LABEL}>{getRelationStyle(relation).label}</span>
+                      <div className={styles.neighbors}>
+                        {nodesForRelation.map((node) => {
+                          const flatIndex = selectedNeighbors.findIndex((candidate) => candidate.id === node.id);
+                          return (
+                            <Button
+                              key={node.id}
+                              size="sm"
+                              variant="subtle"
+                              tone="menu"
+                              isActive={flatIndex === neighborFocusIndex}
+                              className="w-full justify-start truncate"
+                              onClick={(event) => {
+                                if (event.shiftKey || event.metaKey || event.ctrlKey) {
+                                  setMultiSelectedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(node.id)) next.delete(node.id);
+                                    else next.add(node.id);
+                                    return next;
+                                  });
+                                  return;
+                                }
+                                applyFocus(node.id, null);
+                              }}
+                              onContextMenu={(event) => {
+                                event.preventDefault();
+                                if (event.shiftKey || event.metaKey || event.ctrlKey) {
+                                  setMultiSelectedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(node.id)) next.delete(node.id);
+                                    else next.add(node.id);
+                                    return next;
+                                  });
+                                  return;
+                                }
+                                applyFocus(node.id, null);
+                              }}
+                              onMouseEnter={() => setHoveredNeighborId(node.id)}
+                              onMouseLeave={() =>
+                                setHoveredNeighborId((current) => (current === node.id ? null : current))
+                              }
+                              aria-label={`Focus neighbor ${node.title}`}
+                            >
+                              {node.title}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                   {selectedNeighbors.length === 0 ? (
                     <p className={styles.panelHint}>No visible neighbors in current filter.</p>
-                  ) : (
-                    selectedNeighbors.map((node) => (
-                      <Button
-                        key={node.id}
-                        size="sm"
-                        variant="subtle"
-                        tone="menu"
-                        className="w-full justify-start truncate"
-                        onClick={() => setSelectedId(node.id)}
-                        aria-label={`Focus neighbor ${node.title}`}
-                      >
-                        {node.title}
-                      </Button>
-                    ))
-                  )}
+                  ) : null}
                 </div>
               </>
             ) : (
@@ -342,8 +659,35 @@ export function EntityGraphLab() {
                 Select a node to enter focus mode. Escape or click empty canvas resets focus.
               </p>
             )}
+            {selectedEdge ? (
+              <div className={styles.metaRow}>
+                <span className={HEARTGARDEN_METADATA_LABEL}>Edge</span>
+                <strong>{getRelationStyle(selectedEdge.linkType).label}</strong>
+              </div>
+            ) : null}
+            {hoveredNeighborId ? (
+              <div className={styles.metaRow}>
+                <span className={HEARTGARDEN_METADATA_LABEL}>Hovered path</span>
+                <strong>
+                  {shortestPathHops === null ? "unreachable" : `${shortestPathHops} hops`} · {mutualNeighborCount} mutual
+                </strong>
+              </div>
+            ) : null}
+            {multiSelectedIds.size > 0 ? (
+              <div className={styles.metaRow}>
+                <span className={HEARTGARDEN_METADATA_LABEL}>Multi-select</span>
+                <strong>{multiSelectedIds.size}</strong>
+              </div>
+            ) : null}
           </div>
         </aside>
+
+        {hoveredEdge ? (
+          <div className={styles.edgeTooltip}>{getRelationStyle(hoveredEdge.linkType).label}</div>
+        ) : null}
+        <div className={cx(HEARTGARDEN_GLASS_PANEL, styles.perfHud)}>
+          fps {fps} · layout {layoutMs}ms · nodes {visibleNodes.length.toLocaleString()}
+        </div>
       </div>
     </main>
   );

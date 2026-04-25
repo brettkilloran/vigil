@@ -9,6 +9,7 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 
+import { estimatePillGeometry } from "@/src/lib/entity-graph-pill-geometry";
 import type { GraphLayoutEdge, GraphLayoutNode } from "@/src/lib/graph-layout";
 
 type SimNode = GraphLayoutNode &
@@ -78,15 +79,6 @@ function deterministicSeedPoint(
     x: anchor.x + Math.cos(angle) * radius,
     y: anchor.y + Math.sin(angle) * radius,
   };
-}
-
-function estimatedPillCollisionRadius(title: string): number {
-  const visibleLen = Math.min(28, title.length);
-  const estCharPx = 6.4; // 10px uppercase Geist sans + tracking
-  const estWidth = Math.min(260, Math.max(64, visibleLen * estCharPx + 24));
-  const estHeight = 28;
-  const halfDiagonal = Math.hypot(estWidth / 2, estHeight / 2);
-  return halfDiagonal + 10;
 }
 
 function resolveResidualOverlaps(
@@ -173,7 +165,7 @@ export function computeStableLayout(
       y: start.y,
       fx: pinned?.x ?? null,
       fy: pinned?.y ?? null,
-      collisionRadius: estimatedPillCollisionRadius(node.title),
+      collisionRadius: estimatePillGeometry(node.title).collisionRadius,
     };
     byId.set(node.id, simNode);
     return simNode;
