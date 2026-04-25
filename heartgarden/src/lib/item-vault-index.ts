@@ -175,9 +175,9 @@ export async function reindexItemVault(
     .limit(1);
   if (!row) {
     return {
-      ok: false,
       chunks: 0,
       loreMetaUpdated: false,
+      ok: false,
       skipped: "not_found",
     };
   }
@@ -185,9 +185,9 @@ export async function reindexItemVault(
   if (!isEmbeddingApiConfigured()) {
     await clearItemEmbeddings(db, itemId);
     return {
-      ok: true,
       chunks: 0,
       loreMetaUpdated: false,
+      ok: true,
       skipped: "no_embedding_provider",
     };
   }
@@ -227,8 +227,8 @@ export async function reindexItemVault(
   const corpus = buildItemVaultCorpus(
     itemSearchableSourceFromRow({
       ...row,
-      loreSummary: loreSummaryEff,
       loreAliases: loreAliasesEff,
+      loreSummary: loreSummaryEff,
     })
   );
 
@@ -253,8 +253,8 @@ export async function reindexItemVault(
   if (chunksTruncated) {
     console.warn("[vault-index] chunks truncated", {
       itemId: row.id,
-      total: allChunks.length,
       kept: chunks.length,
+      total: allChunks.length,
     });
   }
 
@@ -264,11 +264,11 @@ export async function reindexItemVault(
       await db
         .update(items)
         .set({
-          searchBlob: corpus,
-          loreSummary: loreSummaryEff,
           loreAliases: loreAliasesEff,
           loreIndexedAt: new Date(),
           loreMetaSourceHash: requiredLoreMetaHash,
+          loreSummary: loreSummaryEff,
+          searchBlob: corpus,
         })
         .where(eq(items.id, itemId));
     } else {
@@ -281,7 +281,7 @@ export async function reindexItemVault(
     await rescanItemEntityMentions(db, itemId).catch(() => {
       /* best effort */
     });
-    return { ok: true, chunks: 0, loreMetaUpdated };
+    return { chunks: 0, loreMetaUpdated, ok: true };
   }
 
   /** Embed first so we never persist a new `search_blob` if embedding fails (audit: vector/index drift). */
@@ -289,14 +289,14 @@ export async function reindexItemVault(
 
   const sourceUpdatedAt = row.updatedAt ?? new Date();
   const values = chunks.map((chunk, i) => ({
-    itemId: row.id,
-    spaceId: row.spaceId,
     chunkIndex: i,
-    contentHash: sha256Hex(chunk.chunkText),
-    sourceUpdatedAt,
-    embedding: vectors[i]!,
     chunkText: chunk.chunkText,
+    contentHash: sha256Hex(chunk.chunkText),
+    embedding: vectors[i]!,
     headingPath: JSON.stringify(chunk.headingPath),
+    itemId: row.id,
+    sourceUpdatedAt,
+    spaceId: row.spaceId,
   }));
 
   await db.transaction(async (tx) => {
@@ -304,11 +304,11 @@ export async function reindexItemVault(
       await tx
         .update(items)
         .set({
-          searchBlob: corpus,
-          loreSummary: loreSummaryEff,
           loreAliases: loreAliasesEff,
           loreIndexedAt: new Date(),
           loreMetaSourceHash: requiredLoreMetaHash,
+          loreSummary: loreSummaryEff,
+          searchBlob: corpus,
         })
         .where(eq(items.id, itemId));
     } else {
@@ -324,7 +324,7 @@ export async function reindexItemVault(
     /* best effort */
   });
 
-  return { ok: true, chunks: chunks.length, loreMetaUpdated };
+  return { chunks: chunks.length, loreMetaUpdated, ok: true };
 }
 
 // REVIEW_2026-04-22-2 H6: cap upstream embedding/summary calls with bounded
@@ -372,5 +372,5 @@ export async function reindexSpaceVault(
     workers.push(runWorker());
   }
   await Promise.all(workers);
-  return { items: total, errors };
+  return { errors, items: total };
 }

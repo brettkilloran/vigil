@@ -102,8 +102,8 @@ export function coerceImportLinkType(
 
   if (normalized === "pin") {
     return {
-      linkType: "history",
       coerced: true,
+      linkType: "history",
       reason: `Link type "pin" is reserved for canvas ropes; imports use "history" instead.`,
     };
   }
@@ -112,20 +112,20 @@ export function coerceImportLinkType(
     !(CANONICAL_IMPORT_LINK_TYPES as readonly string[]).includes(normalized)
   ) {
     return {
-      linkType: "history",
       coerced: true,
+      linkType: "history",
       reason: `Unknown link type "${String(requested ?? "")}" — falling back to "history".`,
     };
   }
 
   const canonical = normalized as CanonicalImportLinkType;
   if (linkTypeAcceptsEndpoints(canonical, fromKind, toKind)) {
-    return { linkType: canonical, coerced: false };
+    return { coerced: false, linkType: canonical };
   }
 
   return {
-    linkType: "history",
     coerced: true,
+    linkType: "history",
     reason: `Link type "${canonical}" does not fit endpoints (${fromKind ?? "unknown"} → ${
       toKind ?? "unknown"
     }); coerced to "history".`,

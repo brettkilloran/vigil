@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+
 import { sql } from "drizzle-orm";
 
 import { loreImportJobs } from "@/src/db/schema";
@@ -36,17 +37,17 @@ export async function insertLoreImportJobForCompletedSyncPlan(args: {
 
   try {
     await args.db.insert(loreImportJobs).values({
-      id,
-      spaceId: args.spaceId,
-      importBatchId: args.importBatchId,
-      status: SYNC_READY_STATUS,
-      sourceText: args.sourceText,
-      fileName: args.fileName ?? null,
-      userContext: userContextRecord,
-      plan: args.plan as unknown as Record<string, unknown>,
-      error: null,
       createdAt: now,
+      error: null,
+      fileName: args.fileName ?? null,
+      id,
+      importBatchId: args.importBatchId,
+      plan: args.plan as unknown as Record<string, unknown>,
+      sourceText: args.sourceText,
+      spaceId: args.spaceId,
+      status: SYNC_READY_STATUS,
       updatedAt: now,
+      userContext: userContextRecord,
     });
   } catch (error) {
     const diag = readLoreImportJobInsertError(error);
@@ -82,8 +83,8 @@ export async function insertLoreImportJobForCompletedSyncPlan(args: {
       `);
     } catch (legacyError) {
       console.error("[lore-import] sync plan job legacy insert failed", {
-        importBatchId: args.importBatchId,
         firstError: diag.message,
+        importBatchId: args.importBatchId,
         legacyError: readLoreImportJobInsertError(legacyError),
       });
       throw error;

@@ -34,35 +34,35 @@ export interface LoreLinkTypeOption {
  */
 export const LORE_LINK_TYPE_OPTIONS: readonly LoreLinkTypeOption[] = [
   {
-    value: "pin",
-    label: "Pin thread",
     group: "canvas",
+    label: "Pin thread",
     menuLabel: "Pin thread (default rope)",
+    value: "pin",
   },
-  { value: "bond", label: "Bond", group: "relationship", menuLabel: "Bond" },
+  { group: "relationship", label: "Bond", menuLabel: "Bond", value: "bond" },
   {
-    value: "affiliation",
+    group: "relationship",
     label: "Affiliation",
-    group: "relationship",
     menuLabel: "Affiliation",
+    value: "affiliation",
   },
   {
-    value: "contract",
+    group: "relationship",
     label: "Contract",
-    group: "relationship",
     menuLabel: "Contract",
+    value: "contract",
   },
   {
-    value: "conflict",
+    group: "relationship",
     label: "Conflict",
-    group: "relationship",
     menuLabel: "Conflict",
+    value: "conflict",
   },
   {
-    value: "history",
-    label: "History",
     group: "relationship",
+    label: "History",
     menuLabel: "History",
+    value: "history",
   },
 ] as const;
 

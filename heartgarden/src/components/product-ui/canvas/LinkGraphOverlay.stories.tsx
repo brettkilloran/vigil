@@ -13,16 +13,16 @@ function LinkGraphPlayground() {
   return (
     <div
       style={{
+        background: "var(--sem-surface-base)",
+        color: "var(--sem-text-secondary)",
+        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+        height: "100vh",
+        padding: 24,
         position: "relative",
         width: "100vw",
-        height: "100vh",
-        background: "var(--sem-surface-base)",
-        padding: 24,
-        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-        color: "var(--sem-text-secondary)",
       }}
     >
-      <p style={{ marginBottom: 12, maxWidth: 520, lineHeight: 1.5 }}>
+      <p style={{ lineHeight: 1.5, marginBottom: 12, maxWidth: 520 }}>
         Full graph data loads from <code>/api/spaces/…/graph</code> in the Next
         app. In Storybook, use <strong>No cloud space</strong> for the
         empty-state copy, or open with a space id to see loading / error when
@@ -68,10 +68,10 @@ function LinkGraphPlayground() {
 }
 
 const meta = {
-  title: "Heartgarden/Product UI/Canvas/Link graph overlay",
   parameters: {
     layout: "fullscreen",
   },
+  title: "Heartgarden/Product UI/Canvas/Link graph overlay",
 } satisfies Meta;
 
 export default meta;

@@ -560,21 +560,14 @@ export function parseCharacterFocusDocumentHtml(
     portraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
 
   return {
-    portraitSrc,
-    portraitAlt,
-    portraitClass,
-    portraitUploadClass,
-    portraitUploadLabel,
-    portraitIsPlaceholder,
-    displayName: takeInnerHtml(
-      root,
-      '[data-hg-character-focus-field="name"]',
-      "<br>"
-    ),
-    role: takeInnerHtml(root, '[data-hg-character-focus-field="role"]', "<br>"),
     affiliation: takeInnerHtml(
       root,
       '[data-hg-character-focus-field="affiliation"]',
+      "<br>"
+    ),
+    displayName: takeInnerHtml(
+      root,
+      '[data-hg-character-focus-field="name"]',
       "<br>"
     ),
     nationality: takeInnerHtml(
@@ -587,6 +580,13 @@ export function parseCharacterFocusDocumentHtml(
       "[data-hg-character-focus-notes]",
       DEFAULT_NOTES_HTML
     ),
+    portraitAlt,
+    portraitClass,
+    portraitIsPlaceholder,
+    portraitSrc,
+    portraitUploadClass,
+    portraitUploadLabel,
+    role: takeInnerHtml(root, '[data-hg-character-focus-field="role"]', "<br>"),
   };
 }
 
@@ -656,21 +656,14 @@ export function readCharacterFocusPartsFromIdentityRow(
     portraitSrc === HEARTGARDEN_MEDIA_PLACEHOLDER_SRC;
 
   return {
-    portraitSrc,
-    portraitAlt,
-    portraitClass,
-    portraitUploadClass,
-    portraitUploadLabel,
-    portraitIsPlaceholder,
-    displayName: takeInnerHtml(
-      root,
-      '[data-hg-character-focus-field="name"]',
-      "<br>"
-    ),
-    role: takeInnerHtml(root, '[data-hg-character-focus-field="role"]', "<br>"),
     affiliation: takeInnerHtml(
       root,
       '[data-hg-character-focus-field="affiliation"]',
+      "<br>"
+    ),
+    displayName: takeInnerHtml(
+      root,
+      '[data-hg-character-focus-field="name"]',
       "<br>"
     ),
     nationality: takeInnerHtml(
@@ -679,6 +672,13 @@ export function readCharacterFocusPartsFromIdentityRow(
       "<br>"
     ),
     notesHtml,
+    portraitAlt,
+    portraitClass,
+    portraitIsPlaceholder,
+    portraitSrc,
+    portraitUploadClass,
+    portraitUploadLabel,
+    role: takeInnerHtml(root, '[data-hg-character-focus-field="role"]', "<br>"),
   };
 }
 

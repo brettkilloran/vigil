@@ -82,20 +82,20 @@ export function ArchitecturalLinksPanel({
         }
         if (data.ok) {
           setCloud({
-            outgoing: data.outgoing ?? [],
-            incoming: data.incoming ?? [],
             err: null,
+            incoming: data.incoming ?? [],
+            outgoing: data.outgoing ?? [],
           });
         } else {
           setCloud({
-            outgoing: [],
-            incoming: [],
             err: data.error ?? "Could not load links",
+            incoming: [],
+            outgoing: [],
           });
         }
       } catch {
         if (!cancelled) {
-          setCloud({ outgoing: [], incoming: [], err: "Could not load links" });
+          setCloud({ err: "Could not load links", incoming: [], outgoing: [] });
         }
       } finally {
         if (!cancelled) {
@@ -157,8 +157,8 @@ export function ArchitecturalLinksPanel({
         if (peer) {
           rows.push({
             peerId: peer.id,
-            title: peer.title,
             tag: menuLabelForLinkType(c.linkType ?? "pin"),
+            title: peer.title,
           });
         }
       } else if (c.targetEntityId === entityId) {
@@ -166,8 +166,8 @@ export function ArchitecturalLinksPanel({
         if (peer) {
           rows.push({
             peerId: peer.id,
-            title: peer.title,
             tag: menuLabelForLinkType(c.linkType ?? "pin"),
+            title: peer.title,
           });
         }
       }

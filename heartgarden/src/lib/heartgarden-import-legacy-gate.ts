@@ -20,9 +20,9 @@ export function heartgardenImportLegacyGoneResponse(
 ): Response {
   return Response.json(
     {
-      ok: false,
-      error: `Legacy lore import route ${routeLabel} is deprecated. Use /api/lore/import/jobs with the smart import review UI. Set HEARTGARDEN_IMPORT_LEGACY_ENABLED=1 to temporarily re-enable the legacy path.`,
       code: "legacy_import_disabled",
+      error: `Legacy lore import route ${routeLabel} is deprecated. Use /api/lore/import/jobs with the smart import review UI. Set HEARTGARDEN_IMPORT_LEGACY_ENABLED=1 to temporarily re-enable the legacy path.`,
+      ok: false,
     },
     { status: 410 }
   );

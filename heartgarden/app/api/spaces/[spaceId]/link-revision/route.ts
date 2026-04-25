@@ -11,7 +11,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -23,5 +23,5 @@ export async function GET(
   }
 
   const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
-  return Response.json({ ok: true, itemLinksRevision });
+  return Response.json({ itemLinksRevision, ok: true });
 }

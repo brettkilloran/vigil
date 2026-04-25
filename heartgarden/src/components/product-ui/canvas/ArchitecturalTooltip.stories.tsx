@@ -7,34 +7,34 @@ import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalBu
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 
 const surface = {
-  minHeight: 200,
-  display: "flex",
   alignItems: "center",
-  justifyContent: "center",
-  padding: 48,
   background: "var(--sem-surface-base)",
+  display: "flex",
+  justifyContent: "center",
+  minHeight: 200,
+  padding: 48,
 } as const;
 
 const meta: Meta<typeof ArchitecturalTooltip> = {
-  title: "Heartgarden/Product UI/Canvas/Tooltip",
+  argTypes: {
+    associateDescription: { control: "boolean" },
+    children: { control: false },
+    content: { control: "text" },
+    delayMs: { control: { max: 2000, min: 0, step: 40, type: "number" } },
+    disabled: { control: "boolean" },
+    side: { control: "radio", options: ["top", "bottom", "left", "right"] },
+  },
   component: ArchitecturalTooltip,
   parameters: {
-    layout: "fullscreen",
     docs: {
       description: {
         component:
           "Frosted chrome tooltip aligned with save popover tokens (`--cmp-tooltip-*`, `--ui-glass-*`). Renders in the vigil portal root; use for shell controls instead of the native `title` attribute.",
       },
     },
+    layout: "fullscreen",
   },
-  argTypes: {
-    content: { control: "text" },
-    side: { control: "radio", options: ["top", "bottom", "left", "right"] },
-    delayMs: { control: { type: "number", min: 0, max: 2000, step: 40 } },
-    disabled: { control: "boolean" },
-    associateDescription: { control: "boolean" },
-    children: { control: false },
-  },
+  title: "Heartgarden/Product UI/Canvas/Tooltip",
 };
 
 export default meta;
@@ -42,11 +42,11 @@ type Story = StoryObj<typeof ArchitecturalTooltip>;
 
 export const Playground: Story = {
   args: {
+    associateDescription: false,
     content: "Short hint — same glass vocabulary as the top save strip.",
-    side: "top",
     delayMs: 280,
     disabled: false,
-    associateDescription: false,
+    side: "top",
   },
   render: (args) => (
     <div style={surface}>
@@ -86,12 +86,12 @@ export const PlacementGrid: Story = {
     <div
       style={{
         ...surface,
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 72,
-        minHeight: 380,
         alignItems: "center",
+        display: "grid",
+        gap: 72,
+        gridTemplateColumns: "1fr 1fr",
         justifyItems: "center",
+        minHeight: 380,
       }}
     >
       {(["top", "right", "bottom", "left"] as const).map((side) => (

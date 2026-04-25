@@ -5,36 +5,36 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalNodeBody } from "@/src/components/foundation/ArchitecturalNodeCard";
 
 const meta: Meta<typeof ArchitecturalNodeBody> = {
-  title: "Heartgarden/Product UI/Canvas/Node body",
-  component: ArchitecturalNodeBody,
   args: {
-    nodeId: "story-node",
     documentVariant: "html",
-    html: "<h1>The ring does not forgive nostalgia.</h1><p>Body content with rich text html.</p>",
     editable: true,
-    spellCheck: false,
+    html: "<h1>The ring does not forgive nostalgia.</h1><p>Body content with rich text html.</p>",
+    nodeId: "story-node",
     onCommitPayload: () => {},
+    spellCheck: false,
   },
   argTypes: {
-    html: { control: "text" },
     editable: { control: "boolean" },
-    spellCheck: { control: "boolean" },
+    html: { control: "text" },
     onCommitPayload: { control: false },
+    spellCheck: { control: "boolean" },
   },
+  component: ArchitecturalNodeBody,
   decorators: [
     (Story) => (
       <div
         style={{
-          width: 360,
-          minHeight: 220,
           background: "var(--theme-default-bg)",
           color: "var(--theme-default-text)",
+          minHeight: 220,
+          width: 360,
         }}
       >
         <Story />
       </div>
     ),
   ],
+  title: "Heartgarden/Product UI/Canvas/Node body",
 };
 
 export default meta;

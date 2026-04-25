@@ -5,23 +5,23 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalFocusCloseButton } from "@/src/components/foundation/ArchitecturalFocusCloseButton";
 
 const meta: Meta<typeof ArchitecturalFocusCloseButton> = {
-  title: "Heartgarden/Product UI/Canvas/Focus close button",
-  component: ArchitecturalFocusCloseButton,
   args: {
     dirty: false,
+    onDiscard: () => {},
     onDone: () => {},
     onSave: () => {},
-    onDiscard: () => {},
   },
   argTypes: {
     dirty: { control: "boolean" },
+    onDiscard: { control: false },
     onDone: { control: false },
     onSave: { control: false },
-    onDiscard: { control: false },
   },
+  component: ArchitecturalFocusCloseButton,
   parameters: {
     layout: "centered",
   },
+  title: "Heartgarden/Product UI/Canvas/Focus close button",
 };
 
 export default meta;

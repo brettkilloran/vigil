@@ -107,9 +107,9 @@ export function verifyHeartgardenRealtimeRoomToken(
     return null;
   }
   return {
-    spaceId: raw.spaceId,
     exp: raw.exp,
     role: raw.role,
+    spaceId: raw.spaceId,
   };
 }
 

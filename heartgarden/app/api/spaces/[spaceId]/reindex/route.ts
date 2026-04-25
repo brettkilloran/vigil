@@ -28,13 +28,13 @@ export async function POST(
     const retry = vaultIndexRateLimitMeta.retry_after_seconds;
     return Response.json(
       {
-        ok: false,
         error: "Too many reindex requests. Try again in a minute.",
+        ok: false,
         rate_limit: vaultIndexRateLimitMeta,
       },
       {
-        status: 429,
         headers: { "Retry-After": String(retry) },
+        status: 429,
       }
     );
   }
@@ -60,14 +60,14 @@ export async function POST(
     }
   } catch {
     return Response.json(
-      { ok: false, error: "Expected JSON body with write_key" },
+      { error: "Expected JSON body with write_key", ok: false },
       { status: 400 }
     );
   }
 
   if (!expected || writeKey !== expected) {
     return Response.json(
-      { ok: false, error: "Invalid or missing write_key" },
+      { error: "Invalid or missing write_key", ok: false },
       { status: 401 }
     );
   }
@@ -75,7 +75,7 @@ export async function POST(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -97,15 +97,15 @@ export async function POST(
       .where(eq(items.spaceId, spaceId));
     const itemCount = row?.c ?? 0;
     return Response.json({
-      ok: true,
       dry_run: true,
-      space_id: spaceId,
-      item_count: itemCount,
-      refresh_lore_meta: refreshLoreMeta,
+      estimated_anthropic_lore_calls: refreshLoreMeta ? itemCount : 0,
       /** One embedding refresh attempt per item; lore meta uses Anthropic when refresh_lore_meta is true. */
       estimated_embedding_calls: itemCount,
-      estimated_anthropic_lore_calls: refreshLoreMeta ? itemCount : 0,
+      item_count: itemCount,
       note: "Commit by POST again with dry_run omitted or false.",
+      ok: true,
+      refresh_lore_meta: refreshLoreMeta,
+      space_id: spaceId,
     });
   }
 
@@ -113,8 +113,8 @@ export async function POST(
     refreshLoreMeta,
   });
   return Response.json({
-    ok: true,
-    items: result.items,
     errors: result.errors,
+    items: result.items,
+    ok: true,
   });
 }

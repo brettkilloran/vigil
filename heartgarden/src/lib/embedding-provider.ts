@@ -84,12 +84,12 @@ async function embedBatchWithRetry(
     let res: Response;
     try {
       res = await fetch("https://api.openai.com/v1/embeddings", {
-        method: "POST",
+        body: JSON.stringify({ input: batch, model }),
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ model, input: batch }),
+        method: "POST",
       });
     } catch (err) {
       if (attempt < maxRetries && isRetryableNetworkError(err)) {

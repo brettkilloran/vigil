@@ -85,10 +85,10 @@ function upsertBestSemanticMatch(
   }
   const heading = parseHeadingPath(row.headingPath).join(" > ").trim();
   bestByTarget.set(row.targetItemId, {
-    targetSpaceId: row.targetSpaceId,
     distance: row.distance,
-    snippet: row.snippet,
     headingPath: heading || null,
+    snippet: row.snippet,
+    targetSpaceId: row.targetSpaceId,
   });
 }
 
@@ -172,22 +172,22 @@ async function computeSemanticNeighborsForItem(
       continue;
     }
     upsertBestSemanticMatch(bestByTarget, {
+      distance,
+      headingPath: row.heading_path,
+      snippet,
       targetItemId,
       targetSpaceId,
-      distance,
-      snippet,
-      headingPath: row.heading_path,
     });
   }
   return [...bestByTarget.entries()]
     .sort((a, b) => a[1].distance - b[1].distance)
     .slice(0, SEMANTIC_MAX_TARGETS)
     .map(([targetItemId, data]) => ({
+      distance: data.distance,
+      headingPath: data.headingPath,
+      snippet: data.snippet,
       targetItemId,
       targetSpaceId: data.targetSpaceId,
-      distance: data.distance,
-      snippet: data.snippet,
-      headingPath: data.headingPath,
     }));
 }
 
@@ -221,11 +221,11 @@ export async function rescanItemEntityMentions(
 ): Promise<void> {
   const [row] = await db
     .select({
+      braneId: spaces.braneId,
       id: items.id,
-      title: items.title,
       searchBlob: items.searchBlob,
       spaceId: items.spaceId,
-      braneId: spaces.braneId,
+      title: items.title,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
@@ -247,10 +247,10 @@ export async function rescanItemEntityMentions(
   const previous = await db
     .select({
       id: entityMentions.id,
-      targetItemId: entityMentions.targetItemId,
       matchedTerm: entityMentions.matchedTerm,
       sourceKind: entityMentions.sourceKind,
       sourceSpaceId: entityMentions.sourceSpaceId,
+      targetItemId: entityMentions.targetItemId,
     })
     .from(entityMentions)
     .where(eq(entityMentions.sourceItemId, itemId));
@@ -285,12 +285,12 @@ export async function rescanItemEntityMentions(
     nextKeys.add(key);
     touchedSpaceIds.add(args.targetSpaceId);
     pendingUpserts.push({
-      targetItemId: args.targetItemId,
+      headingPath: args.headingPath,
       matchedTerm: args.matchedTerm,
-      sourceKind: args.sourceKind,
       mentionCount: args.mentionCount,
       snippet: args.snippet,
-      headingPath: args.headingPath,
+      sourceKind: args.sourceKind,
+      targetItemId: args.targetItemId,
     });
   };
 
@@ -315,10 +315,10 @@ export async function rescanItemEntityMentions(
     }
     const snippet = makeSnippet(blob, entry.term);
     matchedTerms.push({
-      term: entry.term,
-      itemIds: entry.itemIds,
       count,
+      itemIds: entry.itemIds,
       snippet,
+      term: entry.term,
     });
     for (const targetItemId of entry.itemIds) {
       if (targetItemId !== itemId) {
@@ -349,13 +349,13 @@ export async function rescanItemEntityMentions(
         continue;
       }
       applyMentionRow({
-        targetItemId,
-        targetSpaceId,
+        headingPath: null,
         matchedTerm: matched.term,
-        sourceKind: "term",
         mentionCount: matched.count,
         snippet: matched.snippet,
-        headingPath: null,
+        sourceKind: "term",
+        targetItemId,
+        targetSpaceId,
       });
     }
   }
@@ -371,13 +371,13 @@ export async function rescanItemEntityMentions(
     );
     for (const semantic of semanticNeighbors) {
       applyMentionRow({
-        targetItemId: semantic.targetItemId,
-        targetSpaceId: semantic.targetSpaceId,
+        headingPath: semantic.headingPath,
         matchedTerm: SEMANTIC_MENTION_TOKEN,
-        sourceKind: "semantic",
         mentionCount: mentionCountFromDistance(semantic.distance),
         snippet: semantic.snippet,
-        headingPath: semantic.headingPath,
+        sourceKind: "semantic",
+        targetItemId: semantic.targetItemId,
+        targetSpaceId: semantic.targetSpaceId,
       });
     }
   }
@@ -406,35 +406,35 @@ export async function rescanItemEntityMentions(
       // snippet, heading_path, source_space_id, updated_at in one shot.
       const now = new Date();
       const values = pendingUpserts.map((row) => ({
-        sourceItemId: itemId,
-        targetItemId: row.targetItemId,
+        braneId: sourceBraneId,
+        createdAt: now,
+        headingPath: row.headingPath,
         matchedTerm: row.matchedTerm,
         mentionCount: row.mentionCount,
         snippet: row.snippet,
-        headingPath: row.headingPath,
-        braneId: sourceBraneId,
-        sourceSpaceId,
+        sourceItemId: itemId,
         sourceKind: row.sourceKind,
-        createdAt: now,
+        sourceSpaceId,
+        targetItemId: row.targetItemId,
         updatedAt: now,
       }));
       await tx
         .insert(entityMentions)
         .values(values)
         .onConflictDoUpdate({
+          set: {
+            headingPath: sql`excluded.heading_path`,
+            mentionCount: sql`excluded.mention_count`,
+            snippet: sql`excluded.snippet`,
+            sourceSpaceId: sql`excluded.source_space_id`,
+            updatedAt: sql`excluded.updated_at`,
+          },
           target: [
             entityMentions.sourceItemId,
             entityMentions.targetItemId,
             entityMentions.matchedTerm,
             entityMentions.sourceKind,
           ],
-          set: {
-            mentionCount: sql`excluded.mention_count`,
-            snippet: sql`excluded.snippet`,
-            headingPath: sql`excluded.heading_path`,
-            sourceSpaceId: sql`excluded.source_space_id`,
-            updatedAt: sql`excluded.updated_at`,
-          },
         });
     }
     if (idsToDelete.length > 0) {

@@ -5,29 +5,29 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { CanvasViewportToast } from "@/src/components/foundation/CanvasViewportToast";
 
 const meta: Meta<typeof CanvasViewportToast> = {
-  title: "Heartgarden/Product UI/Canvas/Canvas viewport toast",
-  component: CanvasViewportToast,
   args: {
-    onShow: () => {},
     onDismiss: () => {},
+    onShow: () => {},
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: CanvasViewportToast,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          height: "100vh",
           position: "relative",
           width: "100vw",
-          height: "100vh",
-          background: "var(--sem-surface-base)",
         }}
       >
         <Story />
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Canvas/Canvas viewport toast",
 };
 
 export default meta;

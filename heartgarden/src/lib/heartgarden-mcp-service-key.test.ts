@@ -72,8 +72,8 @@ describe("mcpRequestAuthorizedByServiceKey", () => {
     process.env.HEARTGARDEN_MCP_SERVICE_KEY = "path-only-secret";
     process.env.HEARTGARDEN_MCP_ALLOW_QUERY_TOKEN = "1";
     const req = {
-      url: "/api/mcp?token=path-only-secret",
       headers: new Headers(),
+      url: "/api/mcp?token=path-only-secret",
     } as unknown as Request;
     expect(mcpRequestAuthorizedByServiceKey(req)).toBe(true);
   });

@@ -10,36 +10,32 @@ const bodyHtml = getLoreNodeSeedBodyHtml("faction", "v4");
 const factionRoster = createDefaultFactionRosterSeed();
 
 const meta: Meta<typeof ArchitecturalLoreFactionArchiveCanvasNode> = {
-  title: "Heartgarden/Product UI/Lore/Lore canvas · organization coverage",
-  component: ArchitecturalLoreFactionArchiveCanvasNode,
   args: {
-    id: "story-lore-faction-archive091",
-    tapeRotation: 4,
-    bodyHtml,
-    factionRoster,
     activeTool: "select",
+    bodyHtml,
     dragged: false,
-    selected: true,
+    factionRoster,
+    id: "story-lore-faction-archive091",
     onBodyCommit: () => {},
-    tapeVariant: "dark",
+    selected: true,
     showTape: true,
+    tapeRotation: 4,
+    tapeVariant: "dark",
   },
   argTypes: {
     activeTool: { control: "radio", options: ["select", "pan"] },
     onBodyCommit: { control: false },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalLoreFactionArchiveCanvasNode,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          minHeight: "100vh",
+          padding: 32,
           position: "relative",
           width: "100vw",
-          minHeight: "100vh",
-          background: "var(--sem-surface-base)",
-          padding: 32,
         }}
       >
         <div
@@ -52,6 +48,10 @@ const meta: Meta<typeof ArchitecturalLoreFactionArchiveCanvasNode> = {
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Lore/Lore canvas · organization coverage",
 };
 
 export default meta;

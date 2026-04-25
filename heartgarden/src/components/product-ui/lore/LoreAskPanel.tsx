@@ -3,6 +3,7 @@
 import { Sparkle, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
 import { Button } from "@/src/components/ui/Button";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
@@ -172,12 +173,12 @@ export function LoreAskPanel({
     };
 
     window.addEventListener("wheel", onWheel, {
-      passive: false,
       capture: true,
+      passive: false,
     });
     window.addEventListener("touchmove", onTouchMove, {
-      passive: false,
       capture: true,
+      passive: false,
     });
     return () => {
       window.removeEventListener("wheel", onWheel, { capture: true });
@@ -203,17 +204,17 @@ export function LoreAskPanel({
         limit?: number;
         stream?: boolean;
       } = {
-        question: q,
         limit: 18,
+        question: q,
         stream: true,
       };
       if (spaceScopedAllowed && scopeCurrentSpace && spaceId) {
         body.spaceId = spaceId;
       }
       const res = await fetch("/api/lore/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
       const contentType = res.headers.get("content-type") ?? "";
       if (res.ok && contentType.includes("text/event-stream") && res.body) {
@@ -352,10 +353,10 @@ export function LoreAskPanel({
     <div
       data-hg-portal-root="lore"
       style={{
-        position: "fixed",
         inset: 0,
-        zIndex: 1210,
         pointerEvents: "none",
+        position: "fixed",
+        zIndex: 1210,
       }}
     >
       <div

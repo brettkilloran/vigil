@@ -15,7 +15,7 @@ export function recordHeartgardenRealtimePublishMs(ms: number): void {
   if (!Number.isFinite(ms) || ms < 0) {
     return;
   }
-  recent.push({ ms, at: Date.now() });
+  recent.push({ at: Date.now(), ms });
   while (recent.length > MAX_SAMPLES) {
     recent.shift();
   }

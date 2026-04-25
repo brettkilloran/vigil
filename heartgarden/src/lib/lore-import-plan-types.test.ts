@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
+
 import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
 
 const BASE_PLAN = {
-  importBatchId: "11111111-1111-4111-8111-111111111111",
-  sourceCharCount: 123,
+  clarifications: [],
+  contradictions: [],
   folders: [],
+  importBatchId: "11111111-1111-4111-8111-111111111111",
   links: [],
   mergeProposals: [],
-  contradictions: [],
-  clarifications: [],
+  sourceCharCount: 123,
 };
 
 function makeLocationNote(overrides?: {
@@ -18,18 +19,18 @@ function makeLocationNote(overrides?: {
   detail?: string;
 }) {
   return {
-    clientId: "n1",
-    title: "Imported location",
-    canonicalEntityKind: "location",
-    summary: "short summary",
-    bodyText: "body",
     body: {
-      kind: "location",
-      name: overrides?.name ?? "A",
       context: overrides?.context,
       detail: overrides?.detail,
+      kind: "location",
+      name: overrides?.name ?? "A",
       notesParagraphs: [],
     },
+    bodyText: "body",
+    canonicalEntityKind: "location",
+    clientId: "n1",
+    summary: "short summary",
+    title: "Imported location",
   };
 }
 
@@ -39,9 +40,9 @@ describe("loreImportPlanSchema location top-field caps", () => {
       ...BASE_PLAN,
       notes: [
         makeLocationNote({
-          name: "N".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.name),
           context: "C".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.context),
           detail: "D".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.detail),
+          name: "N".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.name),
         }),
       ],
     });

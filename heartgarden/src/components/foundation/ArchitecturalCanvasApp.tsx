@@ -38,6 +38,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { flushSync } from "react-dom";
+
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 import { HeartgardenDocEditor } from "@/src/components/editing/HeartgardenDocEditor";
@@ -370,6 +371,7 @@ import {
 } from "@/src/lib/workspace-view-cache";
 import type { CameraState, CanvasItem } from "@/src/model/canvas-types";
 import { defaultCamera } from "@/src/model/canvas-types";
+
 import styles from "./ArchitecturalCanvasApp.module.css";
 import { VigilAppBootScreen } from "./VigilAppBootScreen";
 import { VigilAppChromeAudioMuteButton } from "./VigilAppChromeAudioMuteButton";
@@ -381,7 +383,7 @@ const VigilFlowRevealOverlay = dynamic(
     ).then((mod) => ({
       default: mod.VigilFlowRevealOverlay,
     })),
-  { ssr: false, loading: () => null }
+  { loading: () => null, ssr: false }
 );
 
 const MIN_ZOOM = 0.3;
@@ -595,7 +597,7 @@ function collectSpacesNeedingParentResync(
       continue;
     }
     if (a.parentSpaceId !== b.parentSpaceId) {
-      out.push({ spaceId: sid, parentSpaceId: b.parentSpaceId });
+      out.push({ parentSpaceId: b.parentSpaceId, spaceId: sid });
     }
   }
   return out;
@@ -644,28 +646,28 @@ function mapSelectionToUserContext(
 ): LoreImportUserContext {
   if (selection.mode === "one_note") {
     return {
-      granularity: "one_note",
-      orgMode: "nearby",
-      importScope: selection.scope,
-      freeformContext: "",
       docSourceKind: inferDocSourceKind(fileName),
+      freeformContext: "",
+      granularity: "one_note",
+      importScope: selection.scope,
+      orgMode: "nearby",
     };
   }
   if (selection.mode === "many_folders") {
     return {
-      granularity: "many",
-      orgMode: "folders",
-      importScope: selection.scope,
-      freeformContext: selection.contextText.trim(),
       docSourceKind: inferDocSourceKind(fileName),
+      freeformContext: selection.contextText.trim(),
+      granularity: "many",
+      importScope: selection.scope,
+      orgMode: "folders",
     };
   }
   return {
-    granularity: "many",
-    orgMode: "nearby",
-    importScope: selection.scope,
-    freeformContext: selection.contextText.trim(),
     docSourceKind: inferDocSourceKind(fileName),
+    freeformContext: selection.contextText.trim(),
+    granularity: "many",
+    importScope: selection.scope,
+    orgMode: "nearby",
   };
 }
 
@@ -862,16 +864,16 @@ function toHumanPhaseLabel(phase?: string): string {
     return "Starting…";
   }
   const labels: Record<string, string> = {
-    queued: "Queued on the server",
-    fallback_plan: "Planning locally",
     chunking: "Reading the document",
-    outline: "Building the outline",
-    vault_retrieval: "Gathering related vault context",
-    merge: "Merging entities and notes",
     clarify: "Drafting clarifications",
-    persist_review: "Saving the review queue",
     failed: "Planning failed",
+    fallback_plan: "Planning locally",
+    merge: "Merging entities and notes",
+    outline: "Building the outline",
+    persist_review: "Saving the review queue",
+    queued: "Queued on the server",
     ready: "Plan ready",
+    vault_retrieval: "Gathering related vault context",
   };
   return (
     labels[key] ??
@@ -1077,11 +1079,11 @@ async function parsePdfInBrowser(
       throw new Error("PDF did not contain readable text");
     }
     return {
-      text: chunks.join("").replace(/\0/g, "").trim(),
-      truncated: charCount >= LORE_IMPORT_LOCAL_PDF_MAX_CHARS,
+      failedPages,
       pageCount: doc.numPages,
       parsedPages,
-      failedPages,
+      text: chunks.join("").replace(/\0/g, "").trim(),
+      truncated: charCount >= LORE_IMPORT_LOCAL_PDF_MAX_CHARS,
     };
   } finally {
     await doc.destroy();
@@ -1208,12 +1210,12 @@ function reportItemLinkFailure(
   if (getNeonSyncSnapshot().cloudEnabled) {
     neonSyncReportAuxiliaryFailure(
       d ?? {
-        operation,
+        cause: "http",
         httpStatus: res.status,
         message: msg,
+        operation,
         responseSnippet:
           rawText.length > 800 ? `${rawText.slice(0, 800)}…` : rawText,
-        cause: "http",
       }
     );
   }
@@ -1223,9 +1225,9 @@ function reportItemLinkFailure(
 async function deleteItemLinkByDbId(dbLinkId: string): Promise<void> {
   try {
     await fetch("/api/item-links", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: dbLinkId }),
+      headers: { "Content-Type": "application/json" },
+      method: "DELETE",
     });
   } catch {
     /* keep local graph authoritative */
@@ -1243,27 +1245,27 @@ async function postItemLinkFromConnectionSnapshot(
   const targetItemId =
     targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
   if (!(isUuidLike(sourceItemId) && isUuidLike(targetItemId))) {
-    return { ok: false, dbLinkId: null };
+    return { dbLinkId: null, ok: false };
   }
   try {
     const res = await fetch("/api/item-links", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sourceItemId,
-        targetItemId,
-        linkType: c.linkType ?? "pin",
         color: c.color,
-        sourcePin: `${c.sourcePin.anchor}:${c.sourcePin.insetX}:${c.sourcePin.insetY}`,
-        targetPin: `${c.targetPin.anchor}:${c.targetPin.insetX}:${c.targetPin.insetY}`,
+        linkType: c.linkType ?? "pin",
         meta: {
-          sourcePinConfig: c.sourcePin,
-          targetPinConfig: c.targetPin,
           slackMultiplier: clampLinkMetaSlackMultiplier(
             c.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER
           ),
+          sourcePinConfig: c.sourcePin,
+          targetPinConfig: c.targetPin,
         },
+        sourceItemId,
+        sourcePin: `${c.sourcePin.anchor}:${c.sourcePin.insetX}:${c.sourcePin.insetY}`,
+        targetItemId,
+        targetPin: `${c.targetPin.anchor}:${c.targetPin.insetX}:${c.targetPin.insetY}`,
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const rawText = await res.text();
     const body = parseJsonBody(rawText) as {
@@ -1280,20 +1282,20 @@ async function postItemLinkFromConnectionSnapshot(
         body,
         logicalOk
       );
-      return { ok: false, dbLinkId: null };
+      return { dbLinkId: null, ok: false };
     }
-    return { ok: true, dbLinkId: body.link?.id ?? null };
+    return { dbLinkId: body.link?.id ?? null, ok: true };
   } catch (error) {
     const msg =
       error instanceof Error ? error.message : "Failed to persist link";
     if (getNeonSyncSnapshot().cloudEnabled) {
       neonSyncReportAuxiliaryFailure({
-        operation: "POST /api/item-links (history)",
-        message: msg,
         cause: "network",
+        message: msg,
+        operation: "POST /api/item-links (history)",
       });
     }
-    return { ok: false, dbLinkId: null };
+    return { dbLinkId: null, ok: false };
   }
 }
 
@@ -1302,17 +1304,17 @@ const ROOT_SPACE_ID = "root";
 /** Empty graph for `scenario === "default"` until bootstrap (and optional seed materialize) finishes — avoids seed → DB entity-id swap flashing. */
 function createBootstrapPendingGraph(): CanvasGraph {
   return {
+    connections: {},
+    entities: {},
     rootSpaceId: ROOT_SPACE_ID,
     spaces: {
       [ROOT_SPACE_ID]: {
+        entityIds: [],
         id: ROOT_SPACE_ID,
         name: ROOT_SPACE_DISPLAY_NAME,
         parentSpaceId: null,
-        entityIds: [],
       },
     },
-    entities: {},
-    connections: {},
   };
 }
 
@@ -1356,10 +1358,10 @@ function snapStackBoundsRect(r: {
   height: number;
 }): { left: number; top: number; width: number; height: number } {
   return {
+    height: Math.round(r.height),
     left: Math.round(r.left),
     top: Math.round(r.top),
     width: Math.round(r.width),
-    height: Math.round(r.height),
   };
 }
 
@@ -1388,15 +1390,15 @@ function unionBoundingRectFromStackLayers(
     return null;
   }
   return {
-    left: minX,
-    top: minY,
-    right: maxX,
     bottom: maxY,
-    width: maxX - minX,
     height: maxY - minY,
+    left: minX,
+    right: maxX,
+    toJSON: () => ({}),
+    top: minY,
+    width: maxX - minX,
     x: minX,
     y: minY,
-    toJSON: () => ({}),
   } as DOMRect;
 }
 
@@ -1529,7 +1531,7 @@ function viewportCssSizeForDefaultCamera(
         : typeof window === "undefined"
           ? 0
           : window.innerHeight;
-  return { width: Math.max(1, w), height: Math.max(1, h) };
+  return { height: Math.max(1, h), width: Math.max(1, w) };
 }
 
 function collectDeletionClosure(
@@ -1603,17 +1605,17 @@ function createRopeRuntime(
     const x = start.x + (end.x - start.x) * t;
     const y = start.y + (end.y - start.y) * t;
     points.push({
-      x,
-      y,
       oldX: x,
       oldY: y,
       pinned: i === 0 || i === CONNECTION_SEGMENTS,
+      x,
+      y,
     });
   }
   for (let i = 0; i < CONNECTION_SEGMENTS; i += 1) {
-    constraints.push({ p1: i, p2: i + 1, length: segmentLength * 1.1 });
+    constraints.push({ length: segmentLength * 1.1, p1: i, p2: i + 1 });
   }
-  return { points, constraints };
+  return { constraints, points };
 }
 
 function resolveConnectionPin(
@@ -1764,7 +1766,7 @@ function measureArchitecturalNodePlacement(
   if (w < 8 || h < 8) {
     return null;
   }
-  return { width: w, height: h };
+  return { height: h, width: w };
 }
 
 function tapeVariantForTheme(theme: ContentTheme): TapeVariant {
@@ -1844,9 +1846,9 @@ function folderPreviewTitles(
 function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
   return {
     ...graph,
-    spaces: { ...graph.spaces },
-    entities: { ...graph.entities },
     connections: { ...graph.connections },
+    entities: { ...graph.entities },
+    spaces: { ...graph.spaces },
   };
 }
 
@@ -1887,8 +1889,6 @@ function applyUnstackStackInSpace(
     const centeredCol = col - (cols - 1) / 2;
     next.entities[entity.id] = {
       ...entity,
-      stackId: null,
-      stackOrder: null,
       slots: {
         ...entity.slots,
         [spaceId]: {
@@ -1896,6 +1896,8 @@ function applyUnstackStackInSpace(
           y: Math.round(anchor.y + row * spacingY),
         },
       },
+      stackId: null,
+      stackOrder: null,
     };
   });
   return next;
@@ -1991,10 +1993,10 @@ function getStackSelectionState(
   const canUnstackWhollySelected = isUnionOfWhollySelectedStacks;
 
   return {
-    orderedContentIds: ordered,
-    whollySelectedStackIds,
     canMergeStacks,
     canUnstackWhollySelected,
+    orderedContentIds: ordered,
+    whollySelectedStackIds,
   };
 }
 
@@ -2550,7 +2552,7 @@ function buildStackModalLayout(
       (viewport.height - STACK_MODAL_PADDING * 2) / totalH
     );
     if (!best || scale > best.scale) {
-      best = { cols, rowHeights, rowSizes, totalW, totalH, scale };
+      best = { cols, rowHeights, rowSizes, scale, totalH, totalW };
     }
   }
 
@@ -2584,7 +2586,7 @@ function buildStackModalLayout(
         offsetX +
         (rowLeft + col * (STACK_MODAL_CARD_W + STACK_MODAL_GAP)) * best.scale;
       const y = offsetY + rowTop * best.scale;
-      layout[id] = { x, y, scale: best.scale };
+      layout[id] = { scale: best.scale, x, y };
     }
     rowTop += best.rowHeights[rowIndex]! + STACK_MODAL_GAP;
   });
@@ -2644,15 +2646,15 @@ function summarizeBootstrapError(
   detail: Extract<BootstrapFetchDetail, { ok: false }>
 ): WorkspaceBootstrapErrorSummary {
   if (detail.cause === "network") {
-    return { cause: "network", status: null, message: detail.message };
+    return { cause: "network", message: detail.message, status: null };
   }
   if (detail.cause === "parse") {
-    return { cause: "parse", status: detail.status, message: null };
+    return { cause: "parse", message: null, status: detail.status };
   }
   return {
     cause: detail.cause,
-    status: detail.status,
     message: "message" in detail && detail.message ? detail.message : null,
+    status: detail.status,
   };
 }
 
@@ -2852,13 +2854,13 @@ function parseHeartgardenBootStatus(
         ? "player"
         : null;
   return {
-    loaded: true,
     gateEnabled: Boolean(d.gateEnabled),
-    sessionValid: Boolean(d.sessionValid),
-    sessionTier: tier,
+    loaded: true,
     playerLayerMisconfigured: Boolean(
       d.gateEnabled && d.playerLayerMisconfigured
     ),
+    sessionTier: tier,
+    sessionValid: Boolean(d.sessionValid),
   };
 }
 
@@ -2866,14 +2868,14 @@ function parseHeartgardenBootStatus(
 function buildHeartgardenDemoLocalGraph() {
   return buildArchitecturalSeedGraph(
     {
-      taskItem: styles.taskItem,
       done: styles.done,
-      taskCheckbox: styles.taskCheckbox,
-      taskText: styles.taskText,
       mediaFrame: styles.mediaFrame,
       mediaImage: styles.mediaImage,
       mediaImageActions: styles.mediaImageActions,
       mediaUploadBtn: styles.mediaUploadBtn,
+      taskCheckbox: styles.taskCheckbox,
+      taskItem: styles.taskItem,
+      taskText: styles.taskText,
     },
     "default"
   );
@@ -2905,14 +2907,14 @@ export function ArchitecturalCanvasApp({
       ? createBootstrapPendingGraph()
       : buildArchitecturalSeedGraph(
           {
-            taskItem: styles.taskItem,
             done: styles.done,
-            taskCheckbox: styles.taskCheckbox,
-            taskText: styles.taskText,
             mediaFrame: styles.mediaFrame,
             mediaImage: styles.mediaImage,
             mediaImageActions: styles.mediaImageActions,
             mediaUploadBtn: styles.mediaUploadBtn,
+            taskCheckbox: styles.taskCheckbox,
+            taskItem: styles.taskItem,
+            taskText: styles.taskText,
           },
           scenario
         )
@@ -2967,7 +2969,7 @@ export function ArchitecturalCanvasApp({
   } | null>(null);
   const [lassoRectScreen, setLassoRectScreen] =
     useState<LassoRectScreen | null>(null);
-  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [viewportSize, setViewportSize] = useState({ height: 0, width: 0 });
   /** After fonts + layout frame; drives viewport fade-in and avoids first-paint hiccups. */
   const [canvasSurfaceReady, setCanvasSurfaceReady] = useState(false);
   /** For app route: hide canvas content until bootstrap resolves (single graph + camera commit). */
@@ -3017,7 +3019,7 @@ export function ArchitecturalCanvasApp({
     lastError: string | null;
     busy: boolean;
     idleTimer: ReturnType<typeof setTimeout> | null;
-  }>({ lastError: null, busy: false, idleTimer: null });
+  }>({ busy: false, idleTimer: null, lastError: null });
   /** Boot UI removed after exit animation (or immediately if reduced motion). */
   const [bootLayerDismissed, setBootLayerDismissed] = useState(
     () => scenario !== "default"
@@ -3027,11 +3029,11 @@ export function ArchitecturalCanvasApp({
   /** GET /api/heartgarden/boot — gate + cookie session (no secrets in state). */
   const [heartgardenBootApi, setHeartgardenBootApi] =
     useState<HeartgardenBootApiState>({
-      loaded: false,
       gateEnabled: false,
-      sessionValid: false,
-      sessionTier: null,
+      loaded: false,
       playerLayerMisconfigured: false,
+      sessionTier: null,
+      sessionValid: false,
     });
   /** Players PIN + `HEARTGARDEN_PLAYER_SPACE_ID`: scoped notes layer (server-enforced). */
   const isPlayersTier = useMemo(
@@ -3292,17 +3294,17 @@ export function ArchitecturalCanvasApp({
         : undefined;
     const findings = findingsRaw
       ? {
-          chunks: readProgressMetaNumber(findingsRaw, "chunks"),
-          folders: readProgressMetaNumber(findingsRaw, "folders"),
-          notes: readProgressMetaNumber(findingsRaw, "notes"),
-          candidates: readProgressMetaNumber(findingsRaw, "candidates"),
           candidateSpaces: readProgressMetaNumber(
             findingsRaw,
             "candidateSpaces"
           ),
-          mergeProposals: readProgressMetaNumber(findingsRaw, "mergeProposals"),
-          contradictions: readProgressMetaNumber(findingsRaw, "contradictions"),
+          candidates: readProgressMetaNumber(findingsRaw, "candidates"),
+          chunks: readProgressMetaNumber(findingsRaw, "chunks"),
           clarifications: readProgressMetaNumber(findingsRaw, "clarifications"),
+          contradictions: readProgressMetaNumber(findingsRaw, "contradictions"),
+          folders: readProgressMetaNumber(findingsRaw, "folders"),
+          mergeProposals: readProgressMetaNumber(findingsRaw, "mergeProposals"),
+          notes: readProgressMetaNumber(findingsRaw, "notes"),
           targetSpaceRoutes: readProgressMetaNumber(
             findingsRaw,
             "targetSpaceRoutes"
@@ -3353,16 +3355,16 @@ export function ArchitecturalCanvasApp({
           )
         : null;
     return {
+      detail,
+      etaLabel,
+      failed,
+      findingsSummary: findingsSummary || null,
       phase,
       phaseLabel,
-      detail,
-      queueFailureHint,
-      failed,
       pipelinePercent,
+      queueFailureHint,
       stepLabel,
       subphase,
-      findingsSummary: findingsSummary || null,
-      etaLabel,
     };
   }, [loreSmartPlanningProgress]);
   const [loreSmartIncludeSource, setLoreSmartIncludeSource] = useState(true);
@@ -3446,8 +3448,8 @@ export function ArchitecturalCanvasApp({
       return {
         ...prev,
         plan: collapseToOneNote(prev.plan, {
-          title,
           text: prev.sourceText,
+          title,
         }),
       };
     });
@@ -3503,9 +3505,9 @@ export function ArchitecturalCanvasApp({
       return;
     }
     const params = new URLSearchParams({
-      scope: loreSmartImportScope,
-      rootSpaceId: activeSpaceId,
       limit: query.length > 0 ? "50" : "20",
+      rootSpaceId: activeSpaceId,
+      scope: loreSmartImportScope,
     });
     if (query) {
       params.set("q", query);
@@ -3563,8 +3565,8 @@ export function ArchitecturalCanvasApp({
       void fetch(
         `/api/lore/import/jobs/${currentJobId}?spaceId=${encodeURIComponent(currentSpaceId)}`,
         {
-          method: "DELETE",
           headers: { "X-Heartgarden-Import-Attempt": "client-cancel" },
+          method: "DELETE",
         }
       ).catch(() => {});
     }
@@ -3592,7 +3594,7 @@ export function ArchitecturalCanvasApp({
       if (existing) {
         existing.events.push(event);
       } else {
-        groups.push({ phase, label, events: [event] });
+        groups.push({ events: [event], label, phase });
       }
     }
     return groups;
@@ -3638,17 +3640,17 @@ export function ArchitecturalCanvasApp({
   const loreSmartQuestionUi = useMemo(() => {
     if (!loreSmartReview) {
       return {
-        requiredTotal: 0,
-        requiredAnswered: 0,
-        optionalAnswered: 0,
-        requiredPending: 0,
-        percent: 0,
-        barPercent: 0,
-        ordered: [] as LoreImportClarificationItem[],
-        stableQuestionOrder: [] as LoreImportClarificationItem[],
-        focusQuestion: null as LoreImportClarificationItem | null,
-        questionsComplete: false,
         answeredCount: 0,
+        barPercent: 0,
+        focusQuestion: null as LoreImportClarificationItem | null,
+        optionalAnswered: 0,
+        ordered: [] as LoreImportClarificationItem[],
+        percent: 0,
+        questionsComplete: false,
+        requiredAnswered: 0,
+        requiredPending: 0,
+        requiredTotal: 0,
+        stableQuestionOrder: [] as LoreImportClarificationItem[],
         totalQuestions: 0,
         wizardBarPercent: 0,
       };
@@ -3738,17 +3740,17 @@ export function ArchitecturalCanvasApp({
             ? 0
             : Math.max(wizardBarPercentRaw, 6);
     return {
-      requiredTotal,
-      requiredAnswered,
-      optionalAnswered,
-      requiredPending,
-      percent,
-      barPercent,
-      ordered,
-      stableQuestionOrder,
-      focusQuestion,
-      questionsComplete,
       answeredCount,
+      barPercent,
+      focusQuestion,
+      optionalAnswered,
+      ordered,
+      percent,
+      questionsComplete,
+      requiredAnswered,
+      requiredPending,
+      requiredTotal,
+      stableQuestionOrder,
       totalQuestions,
       wizardBarPercent,
     };
@@ -3776,9 +3778,9 @@ export function ArchitecturalCanvasApp({
     useState<LoreImportPreparedSource | null>(null);
   const [loreImportSelection, setLoreImportSelection] =
     useState<LoreImportSelectionState>({
+      contextText: "",
       mode: "many_loose",
       scope: "current_subtree",
-      contextText: "",
     });
   const [cloudLinksBar, setCloudLinksBar] = useState(
     () => getNeonSyncSnapshot().cloudEnabled
@@ -3968,13 +3970,13 @@ export function ArchitecturalCanvasApp({
   const [richDocInsertChromeActive, setRichDocInsertChromeActive] =
     useState(false);
   const [formatCommandState, setFormatCommandState] = useState({
+    blockTag: "p" as "p" | "h1" | "h2" | "h3" | "blockquote",
     bold: false,
     italic: false,
-    underline: false,
-    strikeThrough: false,
-    unorderedList: false,
     orderedList: false,
-    blockTag: "p" as "p" | "h1" | "h2" | "h3" | "blockquote",
+    strikeThrough: false,
+    underline: false,
+    unorderedList: false,
   });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -4004,7 +4006,7 @@ export function ArchitecturalCanvasApp({
   const draggedNodeIdsRef = useRef<string[]>([]);
   const dragOffsetsRef = useRef<Record<string, { x: number; y: number }>>({});
   const viewRef = useRef({ scale: 1, tx: 0, ty: 0 });
-  const viewportSizeRef = useRef({ width: 0, height: 0 });
+  const viewportSizeRef = useRef({ height: 0, width: 0 });
   const lassoStartRef = useRef<{ x: number; y: number } | null>(null);
   /** Mirrors lasso rect for global mouseup; React state can lag one frame behind a quick click. */
   const lassoRectScreenRef = useRef<LassoRectScreen | null>(null);
@@ -4079,8 +4081,8 @@ export function ArchitecturalCanvasApp({
   const graphMergeQueueRef = useRef({
     debounceTimer: null as number | null,
     inFlight: false,
-    rerun: false,
     pendingToast: false,
+    rerun: false,
   });
   const mergeRemoteGraphEdgesImplRef = useRef<
     (showToastIfChanged: boolean) => Promise<void>
@@ -4402,10 +4404,10 @@ export function ArchitecturalCanvasApp({
         const term = hit.word.toLowerCase();
         // Hot path: imperative DOM updates avoid per-frame React re-renders.
         setAltHighlightRect({
+          height: Math.max(8, hit.rect.height),
           left: hit.rect.left,
           top: hit.rect.top,
           width: Math.max(8, hit.rect.width),
-          height: Math.max(8, hit.rect.height),
         });
         setAltGraphCardPos(hit.rect.left + 8, hit.rect.bottom + 8);
         if (term === lastTerm) {
@@ -4413,11 +4415,11 @@ export function ArchitecturalCanvasApp({
         }
         lastTerm = term;
         setAltGraphCard({
-          term,
-          mentions: [],
-          searchItems: [],
           loadingMentions: true,
           loadingSearch: true,
+          mentions: [],
+          searchItems: [],
+          term,
         });
         mentionAbort?.abort();
         searchAbort?.abort();
@@ -4429,8 +4431,8 @@ export function ArchitecturalCanvasApp({
             prev && prev.term === term
               ? {
                   ...prev,
-                  mentions: mentionCached.items,
                   loadingMentions: false,
+                  mentions: mentionCached.items,
                 }
               : prev
           );
@@ -4445,8 +4447,8 @@ export function ArchitecturalCanvasApp({
             prev && prev.term === term
               ? {
                   ...prev,
-                  searchItems: searchCached.items,
                   loadingSearch: false,
+                  searchItems: searchCached.items,
                 }
               : prev
           );
@@ -4475,7 +4477,7 @@ export function ArchitecturalCanvasApp({
                 altMentionCacheRef.current.set(term, { at: Date.now(), items });
                 setAltGraphCard((prev) =>
                   prev && prev.term === term
-                    ? { ...prev, mentions: items, loadingMentions: false }
+                    ? { ...prev, loadingMentions: false, mentions: items }
                     : prev
                 );
               }
@@ -4520,13 +4522,13 @@ export function ArchitecturalCanvasApp({
                 });
                 setAltGraphCard((prev) =>
                   prev && prev.term === term
-                    ? { ...prev, searchItems: items, loadingSearch: false }
+                    ? { ...prev, loadingSearch: false, searchItems: items }
                     : prev
                 );
               } else {
                 setAltGraphCard((prev) =>
                   prev && prev.term === term
-                    ? { ...prev, searchItems: [], loadingSearch: false }
+                    ? { ...prev, loadingSearch: false, searchItems: [] }
                     : prev
                 );
               }
@@ -4774,8 +4776,8 @@ export function ArchitecturalCanvasApp({
           isAiReviewPending(ent.entityMeta) &&
           !contentEntityHasHgAiPending(ent);
         const patch: Record<string, unknown> = {
-          contentText: contentPlainTextForEntity(ent),
           contentJson: buildContentJsonForContentEntity(ent),
+          contentText: contentPlainTextForEntity(ent),
         };
         if (clearAiMeta) {
           patch.entityMetaMerge = { aiReview: AI_REVIEW_CLEARED };
@@ -4885,15 +4887,15 @@ export function ArchitecturalCanvasApp({
               ? (e.height ?? FOLDER_CARD_HEIGHT)
               : (e.height ?? 280);
           if (Math.abs(width - prevW) > 0.5 || Math.abs(height - prevH) > 0.5) {
-            dimUpdates.push({ id, width, height });
+            dimUpdates.push({ height, id, width });
           }
         }
         const patch: Record<string, unknown> = {
+          height,
           spaceId: primary,
+          width,
           x: geo.x,
           y: geo.y,
-          width,
-          height,
         };
         if (e.kind === "content") {
           if (!e.stackId) {
@@ -4912,7 +4914,7 @@ export function ArchitecturalCanvasApp({
           for (const { id, width, height } of dimUpdates) {
             const ent = next.entities[id];
             if (ent) {
-              next.entities[id] = { ...ent, width, height };
+              next.entities[id] = { ...ent, height, width };
             }
           }
           return next;
@@ -4948,8 +4950,8 @@ export function ArchitecturalCanvasApp({
       return;
     }
     const snap: ArchitecturalUndoSnapshot = {
-      graph: cloneArchitecturalGraph(graphRef.current),
       activeSpaceId: activeSpaceIdRef.current,
+      graph: cloneArchitecturalGraph(graphRef.current),
       navigationPath: [...navigationPathRef.current],
       selectedNodeIds: [...selectedNodeIdsRef.current],
     };
@@ -5073,8 +5075,8 @@ export function ArchitecturalCanvasApp({
             next.connections[cid] = {
               ...cur,
               dbLinkId: result.dbLinkId,
-              syncState: "synced",
               syncError: null,
+              syncState: "synced",
             };
             return next;
           });
@@ -5087,8 +5089,8 @@ export function ArchitecturalCanvasApp({
             const next = shallowCloneGraph(prev);
             next.connections[cid] = {
               ...cur,
-              syncState: "error",
               syncError: "Thread restored but server returned no link id",
+              syncState: "error",
             };
             return next;
           });
@@ -5101,8 +5103,8 @@ export function ArchitecturalCanvasApp({
             const next = shallowCloneGraph(prev);
             next.connections[cid] = {
               ...cur,
-              syncState: "error",
               syncError: "Could not restore thread on server",
+              syncState: "error",
             };
             return next;
           });
@@ -5135,8 +5137,8 @@ export function ArchitecturalCanvasApp({
     }
     isApplyingHistoryRef.current = true;
     const current: ArchitecturalUndoSnapshot = {
-      graph: cloneArchitecturalGraph(graphRef.current),
       activeSpaceId: activeSpaceIdRef.current,
+      graph: cloneArchitecturalGraph(graphRef.current),
       navigationPath: [...navigationPathRef.current],
       selectedNodeIds: [...selectedNodeIdsRef.current],
     };
@@ -5205,8 +5207,8 @@ export function ArchitecturalCanvasApp({
     }
     isApplyingHistoryRef.current = true;
     const current: ArchitecturalUndoSnapshot = {
-      graph: cloneArchitecturalGraph(graphRef.current),
       activeSpaceId: activeSpaceIdRef.current,
+      graph: cloneArchitecturalGraph(graphRef.current),
       navigationPath: [...navigationPathRef.current],
       selectedNodeIds: [...selectedNodeIdsRef.current],
     };
@@ -5379,34 +5381,34 @@ export function ArchitecturalCanvasApp({
         targetEntity?.persistedItemId ?? targetEntity?.id ?? null;
       if (!(isUuidLike(sourceItemId) && isUuidLike(targetItemId))) {
         setConnectionSyncPatch(connectionId, {
-          syncState: "local-only",
           syncError: "No persisted UUID mapping for one or more cards.",
+          syncState: "local-only",
         });
         return;
       }
       setConnectionSyncPatch(connectionId, {
-        syncState: "syncing",
         syncError: null,
+        syncState: "syncing",
       });
       try {
         const res = await fetch("/api/item-links", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            sourceItemId,
-            targetItemId,
-            linkType: snap.linkType ?? "pin",
             color: snap.color,
-            sourcePin: `${snap.sourcePin.anchor}:${snap.sourcePin.insetX}:${snap.sourcePin.insetY}`,
-            targetPin: `${snap.targetPin.anchor}:${snap.targetPin.insetX}:${snap.targetPin.insetY}`,
+            linkType: snap.linkType ?? "pin",
             meta: {
-              sourcePinConfig: snap.sourcePin,
-              targetPinConfig: snap.targetPin,
               slackMultiplier: clampLinkMetaSlackMultiplier(
                 snap.slackMultiplier ?? DEFAULT_LINK_SLACK_MULTIPLIER
               ),
+              sourcePinConfig: snap.sourcePin,
+              targetPinConfig: snap.targetPin,
             },
+            sourceItemId,
+            sourcePin: `${snap.sourcePin.anchor}:${snap.sourcePin.insetX}:${snap.sourcePin.insetY}`,
+            targetItemId,
+            targetPin: `${snap.targetPin.anchor}:${snap.targetPin.insetX}:${snap.targetPin.insetY}`,
           }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
         const rawText = await res.text();
         const body = parseJsonBody(rawText) as {
@@ -5424,28 +5426,28 @@ export function ArchitecturalCanvasApp({
             logicalOk
           );
           setConnectionSyncPatch(connectionId, {
-            syncState: "error",
             syncError: msg,
+            syncState: "error",
           });
           return;
         }
         setConnectionSyncPatch(connectionId, {
-          syncState: "synced",
           dbLinkId: body.link?.id ?? snap.dbLinkId ?? null,
           syncError: null,
+          syncState: "synced",
         });
       } catch (error) {
         const msg =
           error instanceof Error ? error.message : "Failed to persist link";
         setConnectionSyncPatch(connectionId, {
-          syncState: "error",
           syncError: msg,
+          syncState: "error",
         });
         if (getNeonSyncSnapshot().cloudEnabled) {
           neonSyncReportAuxiliaryFailure({
-            operation: "POST /api/item-links",
-            message: msg,
             cause: "network",
+            message: msg,
+            operation: "POST /api/item-links",
           });
         }
       }
@@ -5461,14 +5463,14 @@ export function ArchitecturalCanvasApp({
       }
       try {
         const res = await fetch("/api/item-links", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: snap.dbLinkId,
             meta: {
               slackMultiplier: clampLinkMetaSlackMultiplier(slackMultiplier),
             },
           }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
         });
         const rawText = await res.text();
         const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
@@ -5482,14 +5484,14 @@ export function ArchitecturalCanvasApp({
             logicalOk
           );
           setConnectionSyncPatch(connectionId, {
-            syncState: "error",
             syncError: msg,
+            syncState: "error",
           });
           return;
         }
         setConnectionSyncPatch(connectionId, {
-          syncState: "synced",
           syncError: null,
+          syncState: "synced",
         });
       } catch (error) {
         const msg =
@@ -5497,14 +5499,14 @@ export function ArchitecturalCanvasApp({
             ? error.message
             : "Failed to sync thread slack";
         setConnectionSyncPatch(connectionId, {
-          syncState: "error",
           syncError: msg,
+          syncState: "error",
         });
         if (getNeonSyncSnapshot().cloudEnabled) {
           neonSyncReportAuxiliaryFailure({
-            operation: "PATCH /api/item-links (slack)",
-            message: msg,
             cause: "network",
+            message: msg,
+            operation: "PATCH /api/item-links (slack)",
           });
         }
       }
@@ -5519,15 +5521,15 @@ export function ArchitecturalCanvasApp({
       }
       try {
         await fetch("/api/item-links", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: connection.dbLinkId }),
+          headers: { "Content-Type": "application/json" },
+          method: "DELETE",
         });
       } catch (e) {
         neonSyncReportAuxiliaryFailure({
-          operation: "DELETE /api/item-links",
-          message: e instanceof Error ? e.message : "Network error",
           cause: "network",
+          message: e instanceof Error ? e.message : "Network error",
+          operation: "DELETE /api/item-links",
         });
       }
     },
@@ -5542,9 +5544,9 @@ export function ArchitecturalCanvasApp({
       }
       try {
         const res = await fetch("/api/item-links", {
-          method: "PATCH",
+          body: JSON.stringify({ color, id: snap.dbLinkId }),
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: snap.dbLinkId, color }),
+          method: "PATCH",
         });
         const rawText = await res.text();
         const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
@@ -5558,8 +5560,8 @@ export function ArchitecturalCanvasApp({
             logicalOk
           );
           setConnectionSyncPatch(connectionId, {
-            syncState: "error",
             syncError: msg,
+            syncState: "error",
           });
         }
       } catch (error) {
@@ -5568,14 +5570,14 @@ export function ArchitecturalCanvasApp({
             ? error.message
             : "Failed to sync connection color";
         setConnectionSyncPatch(connectionId, {
-          syncState: "error",
           syncError: msg,
+          syncState: "error",
         });
         if (getNeonSyncSnapshot().cloudEnabled) {
           neonSyncReportAuxiliaryFailure({
-            operation: "PATCH /api/item-links (color)",
-            message: msg,
             cause: "network",
+            message: msg,
+            operation: "PATCH /api/item-links (color)",
           });
         }
       }
@@ -5591,9 +5593,9 @@ export function ArchitecturalCanvasApp({
       }
       try {
         const res = await fetch("/api/item-links", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: snap.dbLinkId, linkType }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
         });
         const rawText = await res.text();
         const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
@@ -5607,22 +5609,22 @@ export function ArchitecturalCanvasApp({
             logicalOk
           );
           setConnectionSyncPatch(connectionId, {
-            syncState: "error",
             syncError: msg,
+            syncState: "error",
           });
         }
       } catch (error) {
         const msg =
           error instanceof Error ? error.message : "Failed to sync link type";
         setConnectionSyncPatch(connectionId, {
-          syncState: "error",
           syncError: msg,
+          syncState: "error",
         });
         if (getNeonSyncSnapshot().cloudEnabled) {
           neonSyncReportAuxiliaryFailure({
-            operation: "PATCH /api/item-links (linkType)",
-            message: msg,
             cause: "network",
+            message: msg,
+            operation: "PATCH /api/item-links (linkType)",
           });
         }
       }
@@ -5695,24 +5697,24 @@ export function ArchitecturalCanvasApp({
       }
       const now = Date.now();
       const newConnection: CanvasPinConnection = {
+        color: connectionColor,
+        createdAt: now,
         id: connectionId,
+        linkType: linkTypeForConnectionKind(connectionKind),
+        slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
         sourceEntityId,
-        targetEntityId,
         sourcePin:
           prev.entities[sourceEntityId]?.kind === "folder"
             ? CONNECTION_PIN_DEFAULT_FOLDER
             : CONNECTION_PIN_DEFAULT_CONTENT,
+        syncError: null,
+        syncState: "local-only",
+        targetEntityId,
         targetPin:
           prev.entities[targetEntityId]?.kind === "folder"
             ? CONNECTION_PIN_DEFAULT_FOLDER
             : CONNECTION_PIN_DEFAULT_CONTENT,
-        color: connectionColor,
-        linkType: linkTypeForConnectionKind(connectionKind),
-        slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
-        createdAt: now,
         updatedAt: now,
-        syncState: "local-only",
-        syncError: null,
       };
       setGraph((p) => {
         if (
@@ -5886,7 +5888,7 @@ export function ArchitecturalCanvasApp({
       ) {
         continue;
       }
-      patches.push({ id: conn.id, color: pair.color, linkType: pair.linkType });
+      patches.push({ color: pair.color, id: conn.id, linkType: pair.linkType });
     }
     if (patches.length === 0) {
       return;
@@ -5994,21 +5996,21 @@ export function ArchitecturalCanvasApp({
       const nextPaths: Record<string, string> = {};
       const activeIds = new Set<string>();
       const { tx, ty, scale: pinScale } = viewRef.current;
-      const pinView: ConnectionPinViewContext = { tx, ty, scale: pinScale };
+      const pinView: ConnectionPinViewContext = { scale: pinScale, tx, ty };
       const { width: vw, height: vh } = viewportSizeRef.current;
       const worldRectCullSim =
         vw > 0 && vh > 0
           ? worldRectFromViewport(tx, ty, pinScale, vw, vh, CULL_MARGIN_WORLD)
           : {
-              left: Number.NEGATIVE_INFINITY,
-              top: Number.NEGATIVE_INFINITY,
-              right: Number.POSITIVE_INFINITY,
               bottom: Number.POSITIVE_INFINITY,
+              left: Number.NEGATIVE_INFINITY,
+              right: Number.POSITIVE_INFINITY,
+              top: Number.NEGATIVE_INFINITY,
             };
       const cullExcSim = buildCullExceptionEntityIds({
-        selectedNodeIds: selectedNodeIdsRef.current,
-        draggedNodeIds: draggedNodeIdsRef.current,
         connectionSourceId: connectionSourceIdRef.current,
+        draggedNodeIds: draggedNodeIdsRef.current,
+        selectedNodeIds: selectedNodeIdsRef.current,
       });
       Object.values(graphSnap.connections).forEach((connection) => {
         const source = graphSnap.entities[connection.sourceEntityId];
@@ -6201,18 +6203,18 @@ export function ArchitecturalCanvasApp({
               .slice(0, 180)
           : undefined;
       out.push({
+        entityType: null,
         id: entity.id,
-        title: entity.title || "Untitled",
         itemType:
           entity.kind === "folder"
             ? "folder"
             : entity.theme === "task"
               ? "checklist"
               : entity.theme,
-        entityType: null,
+        snippet,
         spaceId: preferredSpaceId,
         spaceName: space.name,
-        snippet,
+        title: entity.title || "Untitled",
       });
     }
     return out;
@@ -6274,8 +6276,8 @@ export function ArchitecturalCanvasApp({
     const out = Array.from(stackGroups.entries())
       .filter(([, arr]) => arr.length > 1)
       .map(([stackId, arr]) => ({
-        stackId,
         entities: arr,
+        stackId,
         top: arr[arr.length - 1]!,
       }));
     return out.length === 0 ? EMPTY_COLLAPSED_STACKS : out;
@@ -6347,9 +6349,9 @@ export function ArchitecturalCanvasApp({
   const cullExceptionEntityIds = useMemo(
     () =>
       buildCullExceptionEntityIds({
-        selectedNodeIds,
-        draggedNodeIds,
         connectionSourceId,
+        draggedNodeIds,
+        selectedNodeIds,
       }),
     [selectedNodeIds, draggedNodeIds, connectionSourceId]
   );
@@ -6518,10 +6520,10 @@ export function ArchitecturalCanvasApp({
       });
       const pad = 10;
       next[stackId] = snapStackBoundsRect({
+        height: maxY - minY + pad * 2,
         left: minX - containerRect.left - pad,
         top: minY - containerRect.top - pad,
         width: maxX - minX + pad * 2,
-        height: maxY - minY + pad * 2,
       });
     });
     setStackFocusBoundsById((prev) =>
@@ -6571,10 +6573,10 @@ export function ArchitecturalCanvasApp({
       });
       const pad = 10;
       next[stackId] = snapStackBoundsRect({
+        height: maxY - minY + pad * 2,
         left: minX - containerRect.left - pad,
         top: minY - containerRect.top - pad,
         width: maxX - minX + pad * 2,
-        height: maxY - minY + pad * 2,
       });
     });
     setStackHoverBoundsById((prev) =>
@@ -6586,10 +6588,10 @@ export function ArchitecturalCanvasApp({
   const updateNodeBody = useCallback(
     (id: string, html: string, options?: { immediate?: boolean }) => {
       const normalizedHtml = normalizeChecklistMarkup(html, {
-        taskItem: styles.taskItem,
-        taskCheckbox: styles.taskCheckbox,
-        taskText: styles.taskText,
         done: styles.done,
+        taskCheckbox: styles.taskCheckbox,
+        taskItem: styles.taskItem,
+        taskText: styles.taskText,
       });
       queueGraphCommit(
         `content-body:${id}`,
@@ -6623,7 +6625,7 @@ export function ArchitecturalCanvasApp({
               ...p,
               entities: {
                 ...p.entities,
-                [id]: { ...e, bodyHtml: nextHtmlInner, bodyDoc: undefined },
+                [id]: { ...e, bodyDoc: undefined, bodyHtml: nextHtmlInner },
               },
             };
           });
@@ -6720,8 +6722,8 @@ export function ArchitecturalCanvasApp({
       }
       const merged = { ...ent, factionRoster: roster } as CanvasContentEntity;
       void patchItemWithVersion(entityId, {
-        contentText: contentPlainTextForEntity(merged),
         contentJson: buildContentJsonForContentEntity(merged),
+        contentText: contentPlainTextForEntity(merged),
       });
     },
     [patchItemWithVersion, recordUndoBeforeMutation]
@@ -6807,10 +6809,10 @@ export function ArchitecturalCanvasApp({
           const normalizedBody =
             merged.theme === "task"
               ? normalizeChecklistMarkup(merged.bodyHtml, {
-                  taskItem: styles.taskItem,
-                  taskCheckbox: styles.taskCheckbox,
-                  taskText: styles.taskText,
                   done: styles.done,
+                  taskCheckbox: styles.taskCheckbox,
+                  taskItem: styles.taskItem,
+                  taskText: styles.taskText,
                 })
               : merged.bodyHtml;
           const projected = projectBodyHtmlForFocus(merged, normalizedBody);
@@ -6819,8 +6821,8 @@ export function ArchitecturalCanvasApp({
         }
       }
       void patchItemWithVersion(entityId, {
-        contentText: contentPlainTextForEntity(merged),
         contentJson: buildContentJsonForContentEntity(merged),
+        contentText: contentPlainTextForEntity(merged),
         entityMetaMerge: { aiReview: AI_REVIEW_CLEARED },
       });
     },
@@ -6956,7 +6958,7 @@ export function ArchitecturalCanvasApp({
       e.stopPropagation();
       const ownerFromBtn = t.getAttribute("data-media-owner-id");
       if (ownerFromBtn) {
-        queueMediaUploadPick({ mode: "canvas", id: ownerFromBtn });
+        queueMediaUploadPick({ id: ownerFromBtn, mode: "canvas" });
         return;
       }
       const inFocusBody = t.closest(
@@ -6965,13 +6967,13 @@ export function ArchitecturalCanvasApp({
       const nodeHost = t.closest("[data-node-id]");
       if (inFocusBody && focusOpenRef.current && activeNodeIdRef.current) {
         queueMediaUploadPick({
-          mode: "focus",
           id: activeNodeIdRef.current,
+          mode: "focus",
         });
       } else if (nodeHost instanceof HTMLElement && nodeHost.dataset.nodeId) {
         queueMediaUploadPick({
-          mode: "canvas",
           id: nodeHost.dataset.nodeId,
+          mode: "canvas",
         });
       } else {
         return;
@@ -6995,18 +6997,18 @@ export function ArchitecturalCanvasApp({
       const spaceName = graph.spaces[spaceId]?.name ?? "Unknown";
       pushRecentItem({
         id: entity.id,
-        title: entity.title,
         itemType: entity.theme === "task" ? "checklist" : entity.theme,
         spaceId,
         spaceName,
+        title: entity.title,
       });
       const normalizedBody =
         entity.theme === "task"
           ? normalizeChecklistMarkup(entity.bodyHtml, {
-              taskItem: styles.taskItem,
-              taskCheckbox: styles.taskCheckbox,
-              taskText: styles.taskText,
               done: styles.done,
+              taskCheckbox: styles.taskCheckbox,
+              taskItem: styles.taskItem,
+              taskText: styles.taskText,
             })
           : entity.bodyHtml;
       setActiveNodeId(id);
@@ -7091,11 +7093,11 @@ export function ArchitecturalCanvasApp({
           ...prev.entities,
           [galleryNodeId]: {
             ...e,
-            title: nextTitle,
             bodyHtml: setArchitecturalMediaNotes(e.bodyHtml, notesHtml),
             entityMeta: clearAiMeta
               ? { ...e.entityMeta, aiReview: AI_REVIEW_CLEARED }
               : e.entityMeta,
+            title: nextTitle,
           },
         },
       };
@@ -7112,13 +7114,13 @@ export function ArchitecturalCanvasApp({
           return;
         }
         void patchItemWithVersion(gid, {
-          title: nextTitle,
-          contentText: htmlToPlainText(nextBodyPersist),
           contentJson: buildContentJsonForContentEntity({
             ...ent,
-            title: nextTitle,
             bodyHtml: nextBodyPersist,
+            title: nextTitle,
           }),
+          contentText: htmlToPlainText(nextBodyPersist),
+          title: nextTitle,
           ...(clearAiMeta
             ? { entityMetaMerge: { aiReview: AI_REVIEW_CLEARED } }
             : {}),
@@ -7250,10 +7252,10 @@ export function ArchitecturalCanvasApp({
     const normalizedFocusBody = hgDefault
       ? hgDocToHtml(focusDoc)
       : normalizeChecklistMarkup(focusBody, {
-          taskItem: styles.taskItem,
-          taskCheckbox: styles.taskCheckbox,
-          taskText: styles.taskText,
           done: styles.done,
+          taskCheckbox: styles.taskCheckbox,
+          taskItem: styles.taskItem,
+          taskText: styles.taskText,
         });
 
     if (activeNodeId) {
@@ -7288,9 +7290,9 @@ export function ArchitecturalCanvasApp({
           isAiReviewPending(entity.entityMeta) &&
           !contentEntityHasHgAiPending({
             ...entity,
-            title: nextTitle,
-            bodyHtml: nextBody,
             bodyDoc: nextBodyDoc,
+            bodyHtml: nextBody,
+            title: nextTitle,
           });
         return {
           ...prev,
@@ -7298,12 +7300,12 @@ export function ArchitecturalCanvasApp({
             ...prev.entities,
             [activeNodeId]: {
               ...entity,
-              title: nextTitle,
-              bodyHtml: nextBody,
               bodyDoc: nextBodyDoc,
+              bodyHtml: nextBody,
               entityMeta: clearAiMeta
                 ? { ...entity.entityMeta, aiReview: AI_REVIEW_CLEARED }
                 : entity.entityMeta,
+              title: nextTitle,
             },
           },
         };
@@ -7323,9 +7325,9 @@ export function ArchitecturalCanvasApp({
             );
           const merged: CanvasContentEntity = {
             ...ent,
-            title: nextTitle,
-            bodyHtml: nextBody,
             bodyDoc: hgDefault ? structuredClone(focusDoc) : undefined,
+            bodyHtml: nextBody,
+            title: nextTitle,
           };
           const clearAiMeta =
             isAiReviewPending(ent.entityMeta) &&
@@ -7340,9 +7342,9 @@ export function ArchitecturalCanvasApp({
               }
             : merged;
           void patchItemWithVersion(aid, {
-            title: nextTitle,
-            contentText: contentPlainTextForEntity(persistedMerged),
             contentJson: buildContentJsonForContentEntity(persistedMerged),
+            contentText: contentPlainTextForEntity(persistedMerged),
+            title: nextTitle,
             ...(clearAiMeta
               ? { entityMetaMerge: { aiReview: AI_REVIEW_CLEARED } }
               : {}),
@@ -7470,8 +7472,8 @@ export function ArchitecturalCanvasApp({
         }
         setGraph((prev) =>
           mergeHydratedDbConnections(prev, data.edges!, {
-            defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
             defaultContentPin: CONNECTION_PIN_DEFAULT_CONTENT,
+            defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
             fallbackColor: CONNECTION_DEFAULT_COLOR,
           })
         );
@@ -7589,27 +7591,27 @@ export function ArchitecturalCanvasApp({
   );
 
   useHeartgardenSpaceChangeSync({
-    enabled: collabNeonActive,
-    hasRemotePeers: presencePeers.length > 0,
-    refreshNonce: realtimeRefreshNonce,
-    activeSpaceId,
-    syncCursorRef,
-    focusOpenRef,
-    focusDirtyRef,
     activeNodeIdRef,
+    activeSpaceId,
+    enabled: collabNeonActive,
+    focusDirtyRef,
+    focusOpenRef,
+    hasRemotePeers: presencePeers.length > 0,
     inlineContentDirtyIdsRef,
-    savingContentIdsRef,
-    optimisticProtectedIdsRef,
-    remoteTombstoneExemptIdsRef,
-    setGraph,
     itemServerUpdatedAtRef,
     onAfterSpaceChangeMerge,
+    optimisticProtectedIdsRef,
+    refreshNonce: realtimeRefreshNonce,
+    remoteTombstoneExemptIdsRef,
+    savingContentIdsRef,
+    setGraph,
+    syncCursorRef,
   });
 
   const { connectedRef: realtimeConnectedRef } =
     useHeartgardenRealtimeSpaceSync({
-      enabled: collabNeonActive,
       activeSpaceId,
+      enabled: collabNeonActive,
       onInvalidate: (detail) => {
         setRealtimeRefreshNonce((n) => n + 1);
         if (detail?.reason === "item-links.changed") {
@@ -7707,10 +7709,10 @@ export function ArchitecturalCanvasApp({
   }, []);
 
   useHeartgardenPresenceHeartbeat({
-    enabled: collabNeonActive,
     activeSpaceId,
-    getPayload: presencePayloadForHeartbeat,
+    enabled: collabNeonActive,
     getIdentity: presenceIdentityForHeartbeat,
+    getPayload: presencePayloadForHeartbeat,
     onPeersUpdate: onPresencePeersUpdate,
   });
 
@@ -7733,8 +7735,8 @@ export function ArchitecturalCanvasApp({
       const identity = presenceIdentityForHeartbeat();
       void postPresencePayload(activeSpaceId, clientId, {
         camera: { x: v.tx, y: v.ty, zoom: v.scale },
-        pointer: localPointerWorldRef.current,
         displayName: identity.displayName,
+        pointer: localPointerWorldRef.current,
         sigil: identity.sigil,
       });
     };
@@ -7871,27 +7873,13 @@ export function ArchitecturalCanvasApp({
       return {
         enabled: true,
         excludeEntityId,
-        getLocalItems: () => {
-          const g = graphRef.current;
-          const sid = activeSpaceIdRef.current;
-          const ids = g.spaces[sid]?.entityIds ?? [];
-          const out: { id: string; title: string }[] = [];
-          for (const id of ids) {
-            const e = g.entities[id];
-            if (!e) {
-              continue;
-            }
-            out.push({ id, title: e.title || "Untitled" });
-          }
-          return out;
-        },
         fetchRemoteSuggest: cloudLinksBar
           ? async (q, signal) => {
               const sid = activeSpaceIdRef.current;
               if (!isUuidLike(sid)) {
                 return [];
               }
-              const params = new URLSearchParams({ q, mode: "hybrid" });
+              const params = new URLSearchParams({ mode: "hybrid", q });
               params.set("spaceId", sid);
               const res = await fetch(`/api/search/suggest?${params}`, {
                 signal,
@@ -7909,6 +7897,20 @@ export function ArchitecturalCanvasApp({
               }));
             }
           : undefined,
+        getLocalItems: () => {
+          const g = graphRef.current;
+          const sid = activeSpaceIdRef.current;
+          const ids = g.spaces[sid]?.entityIds ?? [];
+          const out: { id: string; title: string }[] = [];
+          for (const id of ids) {
+            const e = g.entities[id];
+            if (!e) {
+              continue;
+            }
+            out.push({ id, title: e.title || "Untitled" });
+          }
+          return out;
+        },
       };
     },
     [activeSpaceId, cloudLinksBar, isRestrictedLayer]
@@ -8036,8 +8038,8 @@ export function ArchitecturalCanvasApp({
         }
         setGraph((prev) =>
           mergeHydratedDbConnections(prev, data.edges!, {
-            defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
             defaultContentPin: CONNECTION_PIN_DEFAULT_CONTENT,
+            defaultFolderPin: CONNECTION_PIN_DEFAULT_FOLDER,
             fallbackColor: CONNECTION_DEFAULT_COLOR,
           })
         );
@@ -8053,7 +8055,7 @@ export function ArchitecturalCanvasApp({
   }, [activeSpaceId, canvasBootstrapResolved, scenario]);
 
   const connectionPinView = useMemo<ConnectionPinViewContext>(
-    () => ({ tx: translateX, ty: translateY, scale }),
+    () => ({ scale, tx: translateX, ty: translateY }),
     [translateX, translateY, scale]
   );
 
@@ -8165,14 +8167,14 @@ export function ArchitecturalCanvasApp({
   useEffect(() => {
     if (scenario !== "default") {
       const tokens = {
-        taskItem: styles.taskItem,
         done: styles.done,
-        taskCheckbox: styles.taskCheckbox,
-        taskText: styles.taskText,
         mediaFrame: styles.mediaFrame,
         mediaImage: styles.mediaImage,
         mediaImageActions: styles.mediaImageActions,
         mediaUploadBtn: styles.mediaUploadBtn,
+        taskCheckbox: styles.taskCheckbox,
+        taskItem: styles.taskItem,
+        taskText: styles.taskText,
       };
       setNeonWorkspaceOk(true);
       setWorkspaceViewFromCache(false);
@@ -8260,9 +8262,9 @@ export function ArchitecturalCanvasApp({
           return;
         }
         failure = {
-          ok: false,
           cause: "network",
           message: e instanceof Error ? e.message : String(e),
+          ok: false,
         };
       }
       if (failure) {
@@ -8394,7 +8396,7 @@ export function ArchitecturalCanvasApp({
   ]);
 
   useLayoutEffect(() => {
-    setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+    setViewportSize({ height: window.innerHeight, width: window.innerWidth });
     // Non-default shell: seed camera so world (0,0) is centered — `AGENTS.md` (Canvas camera).
     // Default scenario: leave translate to bootstrap, which applies camera in one batch.
     if (scenario !== "default") {
@@ -8409,7 +8411,7 @@ export function ArchitecturalCanvasApp({
     }
 
     const onResize = () => {
-      setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+      setViewportSize({ height: window.innerHeight, width: window.innerWidth });
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -8527,11 +8529,11 @@ export function ArchitecturalCanvasApp({
           return;
         }
         setHeartgardenBootApi({
-          loaded: true,
           gateEnabled: false,
-          sessionValid: false,
-          sessionTier: null,
+          loaded: true,
           playerLayerMisconfigured: false,
+          sessionTier: null,
+          sessionValid: false,
         });
       });
     return () => {
@@ -8616,15 +8618,15 @@ export function ArchitecturalCanvasApp({
     void (async () => {
       try {
         const res = await fetch("/api/heartgarden/boot", {
-          method: "DELETE",
           credentials: "include",
+          method: "DELETE",
         });
         if (!res.ok) {
           return;
         }
         setHeartgardenBootApi((prev) =>
           prev.loaded
-            ? { ...prev, sessionValid: false, sessionTier: null }
+            ? { ...prev, sessionTier: null, sessionValid: false }
             : prev
         );
       } catch {
@@ -8675,14 +8677,14 @@ export function ArchitecturalCanvasApp({
       reportFailure(
         createLoreImportFailureDetail({
           attemptId,
-          stage: "apply",
-          operation: "POST /api/lore/import/apply",
+          fileName: rev.fileName,
           message:
             "Importing to the canvas requires a connected Neon space (not local demo mode).",
-          fileName: rev.fileName,
-          spaceId: activeSpaceId,
+          operation: "POST /api/lore/import/apply",
           recommendedAction:
             "Switch to a connected Neon workspace before applying import changes.",
+          spaceId: activeSpaceId,
+          stage: "apply",
         })
       );
       return;
@@ -8696,33 +8698,33 @@ export function ArchitecturalCanvasApp({
     playVigilUiSound("button");
     try {
       const res = await fetch("/api/lore/import/apply", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Heartgarden-Import-Attempt": attemptId,
-        },
         body: JSON.stringify({
-          spaceId: activeSpaceId,
+          acceptedMergeProposalIds,
+          clarificationAnswers: loreSmartClarificationAnswers,
           importBatchId: planForApply.importBatchId,
-          plan: planForApply,
-          layout: { originX: center.x - 140, originY: center.y - 120 },
           includeSourceCard:
             planForApply.userContext?.granularity === "one_note"
               ? false
               : loreSmartIncludeSource,
+          layout: { originX: center.x - 140, originY: center.y - 120 },
+          plan: planForApply,
           sourceDocument:
             loreSmartIncludeSource && rev.sourceText.trim().length > 0
               ? {
+                  text: rev.sourceText,
                   title:
                     rev.sourceTitle?.trim() ||
                     rev.fileName ||
                     rev.plan.fileName,
-                  text: rev.sourceText,
                 }
               : undefined,
-          acceptedMergeProposalIds,
-          clarificationAnswers: loreSmartClarificationAnswers,
+          spaceId: activeSpaceId,
         }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Heartgarden-Import-Attempt": attemptId,
+        },
+        method: "POST",
       });
       const rawText = await res.text();
       const data = parseLoreImportJsonBody(rawText) as {
@@ -8737,19 +8739,19 @@ export function ArchitecturalCanvasApp({
         reportFailure(
           createLoreImportFailureDetail({
             attemptId,
-            stage: "apply",
-            operation: "POST /api/lore/import/apply",
+            fileName: rev.fileName,
+            httpStatus: res.status,
+            jobId: planForApply.importBatchId,
             message:
               typeof data.error === "string"
                 ? data.error
                 : `Apply failed (HTTP ${res.status})`,
-            responseSnippet: rawText,
-            httpStatus: res.status,
-            jobId: planForApply.importBatchId,
-            fileName: rev.fileName,
-            spaceId: activeSpaceId,
+            operation: "POST /api/lore/import/apply",
             recommendedAction:
               "Review required clarifications/merges and retry. If this persists, copy diagnostics and share it.",
+            responseSnippet: rawText,
+            spaceId: activeSpaceId,
+            stage: "apply",
           })
         );
         return;
@@ -8790,15 +8792,15 @@ export function ArchitecturalCanvasApp({
       reportFailure(
         createLoreImportFailureDetail({
           attemptId,
-          stage: "apply",
-          operation: "POST /api/lore/import/apply",
+          fileName: rev.fileName,
+          jobId: rev.plan.importBatchId,
           message:
             error instanceof Error ? error.message : "Apply request failed",
-          jobId: rev.plan.importBatchId,
-          fileName: rev.fileName,
-          spaceId: activeSpaceId,
+          operation: "POST /api/lore/import/apply",
           recommendedAction:
             "Retry apply once. If it fails again, copy support snapshot and include the import batch id.",
+          spaceId: activeSpaceId,
+          stage: "apply",
         })
       );
     } finally {
@@ -8877,12 +8879,12 @@ export function ArchitecturalCanvasApp({
           }
           next.entities[id] = {
             ...entity,
-            stackId,
-            stackOrder: topOrder - index,
             slots: {
               ...entity.slots,
               [spaceId]: { x: anchorX, y: anchorY },
             },
+            stackId,
+            stackOrder: topOrder - index,
           };
         });
         return next;
@@ -8951,10 +8953,10 @@ export function ArchitecturalCanvasApp({
           }
           const next = shallowCloneGraph(prev);
           next.spaces[newSpaceId] = {
+            entityIds: [],
             id: newSpaceId,
             name: f.title || "Untitled Folder",
             parentSpaceId,
-            entityIds: [],
           };
           next.entities[folderId] = { ...f, childSpaceId: newSpaceId };
           return next;
@@ -8985,10 +8987,10 @@ export function ArchitecturalCanvasApp({
           const parentSpaceId =
             next.spaces[activeSpaceId]?.id ?? next.rootSpaceId;
           next.spaces[resolved] = {
+            entityIds: [],
             id: resolved,
             name: folderCurrent.title || "Untitled Folder",
             parentSpaceId,
-            entityIds: [],
           };
           next.entities[folderId] = {
             ...folderCurrent,
@@ -9534,24 +9536,24 @@ export function ArchitecturalCanvasApp({
       const initials = presenceInitialsFromName(name);
       const sigil = presenceSigilLabel(p.sigil);
       return {
+        ariaLabel: presenceIdentityEnabled
+          ? `Follow collaborator ${name}`
+          : `Follow collaborator ending …${short}`,
         clientId: p.clientId,
-        kind: "peer",
+        displayName: presenceIdentityEnabled
+          ? name
+          : presenceFallbackAliasForClientId(p.clientId),
         emoji: presenceIdentityEnabled
           ? undefined
           : presenceEmojiForClientId(p.clientId),
         initials: initials.length > 0 ? initials : "??",
-        displayName: presenceIdentityEnabled
-          ? name
-          : presenceFallbackAliasForClientId(p.clientId),
+        kind: "peer",
+        muted: stale,
+        onFollow: () => handleFollowPresencePeer(p),
         sigilLabel: presenceIdentityEnabled ? sigil : undefined,
         title: presenceIdentityEnabled
           ? `${spaceName} · ${name} · last seen ${formatLastSeen(p.updatedAt)}${stale ? " · may be stale" : ""}`
           : `${spaceName} · …${short}${stale ? " · may be stale" : ""}`,
-        ariaLabel: presenceIdentityEnabled
-          ? `Follow collaborator ${name}`
-          : `Follow collaborator ending …${short}`,
-        muted: stale,
-        onFollow: () => handleFollowPresencePeer(p),
       };
     });
     if (!presenceIdentityEnabled || chips.length <= 3) {
@@ -9563,17 +9565,17 @@ export function ArchitecturalCanvasApp({
       return visible;
     }
     visible.push({
-      clientId: "__overflow__",
-      kind: "overflow",
-      initials: `+${hidden}`,
-      displayName: `${hidden} more`,
-      sigilLabel: undefined,
-      title: `${hidden} additional collaborators`,
       ariaLabel: `${hidden} additional collaborators`,
+      clientId: "__overflow__",
+      displayName: `${hidden} more`,
+      initials: `+${hidden}`,
+      kind: "overflow",
       muted: false,
       onFollow: () => {
         /* informational overflow chip */
       },
+      sigilLabel: undefined,
+      title: `${hidden} additional collaborators`,
     });
     return visible;
   }, [
@@ -9607,9 +9609,9 @@ export function ArchitecturalCanvasApp({
         }
         pushRecentFolder({
           id: folderId,
-          title: folder.title || "Untitled Folder",
           parentSpaceId,
           parentSpaceName: parentSpace?.name ?? "",
+          title: folder.title || "Untitled Folder",
         });
         enterSpace(childSpaceId);
       })();
@@ -9695,13 +9697,13 @@ export function ArchitecturalCanvasApp({
             )
           : stripLegacyHtmlToPlainText(focusBody);
       return {
-        title: focusTitle.trim(),
         bodyText: focusPlain,
         excludeItemId:
           ent.persistedItemId && isUuidLike(ent.persistedItemId)
             ? ent.persistedItemId
             : undefined,
         targetLabel: focusTitle.trim() || "Focused note",
+        title: focusTitle.trim(),
       };
     }
     if (selectedNodeIds.length === 1) {
@@ -9717,13 +9719,13 @@ export function ArchitecturalCanvasApp({
         return null;
       }
       return {
-        title: (ent.title ?? "").trim(),
         bodyText: contentPlainTextForEntity(ent),
         excludeItemId:
           ent.persistedItemId && isUuidLike(ent.persistedItemId)
             ? ent.persistedItemId
             : undefined,
         targetLabel: (ent.title ?? "").trim() || "Selected note",
+        title: (ent.title ?? "").trim(),
       };
     }
     return null;
@@ -9762,14 +9764,14 @@ export function ArchitecturalCanvasApp({
     playVigilUiSound("button");
     try {
       const res = await fetch("/api/lore/consistency/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          spaceId: activeSpaceId,
-          title: draft.title,
           bodyText: draft.bodyText,
           excludeItemId: draft.excludeItemId,
+          spaceId: activeSpaceId,
+          title: draft.title,
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
       const data = (await res.json()) as {
         ok?: boolean;
@@ -9838,40 +9840,40 @@ export function ArchitecturalCanvasApp({
   const paletteActions = useMemo<PaletteAction[]>(() => {
     const all: PaletteAction[] = [
       {
-        id: "create-note",
-        label: "Create note",
         hint: "Add a new note at center",
         icon: <FileText size={14} weight="bold" />,
+        id: "create-note",
+        label: "Create note",
       },
       {
-        id: "create-checklist",
-        label: "Create checklist",
         hint: "Add a checklist card",
         icon: <NotePencil size={14} weight="bold" />,
+        id: "create-checklist",
+        label: "Create checklist",
       },
       {
-        id: "create-media",
-        label: "Create image card",
         hint: "Add a media card",
         icon: <ImageSquare size={14} weight="bold" />,
+        id: "create-media",
+        label: "Create image card",
       },
       {
-        id: "create-folder",
-        label: "Create folder",
         hint: "Add folder and child space",
         icon: <Folder size={14} weight="bold" />,
+        id: "create-folder",
+        label: "Create folder",
       },
       {
-        id: "create-character",
-        label: "Create character",
         hint: `Lore character — ${loreVariantChoiceLabel("character", defaultLoreCardVariantForKind("character"))} layout`,
-        keywords: ["lore", "character", "person", "npc", "cast"],
         icon: <User size={14} weight="bold" />,
+        id: "create-character",
+        keywords: ["lore", "character", "person", "npc", "cast"],
+        label: "Create character",
       },
       {
-        id: "create-organization",
-        label: "Create organization",
         hint: `Lore organization — ${loreVariantChoiceLabel("faction", defaultLoreCardVariantForKind("faction"))} layout`,
+        icon: <UsersThree size={14} weight="bold" />,
+        id: "create-organization",
         keywords: [
           "lore",
           "organization",
@@ -9883,74 +9885,74 @@ export function ArchitecturalCanvasApp({
           "framed",
           "memo",
         ],
-        icon: <UsersThree size={14} weight="bold" />,
+        label: "Create organization",
       },
       {
-        id: "create-location",
-        label: "Create location",
         hint: `Lore place — ${loreVariantChoiceLabel("location", defaultLoreCardVariantForKind("location"))} layout`,
-        keywords: ["lore", "location", "place", "coverage", "map", "region"],
         icon: <MapPin size={14} weight="bold" />,
+        id: "create-location",
+        keywords: ["lore", "location", "place", "coverage", "map", "region"],
+        label: "Create location",
       },
       {
-        id: "export-json",
-        label: "Export graph JSON",
         hint: "Download the current graph",
         icon: <DownloadSimple size={14} weight="bold" />,
+        id: "export-json",
+        label: "Export graph JSON",
       },
       {
-        id: "toggle-canvas-effects",
-        label: "Toggle canvas effects",
         hint: "Flow transitions, vignette, ambient grid",
-        keywords: ["motion", "transition", "performance", "effects", "lean"],
         icon: <Lightning size={14} weight="bold" />,
+        id: "toggle-canvas-effects",
+        keywords: ["motion", "transition", "performance", "effects", "lean"],
+        label: "Toggle canvas effects",
       },
       {
-        id: "zoom-fit",
-        label: "Zoom to fit",
         hint: "Fit visible cards into the viewport",
         icon: <BoundingBox size={14} weight="bold" />,
+        id: "zoom-fit",
+        label: "Zoom to fit",
       },
       {
-        id: "zoom-selection",
-        label: "Zoom to selection",
         hint: "Frame selected cards",
-        keywords: ["selection", "frame", "focus"],
         icon: <Scan size={14} weight="bold" />,
+        id: "zoom-selection",
+        keywords: ["selection", "frame", "focus"],
+        label: "Zoom to selection",
       },
       {
-        id: "recenter",
-        label: "Recenter canvas",
         hint: modKeyHints.recenter,
         icon: <Stack size={14} weight="bold" />,
+        id: "recenter",
+        label: "Recenter canvas",
       },
       {
-        id: "ask-lore",
-        label: "Ask lore (AI)",
         hint: "Claude answers from searchable canvas text",
-        keywords: ["lore", "ai", "claude", "ask", "heartgarden", "question"],
         icon: <Sparkle size={14} weight="bold" />,
+        id: "ask-lore",
+        keywords: ["lore", "ai", "claude", "ask", "heartgarden", "question"],
+        label: "Ask lore (AI)",
       },
       {
-        id: "link-graph",
-        label: "Toggle link graph",
         hint: "Force-directed item_links view for this space",
-        keywords: ["graph", "links", "network", "edges"],
         icon: <Graph size={14} weight="bold" />,
+        id: "link-graph",
+        keywords: ["graph", "links", "network", "edges"],
+        label: "Toggle link graph",
       },
       {
-        id: "import-lore",
-        label: "Import lore file",
         hint: "PDF / DOCX / markdown → text + Claude entity extract (beta)",
-        keywords: ["import", "pdf", "docx", "markdown", "upload"],
         icon: <UploadSimple size={14} weight="bold" />,
+        id: "import-lore",
+        keywords: ["import", "pdf", "docx", "markdown", "upload"],
+        label: "Import lore file",
       },
       ...(vaultReviewChromeVisible
         ? [
             {
-              id: "check-lore-consistency",
-              label: "Vault review (consistency & tags)",
               hint: "Top-right panel — AI pass + label without moving cards",
+              icon: <SealCheck size={14} weight="bold" />,
+              id: "check-lore-consistency",
               keywords: [
                 "consistency",
                 "conflict",
@@ -9960,7 +9962,7 @@ export function ArchitecturalCanvasApp({
                 "tags",
                 "vault",
               ],
-              icon: <SealCheck size={14} weight="bold" />,
+              label: "Vault review (consistency & tags)",
             } satisfies PaletteAction,
           ]
         : []),
@@ -10052,8 +10054,8 @@ export function ArchitecturalCanvasApp({
     moveEntitiesToSpace(idsToMove, parentSpaceId, {
       anchor: anchorBelowFolder,
       forceLayout: true,
-      neonFlush: true,
       fromSpaceId: activeSpaceId,
+      neonFlush: true,
     });
     if (persistNeonRef.current) {
       persistNeonItemsLayout(idsToMove);
@@ -10222,9 +10224,9 @@ export function ArchitecturalCanvasApp({
       return null;
     }
     return {
-      value: e.folderColorScheme ?? null,
       onChange: (next: FolderColorSchemeId | null) =>
         setFolderColorScheme(id, next),
+      value: e.folderColorScheme ?? null,
     };
   }, [
     focusOpen,
@@ -10278,26 +10280,26 @@ export function ArchitecturalCanvasApp({
           const entityId = createId();
           const childSpaceId = createId();
           const optimisticFolder: CanvasFolderEntity = {
-            id: entityId,
-            title: "New Folder",
-            kind: "folder",
-            theme: "folder",
             childSpaceId,
-            rotation,
-            width: FOLDER_CARD_WIDTH,
             height: FOLDER_CARD_HEIGHT,
-            tapeRotation: 0,
+            id: entityId,
+            kind: "folder",
+            rotation,
+            slots: { [spaceId]: { x: fx, y: fy } },
             stackId: null,
             stackOrder: null,
-            slots: { [spaceId]: { x: fx, y: fy } },
+            tapeRotation: 0,
+            theme: "folder",
+            title: "New Folder",
+            width: FOLDER_CARD_WIDTH,
           };
           setGraph((prev) => {
             const next = shallowCloneGraph(prev);
             next.spaces[childSpaceId] = {
+              entityIds: [],
               id: childSpaceId,
               name: "New Folder",
               parentSpaceId: spaceId,
-              entityIds: [],
             };
             next.entities[entityId] = optimisticFolder;
             const sp = next.spaces[spaceId];
@@ -10339,14 +10341,14 @@ export function ArchitecturalCanvasApp({
                 return;
               }
               const itemRes = await apiCreateItem(spaceId, {
+                contentJson: buildContentJsonForFolderEntity(optimisticFolder),
+                height: FOLDER_CARD_HEIGHT,
                 id: entityId,
                 itemType: "folder",
+                title: "New Folder",
+                width: FOLDER_CARD_WIDTH,
                 x: fx,
                 y: fy,
-                width: FOLDER_CARD_WIDTH,
-                height: FOLDER_CARD_HEIGHT,
-                title: "New Folder",
-                contentJson: buildContentJsonForFolderEntity(optimisticFolder),
                 zIndex: nextZ,
               });
               if (!(itemRes.ok && itemRes.item)) {
@@ -10397,9 +10399,9 @@ export function ArchitecturalCanvasApp({
                 e instanceof Error ? e.message : "Create failed unexpectedly.";
               if (getNeonSyncSnapshot().cloudEnabled) {
                 neonSyncReportAuxiliaryFailure({
-                  operation: "createNewNode",
-                  message: msg,
                   cause: "network",
+                  message: msg,
+                  operation: "createNewNode",
                 });
               }
               window.alert(msg);
@@ -10457,12 +10459,12 @@ export function ArchitecturalCanvasApp({
         } else if (type === "media") {
           title = "Untitled photo";
           bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
-            mediaFrameClass: styles.mediaFrame,
             imageSlotImgClass: styles.imageSlotImg,
-            placeholderImgClasses:
-              heartgardenMediaPlaceholderClassList("neutral"),
+            mediaFrameClass: styles.mediaFrame,
             mediaImageActionsClass: styles.mediaImageActions,
             mediaUploadBtnClass: styles.mediaUploadBtn,
+            placeholderImgClasses:
+              heartgardenMediaPlaceholderClassList("neutral"),
             uploadLabel: mediaUploadActionLabel(false),
           });
         } else if (type === "task") {
@@ -10475,27 +10477,27 @@ export function ArchitecturalCanvasApp({
         }
 
         const optimisticNode: CanvasContentEntity = {
+          bodyHtml,
+          height: 280,
           id: entityId,
-          title,
           kind: "content",
           rotation,
-          width,
-          height: 280,
-          theme: contentTheme,
+          tapeRotation,
           tapeVariant:
             loreCard == null
               ? tapeVariantForTheme(contentTheme)
               : tapeVariantForLoreCard(loreCard.kind, loreCard.variant),
-          tapeRotation,
-          bodyHtml,
+          theme: contentTheme,
+          title,
+          width,
           ...(bodyDoc == null ? {} : { bodyDoc }),
           loreCard,
           ...(loreCard?.kind === "faction"
             ? { factionRoster: createDefaultFactionRosterSeed() }
             : {}),
+          slots: { [spaceId]: { x, y } },
           stackId: null,
           stackOrder: null,
-          slots: { [spaceId]: { x, y } },
         };
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
@@ -10511,15 +10513,15 @@ export function ArchitecturalCanvasApp({
         });
 
         const createItemBody: Record<string, unknown> = {
+          contentJson: buildContentJsonForContentEntity(optimisticNode),
+          contentText: contentPlainTextForEntity(optimisticNode),
+          height: 280,
           id: entityId,
           itemType: architecturalItemType(optimisticNode),
+          title,
+          width,
           x,
           y,
-          width,
-          height: 280,
-          title,
-          contentText: contentPlainTextForEntity(optimisticNode),
-          contentJson: buildContentJsonForContentEntity(optimisticNode),
           zIndex: nextZ,
         };
         if (loreCard) {
@@ -10552,9 +10554,9 @@ export function ArchitecturalCanvasApp({
                 "Could not display the new item after create (unexpected response).";
               if (getNeonSyncSnapshot().cloudEnabled) {
                 neonSyncReportAuxiliaryFailure({
-                  operation: "createNewNode (content map)",
-                  message: msg,
                   cause: "client",
+                  message: msg,
+                  operation: "createNewNode (content map)",
                 });
               }
               return;
@@ -10573,9 +10575,9 @@ export function ArchitecturalCanvasApp({
               e instanceof Error ? e.message : "Create failed unexpectedly.";
             if (getNeonSyncSnapshot().cloudEnabled) {
               neonSyncReportAuxiliaryFailure({
-                operation: "createNewNode",
-                message: msg,
                 cause: "network",
+                message: msg,
+                operation: "createNewNode",
               });
             }
             window.alert(msg);
@@ -10601,26 +10603,26 @@ export function ArchitecturalCanvasApp({
         setGraph((prev) => {
           const next = shallowCloneGraph(prev);
           next.spaces[childSpaceId] = {
+            entityIds: [],
             id: childSpaceId,
             name: "New Folder",
             parentSpaceId: activeSpaceId,
-            entityIds: [],
           };
           next.entities[entityId] = {
-            id: entityId,
-            title: "New Folder",
-            kind: "folder",
-            theme: "folder",
             childSpaceId,
-            rotation,
-            width: FOLDER_CARD_WIDTH,
             height: FOLDER_CARD_HEIGHT,
-            tapeRotation: 0,
-            stackId: null,
-            stackOrder: null,
+            id: entityId,
+            kind: "folder",
+            rotation,
             slots: {
               [activeSpaceId]: { x: fx, y: fy },
             },
+            stackId: null,
+            stackOrder: null,
+            tapeRotation: 0,
+            theme: "folder",
+            title: "New Folder",
+            width: FOLDER_CARD_WIDTH,
           };
           const activeSpace = next.spaces[activeSpaceId];
           if (activeSpace) {
@@ -10672,12 +10674,12 @@ export function ArchitecturalCanvasApp({
       } else if (type === "media") {
         title = "Untitled photo";
         bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
-          mediaFrameClass: styles.mediaFrame,
           imageSlotImgClass: styles.imageSlotImg,
-          placeholderImgClasses:
-            heartgardenMediaPlaceholderClassList("neutral"),
+          mediaFrameClass: styles.mediaFrame,
           mediaImageActionsClass: styles.mediaImageActions,
           mediaUploadBtnClass: styles.mediaUploadBtn,
+          placeholderImgClasses:
+            heartgardenMediaPlaceholderClassList("neutral"),
           uploadLabel: mediaUploadActionLabel(false),
         });
       } else if (type === "task") {
@@ -10690,29 +10692,29 @@ export function ArchitecturalCanvasApp({
       }
 
       const nextNode = {
+        bodyHtml,
+        height: 280,
         id,
-        title,
         kind: "content" as const,
         rotation,
-        width,
-        height: 280,
-        theme: contentTheme,
+        tapeRotation,
         tapeVariant:
           loreCard == null
             ? tapeVariantForTheme(contentTheme)
             : tapeVariantForLoreCard(loreCard.kind, loreCard.variant),
-        tapeRotation,
-        bodyHtml,
+        theme: contentTheme,
+        title,
+        width,
         ...(bodyDoc == null ? {} : { bodyDoc }),
         loreCard,
         ...(loreCard?.kind === "faction"
           ? { factionRoster: createDefaultFactionRosterSeed() }
           : {}),
-        stackId: null,
-        stackOrder: null,
         slots: {
           [activeSpaceId]: { x, y },
         },
+        stackId: null,
+        stackOrder: null,
       };
       setGraph((prev) => {
         const next = shallowCloneGraph(prev);
@@ -10760,31 +10762,31 @@ export function ArchitecturalCanvasApp({
       if (persistNeonRef.current && isUuidLike(activeSpaceId)) {
         const spaceId = activeSpaceId;
         const tempNode: CanvasContentEntity = {
+          bodyHtml,
+          height: 280,
           id: "",
-          title,
           kind: "content",
           rotation,
-          width: UNIFIED_NODE_WIDTH,
-          height: 280,
-          theme: "default",
-          tapeVariant: tapeVariantForTheme("default"),
-          tapeRotation,
-          bodyHtml,
+          slots: { [spaceId]: { x, y } },
           stackId: null,
           stackOrder: null,
-          slots: { [spaceId]: { x, y } },
+          tapeRotation,
+          tapeVariant: tapeVariantForTheme("default"),
+          theme: "default",
+          title,
+          width: UNIFIED_NODE_WIDTH,
         };
         const itemRes = await apiCreateItem(spaceId, {
+          contentJson: buildContentJsonForContentEntity(tempNode),
+          contentText: text,
+          entityType: "lore",
+          height: 280,
           itemType: architecturalItemType(tempNode),
+          title,
+          width: UNIFIED_NODE_WIDTH,
           x,
           y,
-          width: UNIFIED_NODE_WIDTH,
-          height: 280,
-          title,
-          contentText: text,
-          contentJson: buildContentJsonForContentEntity(tempNode),
           zIndex: nextZ,
-          entityType: "lore",
         });
         if (!(itemRes.ok && itemRes.item)) {
           return false;
@@ -10817,19 +10819,19 @@ export function ArchitecturalCanvasApp({
 
       const id = createId();
       const nextNode: CanvasContentEntity = {
+        bodyHtml,
+        height: 280,
         id,
-        title,
         kind: "content",
         rotation,
-        width: UNIFIED_NODE_WIDTH,
-        height: 280,
-        theme: "default",
-        tapeVariant: tapeVariantForTheme("default"),
-        tapeRotation,
-        bodyHtml,
+        slots: { [activeSpaceId]: { x, y } },
         stackId: null,
         stackOrder: null,
-        slots: { [activeSpaceId]: { x, y } },
+        tapeRotation,
+        tapeVariant: tapeVariantForTheme("default"),
+        theme: "default",
+        title,
+        width: UNIFIED_NODE_WIDTH,
       };
       setGraph((prev) => {
         const next = shallowCloneGraph(prev);
@@ -10873,16 +10875,16 @@ export function ArchitecturalCanvasApp({
         unknownMessage,
       } = args;
       const parsed = {
-        text: parsedText,
         fileName: parsedFileName,
         suggestedTitle: parsedSuggestedTitle,
+        text: parsedText,
       };
       const file = { name: sourceFileName };
       const spaceId = activeSpaceIdRef.current;
       if (userContext.granularity === "one_note") {
         const ok = await createSingleImportedNote({
-          title: parsed.suggestedTitle || parsed.fileName || file.name,
           text: parsedText,
+          title: parsed.suggestedTitle || parsed.fileName || file.name,
         });
         if (ok) {
           playVigilUiSound("celebration");
@@ -10890,14 +10892,14 @@ export function ArchitecturalCanvasApp({
           reportFailure(
             createLoreImportFailureDetail({
               attemptId,
-              stage: "apply",
-              operation: "create_single_import_note",
+              fileName: parsed.fileName ?? file.name,
               message:
                 "Could not create the imported note on the current canvas. Check sync status and retry.",
-              fileName: parsed.fileName ?? file.name,
-              spaceId,
+              operation: "create_single_import_note",
               recommendedAction:
                 "Retry import once. If this keeps failing, open sync status and include the attempt id.",
+              spaceId,
+              stage: "apply",
             })
           );
         }
@@ -10929,10 +10931,10 @@ export function ArchitecturalCanvasApp({
         const applySmartPlanToUi = (plan: LoreImportPlan) => {
           const normalizedPlan = filterAutoResolvedClarifications(plan);
           setLoreSmartReview({
+            fileName: parsed.fileName,
             plan: normalizedPlan,
             sourceText: parsedText,
             sourceTitle: parsed.suggestedTitle,
-            fileName: parsed.fileName,
           });
           setLoreSmartClarificationAnswers([]);
           setLoreSmartOtherFollowUp(null);
@@ -10955,11 +10957,11 @@ export function ArchitecturalCanvasApp({
         const reportPlanningFailure = (detail: LoreImportFailureDetail) => {
           planningFailed = true;
           setLoreSmartPlanningProgress({
-            phase: "failed",
             message: detail.message,
             meta: detail.errorCode
               ? { errorCode: detail.errorCode }
               : undefined,
+            phase: "failed",
           });
           reportFailure(detail);
         };
@@ -10967,24 +10969,24 @@ export function ArchitecturalCanvasApp({
           queueFailureHint?: string
         ): Promise<boolean> => {
           setLoreSmartPlanningProgress({
-            phase: "fallback_plan",
             message: "Smart queue unavailable; planning directly",
             meta: queueFailureHint ? { queueFailureHint } : undefined,
+            phase: "fallback_plan",
           });
           const planRes = await fetch("/api/lore/import/plan", {
-            method: "POST",
+            body: JSON.stringify({
+              fileName: parsed.fileName,
+              persistReview: false,
+              spaceId,
+              text: parsedText,
+              userContext,
+            }),
             headers: {
               "Content-Type": "application/json",
               "X-Heartgarden-Import-Attempt": attemptId,
             },
+            method: "POST",
             signal: planningAbort.signal,
-            body: JSON.stringify({
-              text: parsedText,
-              spaceId,
-              fileName: parsed.fileName,
-              userContext,
-              persistReview: false,
-            }),
           });
           const planRaw = await planRes.text();
           const planBody = parseLoreImportJsonBody(planRaw) as {
@@ -11000,18 +11002,18 @@ export function ArchitecturalCanvasApp({
         };
         try {
           const jobRes = await fetch("/api/lore/import/jobs", {
-            method: "POST",
+            body: JSON.stringify({
+              fileName: parsed.fileName,
+              spaceId,
+              text: parsedText,
+              userContext,
+            }),
             headers: {
               "Content-Type": "application/json",
               "X-Heartgarden-Import-Attempt": attemptId,
             },
+            method: "POST",
             signal: planningAbort.signal,
-            body: JSON.stringify({
-              text: parsedText,
-              spaceId,
-              fileName: parsed.fileName,
-              userContext,
-            }),
           });
           const jobRaw = await jobRes.text();
           const jobBody = parseLoreImportJsonBody(jobRaw) as {
@@ -11064,29 +11066,29 @@ export function ArchitecturalCanvasApp({
                 reportPlanningFailure(
                   createLoreImportFailureDetail({
                     attemptId,
-                    stage: "job_poll",
-                    operation: "GET /api/lore/import/jobs/[jobId]",
+                    errorCode:
+                      typeof st.errorCode === "string"
+                        ? st.errorCode
+                        : undefined,
+                    fileName: parsed.fileName ?? file.name,
+                    httpStatus: poll.status,
+                    jobId,
                     message:
                       typeof st.error === "string"
                         ? st.error
                         : `Import job status request failed (HTTP ${poll.status})`,
-                    responseSnippet: pollRaw,
-                    httpStatus: poll.status,
-                    jobId,
+                    operation: "GET /api/lore/import/jobs/[jobId]",
                     phase:
                       typeof st.lastPhase === "string"
                         ? st.lastPhase
                         : typeof st.progress?.phase === "string"
                           ? st.progress.phase
                           : undefined,
-                    errorCode:
-                      typeof st.errorCode === "string"
-                        ? st.errorCode
-                        : undefined,
-                    fileName: parsed.fileName ?? file.name,
-                    spaceId,
                     recommendedAction:
                       "Wait a few seconds and retry import. If this repeats, copy the snapshot and include the job id.",
+                    responseSnippet: pollRaw,
+                    spaceId,
+                    stage: "job_poll",
                   })
                 );
                 pollFailed = true;
@@ -11116,29 +11118,29 @@ export function ArchitecturalCanvasApp({
                 reportPlanningFailure(
                   createLoreImportFailureDetail({
                     attemptId,
-                    stage: "plan_failed",
-                    operation: "GET /api/lore/import/jobs/[jobId]",
+                    errorCode:
+                      typeof st.errorCode === "string"
+                        ? st.errorCode
+                        : undefined,
+                    fileName: parsed.fileName ?? file.name,
+                    httpStatus: poll.status,
+                    jobId,
                     message:
                       typeof st.error === "string"
                         ? st.error
                         : "Smart import plan failed. Try again or split the file.",
-                    responseSnippet: pollRaw,
-                    httpStatus: poll.status,
-                    jobId,
+                    operation: "GET /api/lore/import/jobs/[jobId]",
                     phase:
                       typeof st.lastPhase === "string"
                         ? st.lastPhase
                         : typeof st.progress?.phase === "string"
                           ? st.progress.phase
                           : undefined,
-                    errorCode:
-                      typeof st.errorCode === "string"
-                        ? st.errorCode
-                        : undefined,
-                    fileName: parsed.fileName ?? file.name,
-                    spaceId,
                     recommendedAction:
                       "Try splitting the source file into smaller chunks, then retry. Share snapshot if failure persists.",
+                    responseSnippet: pollRaw,
+                    spaceId,
+                    stage: "plan_failed",
                   })
                 );
                 planFailed = true;
@@ -11156,42 +11158,42 @@ export function ArchitecturalCanvasApp({
               reportPlanningFailure(
                 createLoreImportFailureDetail({
                   attemptId,
-                  stage: "timeout",
-                  operation: "GET /api/lore/import/jobs/[jobId]",
+                  fileName: parsed.fileName ?? file.name,
+                  jobId,
                   message:
                     "Import planning is taking too long. The server may still be working in the background.",
-                  jobId,
+                  operation: "GET /api/lore/import/jobs/[jobId]",
                   phase: lastPhase || "unknown",
-                  fileName: parsed.fileName ?? file.name,
-                  spaceId,
                   recommendedAction:
                     "Wait 30-60 seconds and retry. If this keeps timing out on the same phase, split the source and rerun.",
+                  spaceId,
+                  stage: "timeout",
                 })
               );
             }
           } else {
             const queueFailureHint = summarizeQueueCreateFailure({
-              status: jobRes.status,
-              error:
-                typeof jobBody.error === "string" ? jobBody.error : undefined,
+              dbCode:
+                typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
               detail:
                 typeof jobBody.detail === "string" ? jobBody.detail : undefined,
-              hint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+              error:
+                typeof jobBody.error === "string" ? jobBody.error : undefined,
               errorCode:
                 typeof jobBody.errorCode === "string"
                   ? jobBody.errorCode
                   : undefined,
-              dbCode:
-                typeof jobBody.dbCode === "string" ? jobBody.dbCode : undefined,
+              hint: typeof jobBody.hint === "string" ? jobBody.hint : undefined,
+              status: jobRes.status,
             });
             console.warn(
               "[lore-import] smart queue unavailable; using direct fallback",
               {
                 attemptId,
-                status: jobRes.status,
-                queueFailureHint,
-                errorCode: jobBody.errorCode,
                 dbCode: jobBody.dbCode,
+                errorCode: jobBody.errorCode,
+                queueFailureHint,
+                status: jobRes.status,
               }
             );
             const usedFallback = await tryDirectPlanFallback(
@@ -11203,35 +11205,9 @@ export function ArchitecturalCanvasApp({
             reportPlanningFailure(
               createLoreImportFailureDetail({
                 attemptId,
-                stage: "job_create",
-                operation: "POST /api/lore/import/jobs",
-                message:
-                  typeof jobBody.error === "string"
-                    ? jobBody.error
-                    : typeof jobBody.detail === "string"
-                      ? jobBody.detail
-                      : `Could not start import job (HTTP ${jobRes.status})`,
-                responseSnippet: jobRaw,
-                httpStatus: jobRes.status,
-                errorCode:
-                  typeof jobBody.errorCode === "string"
-                    ? jobBody.errorCode
-                    : typeof jobBody.dbCode === "string"
-                      ? jobBody.dbCode
-                      : undefined,
-                serverDetail:
-                  typeof jobBody.detail === "string"
-                    ? jobBody.detail
-                    : undefined,
-                serverHint:
-                  typeof jobBody.hint === "string" ? jobBody.hint : undefined,
                 dbCode:
                   typeof jobBody.dbCode === "string"
                     ? jobBody.dbCode
-                    : undefined,
-                dbTable:
-                  typeof jobBody.dbTable === "string"
-                    ? jobBody.dbTable
                     : undefined,
                 dbColumn:
                   typeof jobBody.dbColumn === "string"
@@ -11241,14 +11217,40 @@ export function ArchitecturalCanvasApp({
                   typeof jobBody.dbConstraint === "string"
                     ? jobBody.dbConstraint
                     : undefined,
+                dbTable:
+                  typeof jobBody.dbTable === "string"
+                    ? jobBody.dbTable
+                    : undefined,
+                errorCode:
+                  typeof jobBody.errorCode === "string"
+                    ? jobBody.errorCode
+                    : typeof jobBody.dbCode === "string"
+                      ? jobBody.dbCode
+                      : undefined,
+                fileName: parsed.fileName ?? file.name,
+                httpStatus: jobRes.status,
+                message:
+                  typeof jobBody.error === "string"
+                    ? jobBody.error
+                    : typeof jobBody.detail === "string"
+                      ? jobBody.detail
+                      : `Could not start import job (HTTP ${jobRes.status})`,
+                operation: "POST /api/lore/import/jobs",
+                recommendedAction:
+                  "Confirm Neon/database is reachable and try again. If this repeats, share the snapshot.",
+                responseSnippet: jobRaw,
                 retryable:
                   typeof jobBody.retryable === "boolean"
                     ? jobBody.retryable
                     : undefined,
-                fileName: parsed.fileName ?? file.name,
+                serverDetail:
+                  typeof jobBody.detail === "string"
+                    ? jobBody.detail
+                    : undefined,
+                serverHint:
+                  typeof jobBody.hint === "string" ? jobBody.hint : undefined,
                 spaceId,
-                recommendedAction:
-                  "Confirm Neon/database is reachable and try again. If this repeats, share the snapshot.",
+                stage: "job_create",
               })
             );
           }
@@ -11279,16 +11281,16 @@ export function ArchitecturalCanvasApp({
           reportPlanningFailure(
             createLoreImportFailureDetail({
               attemptId,
-              stage: "job_create",
-              operation: "POST /api/lore/import/jobs",
+              fileName: parsed.fileName ?? file.name,
               message: unknownMessage(
                 error,
                 "Smart import job request failed."
               ),
-              fileName: parsed.fileName ?? file.name,
-              spaceId,
+              operation: "POST /api/lore/import/jobs",
               recommendedAction:
                 "Check network/boot session and retry import. Copy diagnostics if this keeps failing.",
+              spaceId,
+              stage: "job_create",
             })
           );
         } finally {
@@ -11313,14 +11315,14 @@ export function ArchitecturalCanvasApp({
       reportFailure(
         createLoreImportFailureDetail({
           attemptId,
-          stage: "parse",
-          operation: "smart_import_prerequisite",
+          fileName: parsed.fileName ?? file.name,
           message:
             "Smart import requires a connected Neon space. Connect your workspace and retry.",
-          fileName: parsed.fileName ?? file.name,
-          spaceId,
+          operation: "smart_import_prerequisite",
           recommendedAction:
             "Switch to a connected Neon workspace, then retry this import.",
+          spaceId,
+          stage: "parse",
         })
       );
     },
@@ -11379,19 +11381,19 @@ export function ArchitecturalCanvasApp({
           const local = await parsePdfInBrowser(file, planningAbort.signal);
           console.info("[lore-import] parse pdf local fallback success", {
             attemptId,
-            fileName: file.name,
+            failedPages: local.failedPages,
             fileBytes: file.size,
-            reason,
+            fileName: file.name,
             pageCount: local.pageCount,
             parsedPages: local.parsedPages,
-            failedPages: local.failedPages,
+            reason,
             truncated: local.truncated,
           });
           return {
-            ok: true,
-            text: local.text,
             fileName: file.name,
+            ok: true,
             suggestedTitle: loreImportSuggestedTitle(file.name),
+            text: local.text,
           };
         } catch (error) {
           if (isAbortError(error)) {
@@ -11401,13 +11403,13 @@ export function ArchitecturalCanvasApp({
           reportFailure(
             createLoreImportFailureDetail({
               attemptId,
-              stage: "parse",
-              operation: "parse_pdf_client_fallback",
-              message: `PDF parse failed in browser (${detail})`,
               fileName: file.name,
-              spaceId: activeSpaceIdRef.current,
+              message: `PDF parse failed in browser (${detail})`,
+              operation: "parse_pdf_client_fallback",
               recommendedAction:
                 "Try a smaller PDF or export to text/markdown, then retry. If this repeats, copy the snapshot and share it.",
+              spaceId: activeSpaceIdRef.current,
+              stage: "parse",
             })
           );
           return null;
@@ -11431,9 +11433,9 @@ export function ArchitecturalCanvasApp({
           }
         } else {
           parseRes = await fetch("/api/lore/import/parse", {
-            method: "POST",
             body: fd,
             headers: { "X-Heartgarden-Import-Attempt": attemptId },
+            method: "POST",
             signal: planningAbort.signal,
           });
           parseRaw = await parseRes.text();
@@ -11467,28 +11469,28 @@ export function ArchitecturalCanvasApp({
           reportFailure(
             createLoreImportFailureDetail({
               attemptId,
-              stage: "parse",
-              operation: "POST /api/lore/import/parse",
+              fileName: file.name,
+              httpStatus: parseRes?.status,
               message:
                 parsedError ||
                 parsedDetail ||
                 `Parse failed (HTTP ${parseRes?.status ?? "unknown"})`,
-              responseSnippet: parseRaw,
-              httpStatus: parseRes?.status,
-              fileName: file.name,
-              spaceId: activeSpaceIdRef.current,
+              operation: "POST /api/lore/import/parse",
               recommendedAction:
                 "Check file type/content and retry. If this repeats, copy the snapshot and share it.",
+              responseSnippet: parseRaw,
+              spaceId: activeSpaceIdRef.current,
+              stage: "parse",
             })
           );
           return;
         }
 
         setLoreImportPreparedSource({
-          text: parsed.text,
           fileName: parsed.fileName || file.name,
           suggestedTitle:
             parsed.suggestedTitle || loreImportSuggestedTitle(file.name),
+          text: parsed.text,
         });
         setLoreImportPopoverOpen(true);
         playVigilUiSound("select");
@@ -11502,13 +11504,13 @@ export function ArchitecturalCanvasApp({
         reportFailure(
           createLoreImportFailureDetail({
             attemptId,
-            stage: "unknown",
-            operation: "onLoreImportFileChange",
-            message: unknownMessage(error, "Import request failed"),
             fileName: file.name,
-            spaceId: activeSpaceIdRef.current,
+            message: unknownMessage(error, "Import request failed"),
+            operation: "onLoreImportFileChange",
             recommendedAction:
               "Retry import. If this repeats, copy support snapshot and include the stage/attempt id.",
+            spaceId: activeSpaceIdRef.current,
+            stage: "unknown",
           })
         );
       } finally {
@@ -11560,15 +11562,15 @@ export function ArchitecturalCanvasApp({
       error instanceof Error ? error.message : fallback;
     try {
       await executeLoreImportWithParsed({
-        parsedText: prepared.text,
+        attemptId,
         parsedFileName: prepared.fileName,
         parsedSuggestedTitle: prepared.suggestedTitle,
-        sourceFileName: prepared.fileName,
-        userContext,
-        attemptId,
+        parsedText: prepared.text,
         planningAbort,
         reportFailure,
+        sourceFileName: prepared.fileName,
         unknownMessage,
+        userContext,
       });
     } finally {
       if (loreSmartPlanningAbortRef.current === planningAbort) {
@@ -11780,15 +11782,15 @@ export function ArchitecturalCanvasApp({
           const right = Math.max(...rects.map((r) => r.right));
           const bottom = Math.max(...rects.map((r) => r.bottom));
           dragRect = {
-            left,
-            top,
-            right,
             bottom,
-            width: right - left,
             height: bottom - top,
+            left,
+            right,
+            toJSON: () => ({}),
+            top,
+            width: right - left,
             x: left,
             y: top,
-            toJSON: () => ({}),
           } as DOMRect;
         }
       }
@@ -11877,15 +11879,15 @@ export function ArchitecturalCanvasApp({
               ) {
                 const pad = 10;
                 rect = {
-                  left: minX - pad,
-                  top: minY - pad,
-                  right: maxX + pad,
                   bottom: maxY + pad,
-                  width: maxX - minX + pad * 2,
                   height: maxY - minY + pad * 2,
+                  left: minX - pad,
+                  right: maxX + pad,
+                  toJSON: () => ({}),
+                  top: minY - pad,
+                  width: maxX - minX + pad * 2,
                   x: minX - pad,
                   y: minY - pad,
-                  toJSON: () => ({}),
                 } as DOMRect;
               }
             }
@@ -12005,15 +12007,15 @@ export function ArchitecturalCanvasApp({
           }
           next.entities[id] = {
             ...entity,
-            stackId,
-            /* First in drag list sits on top of the pile (above existing members). */
-            stackOrder: baseOrder + (nAdd - 1 - addIndex),
             slots: targetSlot
               ? {
                   ...entity.slots,
                   [activeSpaceId]: { x: targetSlot.x, y: targetSlot.y },
                 }
               : entity.slots,
+            stackId,
+            /* First in drag list sits on top of the pile (above existing members). */
+            stackOrder: baseOrder + (nAdd - 1 - addIndex),
           };
         });
 
@@ -12065,9 +12067,9 @@ export function ArchitecturalCanvasApp({
         moveEntitiesToSpace(draggedEntityIds, parentSpaceId, {
           anchor: anchorBelowFolder,
           forceLayout: true,
-          skipUndo: true,
-          neonFlush: true,
           fromSpaceId: activeSpaceIdRef.current,
+          neonFlush: true,
+          skipUndo: true,
         });
         suppressParentExitActivateUntilRef.current = Date.now() + 500;
         return;
@@ -12085,9 +12087,9 @@ export function ArchitecturalCanvasApp({
             moveEntitiesToSpace(draggedEntityIds, childSpaceId, {
               anchor: fallback,
               forceLayout: true,
-              skipUndo: true,
-              neonFlush: true,
               fromSpaceId: activeSpaceIdRef.current,
+              neonFlush: true,
+              skipUndo: true,
             });
             return;
           }
@@ -12204,8 +12206,8 @@ export function ArchitecturalCanvasApp({
         const start = lassoStartRef.current;
         const next: LassoRectScreen = {
           x1: start.x,
-          y1: start.y,
           x2: event.clientX,
+          y1: start.y,
           y2: event.clientY,
         };
         lassoRectScreenRef.current = next;
@@ -12290,8 +12292,8 @@ export function ArchitecturalCanvasApp({
       const start = lassoStartRef.current;
       const rect: LassoRectScreen = lassoRectScreenRef.current ?? {
         x1: start.x,
-        y1: start.y,
         x2: start.x,
+        y1: start.y,
         y2: start.y,
       };
       lassoStartRef.current = null;
@@ -12374,8 +12376,8 @@ export function ArchitecturalCanvasApp({
       const start = lassoStartRef.current;
       const next: LassoRectScreen = {
         x1: start.x,
-        y1: start.y,
         x2: event.clientX,
+        y1: start.y,
         y2: event.clientY,
       };
       lassoRectScreenRef.current = next;
@@ -12429,8 +12431,8 @@ export function ArchitecturalCanvasApp({
       const stackPointerDrag = stackPointerDragRef.current;
       if (stackPointerDrag?.moved) {
         suppressStackOpenRef.current = {
-          stackId: stackPointerDrag.stackId,
           expiresAt: Date.now() + 450,
+          stackId: stackPointerDrag.stackId,
         };
       }
       stackPointerDragRef.current = null;
@@ -12498,7 +12500,7 @@ export function ArchitecturalCanvasApp({
       if (!(Number.isFinite(minX) && Number.isFinite(minY))) {
         return null;
       }
-      return { left: minX, top: minY, right: maxX, bottom: maxY };
+      return { bottom: maxY, left: minX, right: maxX, top: minY };
     };
 
     const getDraggedRect = (
@@ -12524,7 +12526,7 @@ export function ArchitecturalCanvasApp({
         (cardHeights[drag.entityId] ?? STACK_MODAL_CARD_H_ESTIMATE) * slotScale;
       const left = drag.currentX - drag.pointerOffsetX;
       const top = drag.currentY - drag.pointerOffsetY;
-      return { left, top, right: left + width, bottom: top + height };
+      return { bottom: top + height, left, right: left + width, top };
     };
 
     const isDraggedOutsideHull = (
@@ -12569,9 +12571,9 @@ export function ArchitecturalCanvasApp({
 
       const outsideWithMargin = isDraggedOutsideHull(
         {
-          entityId: prev.entityId,
           currentX: event.clientX,
           currentY: event.clientY,
+          entityId: prev.entityId,
           pointerOffsetX: prev.pointerOffsetX,
           pointerOffsetY: prev.pointerOffsetY,
         },
@@ -12685,9 +12687,9 @@ export function ArchitecturalCanvasApp({
       const hullForEject = hullSnap ?? getVisibleOrdered(modal.orderedIds);
       const outsideWithMargin = isDraggedOutsideHull(
         {
-          entityId: drag.entityId,
           currentX: releaseX,
           currentY: releaseY,
+          entityId: drag.entityId,
           pointerOffsetX: drag.pointerOffsetX,
           pointerOffsetY: drag.pointerOffsetY,
         },
@@ -12771,8 +12773,6 @@ export function ArchitecturalCanvasApp({
                 }
                 next.entities[entity.id] = {
                   ...current,
-                  stackId: modal.stackId,
-                  stackOrder: index,
                   slots:
                     anchorSlot == null
                       ? current.slots
@@ -12780,6 +12780,8 @@ export function ArchitecturalCanvasApp({
                           ...current.slots,
                           [spaceId]: { x: anchorSlot.x, y: anchorSlot.y },
                         },
+                  stackId: modal.stackId,
+                  stackOrder: index,
                 };
               });
             } else if (sortedRemaining.length === 1) {
@@ -12788,8 +12790,6 @@ export function ArchitecturalCanvasApp({
               if (current) {
                 next.entities[sole.id] = {
                   ...current,
-                  stackId: null,
-                  stackOrder: null,
                   slots:
                     anchorSlot == null
                       ? current.slots
@@ -12797,6 +12797,8 @@ export function ArchitecturalCanvasApp({
                           ...current.slots,
                           [spaceId]: { x: anchorSlot.x, y: anchorSlot.y },
                         },
+                  stackId: null,
+                  stackOrder: null,
                 };
               }
             }
@@ -12804,12 +12806,12 @@ export function ArchitecturalCanvasApp({
             if (pulled && extracted.kind === "content") {
               next.entities[drag.entityId] = {
                 ...pulled,
-                stackId: null,
-                stackOrder: null,
                 slots: {
                   ...pulled.slots,
                   [spaceId]: { x: worldDropX, y: worldDropY },
                 },
+                stackId: null,
+                stackOrder: null,
               };
             }
             return next;
@@ -12908,10 +12910,10 @@ export function ArchitecturalCanvasApp({
           );
           if (focusBodyEl && focusOpenRef.current && activeNodeIdRef.current) {
             const nextHtml = normalizeChecklistMarkup(focusBodyEl.innerHTML, {
-              taskItem: styles.taskItem,
-              taskCheckbox: styles.taskCheckbox,
-              taskText: styles.taskText,
               done: styles.done,
+              taskCheckbox: styles.taskCheckbox,
+              taskItem: styles.taskItem,
+              taskText: styles.taskText,
             });
             if (focusBodyEl.innerHTML !== nextHtml) {
               focusBodyEl.innerHTML = nextHtml;
@@ -12926,10 +12928,10 @@ export function ArchitecturalCanvasApp({
             );
             if (bodyEl) {
               const nextHtml = normalizeChecklistMarkup(bodyEl.innerHTML, {
-                taskItem: styles.taskItem,
-                taskCheckbox: styles.taskCheckbox,
-                taskText: styles.taskText,
                 done: styles.done,
+                taskCheckbox: styles.taskCheckbox,
+                taskItem: styles.taskItem,
+                taskText: styles.taskText,
               });
               if (bodyEl.innerHTML !== nextHtml) {
                 bodyEl.innerHTML = nextHtml;
@@ -13031,8 +13033,8 @@ export function ArchitecturalCanvasApp({
                   }
                   seenPersist.add(merged.id);
                   void patchItemWithVersion(merged.id, {
-                    contentText: contentPlainTextForEntity(merged),
                     contentJson: buildContentJsonForContentEntity(merged),
+                    contentText: contentPlainTextForEntity(merged),
                   });
                 }
               }
@@ -13443,10 +13445,10 @@ export function ArchitecturalCanvasApp({
             reparentResults.some((ok) => !ok)
           ) {
             neonSyncReportAuxiliaryFailure({
-              operation: "folder delete pop-out persistence",
+              cause: "http",
               message:
                 "Could not persist one or more pop-out moves; skipped remote deletes to avoid data loss.",
-              cause: "http",
+              operation: "folder delete pop-out persistence",
             });
             return;
           }
@@ -13652,8 +13654,8 @@ export function ArchitecturalCanvasApp({
         lassoStartRef.current = { x: event.clientX, y: event.clientY };
         const initial: LassoRectScreen = {
           x1: event.clientX,
-          y1: event.clientY,
           x2: event.clientX,
+          y1: event.clientY,
           y2: event.clientY,
         };
         lassoRectScreenRef.current = initial;
@@ -14105,13 +14107,13 @@ export function ArchitecturalCanvasApp({
       setTextFormatChromeActive(false);
       setRichDocInsertChromeActive(false);
       setFormatCommandState({
+        blockTag: "p",
         bold: false,
         italic: false,
-        underline: false,
-        strikeThrough: false,
-        unorderedList: false,
         orderedList: false,
-        blockTag: "p",
+        strikeThrough: false,
+        underline: false,
+        unorderedList: false,
       });
       return;
     }
@@ -14132,26 +14134,26 @@ export function ArchitecturalCanvasApp({
     setRichDocInsertChromeActive(fmt && isRichDocBodyFormattingTarget(ae));
     if (!fmt) {
       setFormatCommandState({
+        blockTag: "p",
         bold: false,
         italic: false,
-        underline: false,
-        strikeThrough: false,
-        unorderedList: false,
         orderedList: false,
-        blockTag: "p",
+        strikeThrough: false,
+        underline: false,
+        unorderedList: false,
       });
       return;
     }
     setFormatCommandState({
-      bold: document.queryCommandState("bold"),
-      italic: document.queryCommandState("italic"),
-      underline: document.queryCommandState("underline"),
-      strikeThrough: document.queryCommandState("strikeThrough"),
-      unorderedList: document.queryCommandState("insertUnorderedList"),
-      orderedList: document.queryCommandState("insertOrderedList"),
       blockTag: normalizeFormatBlockTag(
         document.queryCommandValue("formatBlock")
       ),
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      orderedList: document.queryCommandState("insertOrderedList"),
+      strikeThrough: document.queryCommandState("strikeThrough"),
+      underline: document.queryCommandState("underline"),
+      unorderedList: document.queryCommandState("insertUnorderedList"),
     });
   }, []);
 
@@ -14278,7 +14280,7 @@ export function ArchitecturalCanvasApp({
           return;
         }
         if (focusOpenRef.current && activeNodeIdRef.current) {
-          queueMediaUploadPick({ mode: "focus", id: activeNodeIdRef.current });
+          queueMediaUploadPick({ id: activeNodeIdRef.current, mode: "focus" });
         } else {
           const ids = selectedNodeIdsRef.current;
           const entity =
@@ -14286,7 +14288,7 @@ export function ArchitecturalCanvasApp({
           if (!entity || entity.kind !== "content") {
             return;
           }
-          queueMediaUploadPick({ mode: "canvas", id: entity.id });
+          queueMediaUploadPick({ id: entity.id, mode: "canvas" });
         }
         return;
       }
@@ -14405,7 +14407,7 @@ export function ArchitecturalCanvasApp({
         setCanvasEmptyContextMenu(
           clampContextMenuPosition(
             { x: event.clientX, y: event.clientY },
-            { maxWidth: 280, maxHeight: 400, edgePadding: 8 }
+            { edgePadding: 8, maxHeight: 400, maxWidth: 280 }
           )
         );
         setSelectedNodeIds([]);
@@ -14419,7 +14421,7 @@ export function ArchitecturalCanvasApp({
       setSelectionContextMenu(
         clampContextMenuPosition(
           { x: event.clientX, y: event.clientY },
-          { maxWidth: 236, maxHeight: 280, edgePadding: 8 }
+          { edgePadding: 8, maxHeight: 280, maxWidth: 236 }
         )
       );
     },
@@ -14461,13 +14463,13 @@ export function ArchitecturalCanvasApp({
         continue;
       }
       if (e.kind === "content") {
-        plan.push({ kind: "content", nid: createId(), fromId: id });
+        plan.push({ fromId: id, kind: "content", nid: createId() });
       } else {
         plan.push({
+          childSpaceId: createId(),
+          fromId: id,
           kind: "folder",
           nid: createId(),
-          fromId: id,
-          childSpaceId: createId(),
         });
       }
     }
@@ -14498,30 +14500,30 @@ export function ArchitecturalCanvasApp({
           next.entities[entry.nid] = {
             ...e,
             id: entry.nid,
-            stackId: null,
-            stackOrder: null,
             slots: {
               ...e.slots,
               [spaceId]: { x: slot.x + delta, y: slot.y + delta },
             },
+            stackId: null,
+            stackOrder: null,
           };
         } else if (entry.kind === "folder" && e.kind === "folder") {
           next.spaces[entry.childSpaceId] = {
+            entityIds: [],
             id: entry.childSpaceId,
             name: e.title || "New Folder",
             parentSpaceId: spaceId,
-            entityIds: [],
           };
           next.entities[entry.nid] = {
             ...e,
-            id: entry.nid,
             childSpaceId: entry.childSpaceId,
-            stackId: null,
-            stackOrder: null,
+            id: entry.nid,
             slots: {
               ...e.slots,
               [spaceId]: { x: slot.x + delta, y: slot.y + delta },
             },
+            stackId: null,
+            stackOrder: null,
           };
         }
       }
@@ -14747,40 +14749,40 @@ export function ArchitecturalCanvasApp({
   const selectionContextMenuItems = useMemo<ContextMenuItem[]>(
     () => [
       {
+        disabled: !stackSelectionUi.canMergeStacks,
+        icon: <Stack aria-hidden size={18} weight="bold" />,
         label:
           stackSelectionUi.whollySelectedStackIds.length >= 2
             ? "Merge stacks"
             : "Create stack",
-        icon: <Stack aria-hidden size={18} weight="bold" />,
-        disabled: !stackSelectionUi.canMergeStacks,
         onSelect: () => stackSelectedContent(selectedNodeIds),
       },
       {
-        label: "Unstack",
-        icon: <ArrowsOut aria-hidden size={18} weight="bold" />,
         disabled: !stackSelectionUi.canUnstackWhollySelected,
+        icon: <ArrowsOut aria-hidden size={18} weight="bold" />,
+        label: "Unstack",
         onSelect: () => unstackWhollySelectedStacks(selectedNodeIds),
       },
       {
-        label: "Align in grid",
-        icon: <SquaresFour aria-hidden size={18} weight="bold" />,
         disabled: selectedNodeIds.length < 2,
+        icon: <SquaresFour aria-hidden size={18} weight="bold" />,
+        label: "Align in grid",
         onSelect: () => alignSelectedInGrid(),
       },
       {
-        label: "Delete",
         icon: <Trash aria-hidden size={18} weight="bold" />,
+        label: "Delete",
         onSelect: () => deleteEntitySelection([...selectedNodeIdsRef.current]),
       },
       {
-        label: "Copy",
         icon: <CopySimple aria-hidden size={18} weight="bold" />,
+        label: "Copy",
         onSelect: () => duplicateSelectedEntities(),
       },
       {
-        label: "Copy ID",
-        icon: <CopySimple aria-hidden size={18} weight="bold" />,
         disabled: selectedNodeIds.length !== 1,
+        icon: <CopySimple aria-hidden size={18} weight="bold" />,
+        label: "Copy ID",
         onSelect: copySelectedNodeId,
       },
     ],
@@ -14801,18 +14803,18 @@ export function ArchitecturalCanvasApp({
   const canvasEmptyContextMenuItems = useMemo<ContextMenuItem[]>(
     () => [
       {
-        label: "Create character",
         icon: <User aria-hidden size={18} weight="bold" />,
+        label: "Create character",
         onSelect: () => createNewNode("character"),
       },
       {
-        label: "Create organization",
         icon: <UsersThree aria-hidden size={18} weight="bold" />,
+        label: "Create organization",
         onSelect: () => createNewNode("faction"),
       },
       {
-        label: "Create location",
         icon: <MapPin aria-hidden size={18} weight="bold" />,
+        label: "Create location",
         onSelect: () => createNewNode("location"),
       },
     ],
@@ -14838,24 +14840,24 @@ export function ArchitecturalCanvasApp({
     );
 
     const out: ContextMenuItem[] = [
-      { type: "heading", label: "Thread" },
+      { label: "Thread", type: "heading" },
       {
         label: "Cut thread",
         onSelect: () => cutConnection(selectedConnectionId),
       },
       {
-        label: "Make thread taut",
         disabled: currentSlack <= 1.01,
+        label: "Make thread taut",
         onSelect: () => setConnectionSlack(selectedConnectionId, 1.02),
       },
       {
-        label: "Loosen thread",
         disabled: currentSlack >= 1.29,
+        label: "Loosen thread",
         onSelect: () => setConnectionSlack(selectedConnectionId, 1.28),
       },
     ];
     for (const { group, options } of grouped) {
-      out.push({ type: "heading", label: LINK_TYPE_GROUP_HEADINGS[group] });
+      out.push({ label: LINK_TYPE_GROUP_HEADINGS[group], type: "heading" });
       for (const opt of options) {
         // Picker kinds render with their canonical color swatch so the right-click
         // menu visibly matches the thread-kind picker.
@@ -14866,19 +14868,19 @@ export function ArchitecturalCanvasApp({
           <span
             aria-hidden
             style={{
-              width: 14,
-              height: 14,
-              borderRadius: 999,
-              display: "inline-block",
               background: colorForConnectionKind(kindForOpt),
+              borderRadius: 999,
               boxShadow:
                 "inset 0 1px 2px color-mix(in oklch, black 30%, transparent), 0 0 0 1px color-mix(in oklch, black 50%, transparent)",
+              display: "inline-block",
+              height: 14,
+              width: 14,
             }}
           />
         ) : undefined;
         out.push({
-          label: `${currentLt === opt.value ? "✓ " : ""}${opt.menuLabel}`,
           icon: swatchIcon,
+          label: `${currentLt === opt.value ? "✓ " : ""}${opt.menuLabel}`,
           onSelect: () =>
             setConnectionLinkType(selectedConnectionId, opt.value),
         });
@@ -14972,8 +14974,8 @@ export function ArchitecturalCanvasApp({
               : "Heading";
           return {
             ...action,
-            label: headingLabel,
             active: level === "h1" || level === "h2" || level === "h3",
+            label: headingLabel,
           };
         }
         return action;
@@ -15114,12 +15116,12 @@ export function ArchitecturalCanvasApp({
       return null;
     }
     return {
-      left: minX,
-      top: minY,
-      right: maxX,
       bottom: maxY,
-      width: maxX - minX,
       height: maxY - minY,
+      left: minX,
+      right: maxX,
+      top: minY,
+      width: maxX - minX,
     };
   }, [stackModalCardHeights, stackModalLayout, stackModalVisibleEntities]);
 
@@ -15131,7 +15133,7 @@ export function ArchitecturalCanvasApp({
       galleryEntity.kind !== "content" ||
       galleryEntity.theme !== "media"
     ) {
-      return { src: null as string | null, alt: "" };
+      return { alt: "", src: null as string | null };
     }
     return parseArchitecturalMediaFromBody(galleryEntity.bodyHtml);
   }, [galleryEntity]);
@@ -15746,10 +15748,10 @@ export function ArchitecturalCanvasApp({
                         <div
                           className={styles.stackFocusBounds}
                           style={{
+                            height: focusBounds.height,
                             left: focusBounds.left,
                             top: focusBounds.top,
                             width: focusBounds.width,
-                            height: focusBounds.height,
                           }}
                         />
                       ) : null}
@@ -15757,10 +15759,10 @@ export function ArchitecturalCanvasApp({
                         <div
                           className={styles.stackHoverBounds}
                           style={{
+                            height: hoverBounds.height,
                             left: hoverBounds.left,
                             top: hoverBounds.top,
                             width: hoverBounds.width,
-                            height: hoverBounds.height,
                           }}
                         />
                       ) : null}
@@ -15805,13 +15807,13 @@ export function ArchitecturalCanvasApp({
                                     setStackModalEjectCount(0);
                                     setHoveredStackTargetId(null);
                                     setStackModal({
-                                      stackId,
+                                      anchorWorld: { x: slot.x, y: slot.y },
                                       orderedIds: [...entities]
                                         .reverse()
                                         .map((e) => e.id),
                                       originX: rect.left + rect.width / 2,
                                       originY: rect.top + rect.height / 2,
-                                      anchorWorld: { x: slot.x, y: slot.y },
+                                      stackId,
                                       stackScreenLeft: rect.left,
                                       stackScreenTop: rect.top,
                                     });
@@ -15868,19 +15870,19 @@ export function ArchitecturalCanvasApp({
                                     };
                                     setMaxZIndex((prev) => prev + 1);
                                     stackPointerDragRef.current = {
+                                      moved: false,
                                       stackId,
                                       startX: event.clientX,
                                       startY: event.clientY,
-                                      moved: false,
                                     };
                                   }
                                 : undefined
                             }
                             style={
                               {
+                                "--stack-r": `${(index - (entities.length - 1) / 2) * 1.6}deg`,
                                 "--stack-x": `${index * 6}px`,
                                 "--stack-y": `${index * 6}px`,
-                                "--stack-r": `${(index - (entities.length - 1) / 2) * 1.6}deg`,
                               } as React.CSSProperties
                             }
                           >
@@ -16144,9 +16146,9 @@ export function ArchitecturalCanvasApp({
                               clampContextMenuPosition(
                                 { x: event.clientX, y: event.clientY },
                                 {
-                                  maxWidth: 280,
-                                  maxHeight: 680,
                                   edgePadding: 8,
+                                  maxHeight: 680,
+                                  maxWidth: 280,
                                 }
                               )
                             );
@@ -16183,7 +16185,7 @@ export function ArchitecturalCanvasApp({
                           setConnectionContextMenu(
                             clampContextMenuPosition(
                               { x: event.clientX, y: event.clientY },
-                              { maxWidth: 280, maxHeight: 680, edgePadding: 8 }
+                              { edgePadding: 8, maxHeight: 680, maxWidth: 280 }
                             )
                           );
                         }}
@@ -16357,18 +16359,18 @@ export function ArchitecturalCanvasApp({
                   onUndo={undoFromDock}
                   redoLabel={`Redo (${modKeyHints.redo})`}
                   selectionDelete={{
-                    selectedCount: selectedNodeIds.length,
                     onDelete: () =>
                       deleteEntitySelection([...selectedNodeIdsRef.current]),
+                    selectedCount: selectedNodeIds.length,
                   }}
                   selectionStack={{
                     canMerge: stackSelectionUi.canMergeStacks,
-                    onMerge: () => stackSelectedContent(selectedNodeIds),
+                    canUnstack: stackSelectionUi.canUnstackWhollySelected,
                     mergeTitle:
                       stackSelectionUi.whollySelectedStackIds.length >= 2
                         ? `Merge stacks (${modKeyHints.stack})`
                         : `Create stack (${modKeyHints.stack})`,
-                    canUnstack: stackSelectionUi.canUnstackWhollySelected,
+                    onMerge: () => stackSelectedContent(selectedNodeIds),
                     onUnstack: () =>
                       unstackWhollySelectedStacks(selectedNodeIds),
                     unstackTitle: "Unstack",
@@ -17079,9 +17081,9 @@ export function ArchitecturalCanvasApp({
                             ...(
                               loreSmartReview.plan.spaceSuggestions ?? []
                             ).map((s) => ({
+                              path: s.path ?? s.spaceTitle,
                               spaceId: s.spaceId,
                               title: s.spaceTitle,
-                              path: s.path ?? s.spaceTitle,
                             })),
                             ...loreSmartSpaceSearchResults,
                           ];
@@ -17561,8 +17563,8 @@ export function ArchitecturalCanvasApp({
                                             (prev) =>
                                               upsertClarificationAnswer(prev, {
                                                 clarificationId: c.id,
-                                                resolution: "other_text",
                                                 otherText: ans?.otherText ?? "",
+                                                resolution: "other_text",
                                               })
                                           );
                                         }}
@@ -17588,8 +17590,8 @@ export function ArchitecturalCanvasApp({
                                             (prev) =>
                                               upsertClarificationAnswer(prev, {
                                                 clarificationId: c.id,
-                                                resolution: "other_text",
                                                 otherText: e.target.value,
+                                                resolution: "other_text",
                                               })
                                           );
                                         }}
@@ -17793,10 +17795,10 @@ export function ArchitecturalCanvasApp({
           <div
             className={styles.lassoRect}
             style={{
+              height: Math.abs(lassoRectScreen.y2 - lassoRectScreen.y1),
               left: Math.min(lassoRectScreen.x1, lassoRectScreen.x2),
               top: Math.min(lassoRectScreen.y1, lassoRectScreen.y2),
               width: Math.abs(lassoRectScreen.x2 - lassoRectScreen.x1),
-              height: Math.abs(lassoRectScreen.y2 - lassoRectScreen.y1),
             }}
           />
         ) : null}
@@ -17818,18 +17820,18 @@ export function ArchitecturalCanvasApp({
               <div
                 className={`${styles.stackHullDropCue} ${stackModalEjectPreview ? styles.stackHullDropCueActive : ""}`}
                 style={{
+                  height: stackModalHull.height + STACK_MODAL_EJECT_MARGIN * 2,
                   left: stackModalHull.left - STACK_MODAL_EJECT_MARGIN,
                   top: stackModalHull.top - STACK_MODAL_EJECT_MARGIN,
                   width: stackModalHull.width + STACK_MODAL_EJECT_MARGIN * 2,
-                  height: stackModalHull.height + STACK_MODAL_EJECT_MARGIN * 2,
                 }}
               />
             ) : null}
             {stackModalVisibleEntities.map((entity, index) => {
               const slot = stackModalLayout[entity.id] ?? {
+                scale: 1,
                 x: viewportSize.width / 2 - 170,
                 y: viewportSize.height / 2 - 95,
-                scale: 1,
               };
               const drag = stackDrag?.entityId === entity.id ? stackDrag : null;
               const visLast = stackModalVisibleEntities.length - 1;
@@ -17866,15 +17868,15 @@ export function ArchitecturalCanvasApp({
                     stackBlockLiveReorderRef.current = false;
                     lastStackEjectPreviewRef.current = false;
                     const nextStackDrag = {
+                      currentX: event.clientX,
+                      currentY: event.clientY,
                       entityId: entity.id,
+                      intent: "pending" as const,
+                      pointerOffsetX: event.clientX - baseX,
+                      pointerOffsetY: event.clientY - baseY,
                       stackId: stackModal.stackId,
                       startX: event.clientX,
                       startY: event.clientY,
-                      currentX: event.clientX,
-                      currentY: event.clientY,
-                      pointerOffsetX: event.clientX - baseX,
-                      pointerOffsetY: event.clientY - baseY,
-                      intent: "pending" as const,
                     };
                     stackDragRef.current = nextStackDrag;
                     setStackDrag(nextStackDrag);
@@ -17895,8 +17897,8 @@ export function ArchitecturalCanvasApp({
                     });
                   }}
                   style={{
-                    zIndex: 900 + rank,
                     transform: `translate(${dragX}px, ${dragY}px) rotate(${rotation}deg) scale(${slot.scale})`,
+                    zIndex: 900 + rank,
                   }}
                 >
                   {entity.kind === "content" ? (

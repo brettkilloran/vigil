@@ -110,5 +110,5 @@ export function useRecentItems(tier: WorkspaceBootTierTag) {
     [tier]
   );
 
-  return { items, push, pruneIds };
+  return { items, pruneIds, push };
 }

@@ -34,7 +34,7 @@ export function loreQueryRateLimitExceeded(req: Request): boolean {
   const now = Date.now();
   let b = buckets.get(key);
   if (!b || now - b.windowStart >= WINDOW_MS) {
-    b = { windowStart: now, count: 0 };
+    b = { count: 0, windowStart: now };
     buckets.set(key, b);
   }
   b.count += 1;

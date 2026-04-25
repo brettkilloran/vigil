@@ -41,10 +41,10 @@ export function readBootEnv(): {
 } {
   if (isHeartgardenBootGateBypassed()) {
     return {
-      gateEnabled: false,
       bishopPin: "",
-      playersPin: "",
       demoPin: "",
+      gateEnabled: false,
+      playersPin: "",
       sessionSecret: "",
     };
   }
@@ -60,7 +60,7 @@ export function readBootEnv(): {
   /** Gate is on when the session secret is set and at least one PIN is configured. */
   const gateEnabled =
     sessionSecret.length >= 16 && (bishopOk || playersOk || demoOk);
-  return { gateEnabled, bishopPin, playersPin, demoPin, sessionSecret };
+  return { bishopPin, demoPin, gateEnabled, playersPin, sessionSecret };
 }
 
 export function bootSessionMaxAgeSec(): number {
@@ -221,7 +221,7 @@ export function verifyBootSessionCookie(
   if (o.exp <= now) {
     return null;
   }
-  return { tier, exp: o.exp };
+  return { exp: o.exp, tier };
 }
 
 export function clearBootSessionCookieOptions(): {
@@ -233,10 +233,10 @@ export function clearBootSessionCookieOptions(): {
   secure: boolean;
 } {
   return {
+    httpOnly: true,
+    maxAge: 0,
     name: HEARTGARDEN_BOOT_COOKIE_NAME,
     path: "/",
-    maxAge: 0,
-    httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   };
@@ -255,12 +255,12 @@ export function bootSessionCookieOptions(
   secure: boolean;
 } {
   return {
-    name: HEARTGARDEN_BOOT_COOKIE_NAME,
-    value,
-    path: "/",
-    maxAge: maxAgeSec,
     httpOnly: true,
+    maxAge: maxAgeSec,
+    name: HEARTGARDEN_BOOT_COOKIE_NAME,
+    path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
+    value,
   };
 }

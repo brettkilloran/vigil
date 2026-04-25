@@ -2,6 +2,7 @@
 
 import { CornersOut, DownloadSimple } from "@phosphor-icons/react";
 import { useMemo } from "react";
+
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";

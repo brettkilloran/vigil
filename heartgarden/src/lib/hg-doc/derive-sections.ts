@@ -50,7 +50,7 @@ export function deriveSectionsFromHgDoc(
   const title = itemTitle.trim() || "Untitled";
   const topLevel = Array.isArray(doc?.content) ? doc.content : [];
   if (topLevel.length === 0) {
-    return [{ headingPath: [title], text: "", charRange: [0, 0] }];
+    return [{ charRange: [0, 0], headingPath: [title], text: "" }];
   }
 
   const sections: TempSection[] = [];
@@ -94,7 +94,7 @@ export function deriveSectionsFromHgDoc(
   if (usable.length === 0) {
     const plain = hgDocToPlainText(doc).trim();
     return [
-      { headingPath: [title], text: plain, charRange: [0, plain.length] },
+      { charRange: [0, plain.length], headingPath: [title], text: plain },
     ];
   }
 
@@ -105,10 +105,10 @@ export function deriveSectionsFromHgDoc(
     const start = cursor;
     const end = start + text.length;
     withRanges.push({
+      charRange: [start, end],
       headingPath:
         section.headingPath.length > 0 ? section.headingPath : [title],
       text,
-      charRange: [start, end],
     });
     cursor = end + 2;
   }
@@ -123,9 +123,9 @@ export function fallbackSingleSection(
   const normalized = text.replace(/\r\n?/g, "\n").trim();
   return [
     {
+      charRange: [0, normalized.length],
       headingPath: [title],
       text: normalized,
-      charRange: [0, normalized.length],
     },
   ];
 }

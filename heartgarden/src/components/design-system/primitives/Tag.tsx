@@ -1,15 +1,16 @@
 "use client";
 
 import type { HTMLAttributes, ReactNode } from "react";
+
 import styles from "@/src/components/ui/Tag.module.css";
 import { cx } from "@/src/lib/cx";
 
 export type TagVariant = "llmLight" | "llmCode" | "llmFocusDark" | "neutral";
 
 const variantClass: Record<TagVariant, string> = {
-  llmLight: styles.llmLight,
   llmCode: styles.llmCode,
   llmFocusDark: styles.llmFocusDark,
+  llmLight: styles.llmLight,
   neutral: styles.neutral,
 };
 

@@ -3,7 +3,6 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { VigilBootFlowerCatalog } from "./VigilBootFlowerCatalog";
 
 const meta = {
-  title: "Heartgarden/Product UI/Flowers/Boot flower catalog",
   component: VigilBootFlowerCatalog,
   parameters: {
     layout: "fullscreen",
@@ -11,6 +10,7 @@ const meta = {
       appDirectory: true,
     },
   },
+  title: "Heartgarden/Product UI/Flowers/Boot flower catalog",
 } satisfies Meta<typeof VigilBootFlowerCatalog>;
 
 export default meta;

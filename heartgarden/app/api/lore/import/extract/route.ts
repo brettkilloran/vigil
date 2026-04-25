@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(
-      { ok: false, error: "ANTHROPIC_API_KEY is not configured" },
+      { error: "ANTHROPIC_API_KEY is not configured", ok: false },
       { status: 503 }
     );
   }
@@ -39,13 +39,13 @@ export async function POST(req: Request) {
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }

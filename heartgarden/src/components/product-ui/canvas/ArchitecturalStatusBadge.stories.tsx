@@ -5,16 +5,15 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalStatusBadge } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusBadge> = {
-  title: "Heartgarden/Product UI/Canvas/Status badge",
-  component: ArchitecturalStatusBadge,
   args: {
-    showPulse: true,
     label: "波途画電",
+    showPulse: true,
   },
   argTypes: {
-    showPulse: { control: "boolean" },
     label: { control: "text" },
+    showPulse: { control: "boolean" },
   },
+  component: ArchitecturalStatusBadge,
   decorators: [
     (Story) => (
       <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
@@ -22,6 +21,7 @@ const meta: Meta<typeof ArchitecturalStatusBadge> = {
       </div>
     ),
   ],
+  title: "Heartgarden/Product UI/Canvas/Status badge",
 };
 
 export default meta;

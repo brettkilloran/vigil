@@ -10,18 +10,18 @@ import type { CanvasItem } from "@/src/model/canvas-types";
 
 function baseItem(partial: Partial<CanvasItem>): CanvasItem {
   return {
+    contentJson: null,
+    contentText: "",
+    height: 240,
     id: "item-1",
-    spaceId: "space-1",
     itemType: "note",
+    spaceId: "space-1",
+    title: "Title",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    width: 320,
     x: 0,
     y: 0,
-    width: 320,
-    height: 240,
     zIndex: 1,
-    title: "Title",
-    contentText: "",
-    contentJson: null,
-    updatedAt: "2026-01-01T00:00:00.000Z",
     ...partial,
   };
 }
@@ -30,8 +30,8 @@ describe("hgDoc persistence cutover", () => {
   it("default/task entity persists as content_json.format=hgDoc when bodyDoc exists", () => {
     const mapped = canvasItemToEntity(
       baseItem({
-        itemType: "checklist",
         contentJson: { format: "html", html: "<p>legacy html</p>" },
+        itemType: "checklist",
       }),
       "space-1"
     );
@@ -43,20 +43,20 @@ describe("hgDoc persistence cutover", () => {
 
     const contentJson = buildContentJsonForContentEntity(mapped);
     expect(contentJson).toMatchObject({
-      format: "hgDoc",
       doc: mapped.bodyDoc,
+      format: "hgDoc",
     });
   });
 
   it("code theme with legacy html migrates to hgDoc persistence", () => {
     const mapped = canvasItemToEntity(
       baseItem({
-        itemType: "note",
         contentJson: {
           format: "html",
-          html: "<pre>code-ish</pre>",
           hgArch: { theme: "code" },
+          html: "<pre>code-ish</pre>",
         },
+        itemType: "note",
       }),
       "space-1"
     );
@@ -69,19 +69,19 @@ describe("hgDoc persistence cutover", () => {
 
     const contentJson = buildContentJsonForContentEntity(mapped);
     expect(contentJson).toMatchObject({
-      format: "hgDoc",
       doc: mapped.bodyDoc,
+      format: "hgDoc",
     });
   });
 
   it("legacy note HTML hydrates into hgDoc body content", () => {
     const mapped = canvasItemToEntity(
       baseItem({
-        itemType: "note",
         contentJson: {
           format: "html",
           html: "<p>legacy prose should not carry over</p>",
         },
+        itemType: "note",
       }),
       "space-1"
     );
@@ -95,33 +95,33 @@ describe("hgDoc persistence cutover", () => {
     );
 
     const contentJson = buildContentJsonForContentEntity(mapped);
-    expect(contentJson).toMatchObject({ format: "hgDoc", doc: mapped.bodyDoc });
+    expect(contentJson).toMatchObject({ doc: mapped.bodyDoc, format: "hgDoc" });
   });
 
   it("lore character HTML body wins over stray bodyDoc when serializing PATCH payload", () => {
     const html = '<div data-hg-lore-portrait-root="v11"></div>';
     const strayDoc = {
-      type: "doc",
       content: [
-        { type: "paragraph", content: [{ type: "text", text: "stale" }] },
+        { content: [{ text: "stale", type: "text" }], type: "paragraph" },
       ],
+      type: "doc",
     };
     const entity: CanvasContentEntity = {
-      id: "char-1",
-      title: "Agent",
-      kind: "content",
-      theme: "default",
-      rotation: 0,
-      width: 320,
-      height: 400,
-      tapeRotation: 0,
-      tapeVariant: "clear",
-      bodyHtml: html,
       bodyDoc: strayDoc,
+      bodyHtml: html,
+      height: 400,
+      id: "char-1",
+      kind: "content",
       loreCard: { kind: "character", variant: "v11" },
+      rotation: 0,
+      slots: { "space-1": { x: 0, y: 0 } },
       stackId: null,
       stackOrder: null,
-      slots: { "space-1": { x: 0, y: 0 } },
+      tapeRotation: 0,
+      tapeVariant: "clear",
+      theme: "default",
+      title: "Agent",
+      width: 320,
     };
     const contentJson = buildContentJsonForContentEntity(entity);
     expect(contentJson).toMatchObject({ format: "html", html });

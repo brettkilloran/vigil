@@ -26,24 +26,24 @@ export async function GET(req: Request) {
    */
   if (process.env.PLAYWRIGHT_E2E === "1") {
     return Response.json({
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: true,
+      items: [],
+      ok: true,
       spaceId: null,
       spaces: [] as { id: string; name: string; updatedAt: string }[],
-      items: [],
-      camera: { x: 0, y: 0, zoom: 1 },
     });
   }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json({
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: true,
+      items: [],
+      ok: true,
       spaceId: null,
       spaces: [] as { id: string; name: string; updatedAt: string }[],
-      items: [],
-      camera: { x: 0, y: 0, zoom: 1 },
     });
   }
   await ensureDemoBraneSeed(db);
@@ -84,10 +84,12 @@ export async function GET(req: Request) {
     const items = itemRows.map(rowToCanvasItem);
     const camera = parseCameraFromRow(activeSpace.canvasState);
     return Response.json({
-      ok: true,
-      demo: false,
-      spaceId: activeSpace.id,
       braneId: activeSpace.braneId,
+      camera,
+      demo: false,
+      items,
+      ok: true,
+      spaceId: activeSpace.id,
       spaces: subtreeRows.map((s) => ({
         id: s.id,
         name: s.name,
@@ -97,8 +99,6 @@ export async function GET(req: Request) {
             ? s.updatedAt.toISOString()
             : String(s.updatedAt),
       })),
-      items,
-      camera,
     });
   }
 
@@ -122,10 +122,12 @@ export async function GET(req: Request) {
   const camera = parseCameraFromRow(activeSpace.canvasState);
 
   return Response.json({
-    ok: true,
-    demo: false,
-    spaceId: activeSpace.id,
     braneId: activeSpace.braneId,
+    camera,
+    demo: false,
+    items,
+    ok: true,
+    spaceId: activeSpace.id,
     spaces: allSpaces.map((s) => ({
       id: s.id,
       name: s.name,
@@ -135,7 +137,5 @@ export async function GET(req: Request) {
           ? s.updatedAt.toISOString()
           : String(s.updatedAt),
     })),
-    items,
-    camera,
   });
 }

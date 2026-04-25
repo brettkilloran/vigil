@@ -13,8 +13,7 @@ export interface StructuredBodyEvalFixture {
 
 export const STRUCTURED_BODY_EVAL_FIXTURES: StructuredBodyEvalFixture[] = [
   {
-    name: "short-single-topic",
-    title: "Scout Notes",
+    expect: { minH1: 1, minH2: 0, minH3: 0 },
     input: {
       blocks: [
         {
@@ -24,11 +23,11 @@ export const STRUCTURED_BODY_EVAL_FIXTURES: StructuredBodyEvalFixture[] = [
         { kind: "paragraph", text: "No hostile movement detected at dawn." },
       ],
     },
-    expect: { minH1: 1, minH2: 0, minH3: 0 },
+    name: "short-single-topic",
+    title: "Scout Notes",
   },
   {
-    name: "medium-multi-topic",
-    title: "Session 12 Debrief",
+    expect: { minH1: 1, minH2: 3, minH3: 0 },
     input: {
       blocks: [
         { kind: "heading", level: 2, text: "Travel" },
@@ -48,17 +47,18 @@ export const STRUCTURED_BODY_EVAL_FIXTURES: StructuredBodyEvalFixture[] = [
         },
       ],
     },
-    expect: { minH1: 1, minH2: 3, minH3: 0 },
+    name: "medium-multi-topic",
+    title: "Session 12 Debrief",
   },
   {
-    name: "malformed-h3-before-h2",
-    title: "Ops Handbook",
+    expect: { minH1: 1, minH2: 1, minH3: 0 },
     input: {
       blocks: [
         { kind: "heading", level: 3, text: "Dispatch Timing" },
         { kind: "paragraph", text: "Signals go out at first bell." },
       ],
     },
-    expect: { minH1: 1, minH2: 1, minH3: 0 },
+    name: "malformed-h3-before-h2",
+    title: "Ops Handbook",
   },
 ];

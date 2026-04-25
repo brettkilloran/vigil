@@ -48,14 +48,8 @@ function pinAppReactAliases(map: Record<string, unknown>) {
  * Invariants: see `AGENTS.md` § "Local dev, Node, and Storybook (guardrails)".
  */
 const config: StorybookConfig = {
-  stories: ["../src/components/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
   /** Keep minimal until dev UI is stable; add Chromatic / Vitest / onboarding back one at a time. */
   addons: ["@storybook/addon-a11y", "@storybook/addon-docs"],
-  framework: {
-    name: "@storybook/nextjs",
-    options: {},
-  },
-  staticDirs: ["../public"],
   /**
    * Storybook 10 validates Host/Origin separately from webpack. Use `true` when using non-default hosts
    * or proxies (see `core.allowedHosts` docs).
@@ -65,6 +59,12 @@ const config: StorybookConfig = {
     allowedHosts: true,
     disableTelemetry: true,
   },
+  framework: {
+    name: "@storybook/nextjs",
+    options: {},
+  },
+  staticDirs: ["../public"],
+  stories: ["../src/components/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
   /**
    * Default pnpm scripts bind **localhost** (not 0.0.0.0) so Windows HMR / dev-server client URLs stay
    * consistent. Use `pnpm run storybook:lan` when you need the LAN URL.

@@ -9,17 +9,16 @@ vi.mock("@/src/db/index", () => ({
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", () => ({
   getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
-  isHeartgardenPlayerBlocked: vi.fn().mockReturnValue(false),
   heartgardenApiForbiddenJsonResponse: vi.fn(() =>
     Response.json(
-      { ok: false, error: "forbidden", spaces: [] },
+      { error: "forbidden", ok: false, spaces: [] },
       { status: 403 }
     )
   ),
+  isHeartgardenPlayerBlocked: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock("@/src/lib/lore-import-space-scope", () => ({
-  resolveLoreImportAllowedSpaceIds: resolveLoreImportAllowedSpaceIdsMock,
   buildSpacePath: (
     spaceId: string,
     byId: Map<string, { name: string; parentSpaceId: string | null }>
@@ -27,6 +26,7 @@ vi.mock("@/src/lib/lore-import-space-scope", () => ({
     const row = byId.get(spaceId);
     return row?.name ?? spaceId;
   },
+  resolveLoreImportAllowedSpaceIds: resolveLoreImportAllowedSpaceIdsMock,
 }));
 
 describe("GET /api/spaces/search", () => {

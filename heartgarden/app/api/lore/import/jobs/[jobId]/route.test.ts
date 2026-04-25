@@ -9,8 +9,8 @@ vi.mock("@/src/db/index", () => ({
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", () => ({
-  getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
   enforceGmOnlyBootContext: vi.fn().mockReturnValue(null),
+  getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
   gmMayAccessSpaceIdAsync: gmMayAccessSpaceIdAsyncMock,
   heartgardenApiForbiddenJsonResponse: vi.fn(),
 }));
@@ -27,18 +27,18 @@ describe("GET /api/lore/import/jobs/[jobId]", () => {
 
   it("returns structured failure fields for failed jobs", async () => {
     const failedJob = {
-      id: "11111111-1111-4111-8111-111111111111",
-      spaceId: "22222222-2222-4222-8222-222222222222",
-      status: "failed",
       error: "Outline model timed out",
+      id: "11111111-1111-4111-8111-111111111111",
+      lastProgressAt: new Date(),
       plan: null,
-      updatedAt: new Date(),
+      progressMessage: "Import job failed",
+      progressMeta: { errorCode: "outline_llm_failed", lastPhase: "outline" },
       progressPhase: "failed",
       progressStep: null,
       progressTotal: null,
-      progressMessage: "Import job failed",
-      progressMeta: { errorCode: "outline_llm_failed", lastPhase: "outline" },
-      lastProgressAt: new Date(),
+      spaceId: "22222222-2222-4222-8222-222222222222",
+      status: "failed",
+      updatedAt: new Date(),
     };
     const db = {
       select: () => ({

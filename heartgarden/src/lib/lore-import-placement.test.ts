@@ -22,13 +22,13 @@ function overlaps(
 describe("placeImportCards", () => {
   it("places solo entities without overlap", () => {
     const result = placeImportCards({
+      entities: [
+        { affinities: [], clientId: "a" },
+        { affinities: [], clientId: "b" },
+        { affinities: [], clientId: "c" },
+      ],
       originX: 0,
       originY: 0,
-      entities: [
-        { clientId: "a", affinities: [] },
-        { clientId: "b", affinities: [] },
-        { clientId: "c", affinities: [] },
-      ],
     });
     const rects = Object.values(result.entities);
     expect(rects).toHaveLength(3);
@@ -41,10 +41,10 @@ describe("placeImportCards", () => {
 
   it("keeps source card at origin and entities below it", () => {
     const result = placeImportCards({
+      entities: [{ affinities: [], clientId: "a" }],
       originX: 10,
       originY: 20,
-      source: { width: 420, height: 360 },
-      entities: [{ clientId: "a", affinities: [] }],
+      source: { height: 360, width: 420 },
     });
     expect(result.source?.x).toBe(10);
     expect(result.source?.y).toBe(20);
@@ -56,17 +56,17 @@ describe("placeImportCards", () => {
 
   it("clusters affine entities near each other", () => {
     const result = placeImportCards({
-      originX: 0,
-      originY: 0,
       entities: [
         // Three highly connected around "hub"
-        { clientId: "hub", affinities: ["a", "b", "c"] },
-        { clientId: "a", affinities: ["hub"] },
-        { clientId: "b", affinities: ["hub"] },
-        { clientId: "c", affinities: ["hub"] },
+        { affinities: ["a", "b", "c"], clientId: "hub" },
+        { affinities: ["hub"], clientId: "a" },
+        { affinities: ["hub"], clientId: "b" },
+        { affinities: ["hub"], clientId: "c" },
         // Disconnected outsider
-        { clientId: "outsider", affinities: [] },
+        { affinities: [], clientId: "outsider" },
       ],
+      originX: 0,
+      originY: 0,
     });
     const step = IMPORT_CARD_WIDTH + IMPORT_CARD_GAP;
     const hub = result.entities.hub!;
@@ -82,12 +82,12 @@ describe("placeImportCards", () => {
 
   it("avoids obstacle rects", () => {
     const result = placeImportCards({
+      entities: [{ affinities: [], clientId: "a" }],
+      obstacles: [
+        { height: IMPORT_CARD_HEIGHT, width: IMPORT_CARD_WIDTH, x: 0, y: 0 },
+      ],
       originX: 0,
       originY: 0,
-      entities: [{ clientId: "a", affinities: [] }],
-      obstacles: [
-        { x: 0, y: 0, width: IMPORT_CARD_WIDTH, height: IMPORT_CARD_HEIGHT },
-      ],
     });
     const rect = result.entities.a!;
     expect(rect.x !== 0 || rect.y !== 0).toBe(true);
@@ -95,13 +95,13 @@ describe("placeImportCards", () => {
 
   it("is deterministic for the same input", () => {
     const input = {
+      entities: [
+        { affinities: ["b"], clientId: "a" },
+        { affinities: ["a"], clientId: "b" },
+        { affinities: [], clientId: "c" },
+      ],
       originX: 0,
       originY: 0,
-      entities: [
-        { clientId: "a", affinities: ["b"] },
-        { clientId: "b", affinities: ["a"] },
-        { clientId: "c", affinities: [] },
-      ],
     };
     const a = placeImportCards(input);
     const b = placeImportCards(input);
@@ -110,14 +110,14 @@ describe("placeImportCards", () => {
 
   it("no two placed cards overlap even in crowded scenes", () => {
     const entities = Array.from({ length: 18 }, (_, i) => ({
-      clientId: `n${i}`,
       affinities: i % 3 === 0 ? [`n${(i + 1) % 18}`, `n${(i + 2) % 18}`] : [],
+      clientId: `n${i}`,
     }));
     const result = placeImportCards({
+      entities,
       originX: 0,
       originY: 0,
-      source: { width: 420, height: 360 },
-      entities,
+      source: { height: 360, width: 420 },
     });
     const rects = Object.values(result.entities);
     expect(rects).toHaveLength(18);

@@ -51,10 +51,10 @@ function padBounds(
   const px = Math.max(w * padRatio, minPad);
   const py = Math.max(h * padRatio, minPad);
   return {
-    minX: b.minX - px,
-    minY: b.minY - py,
     maxX: b.maxX + px,
     maxY: b.maxY + py,
+    minX: b.minX - px,
+    minY: b.minY - py,
   };
 }
 
@@ -130,17 +130,17 @@ export function CanvasMinimap({
   const clientToWorldDelta = useCallback(
     (movementX: number, movementY: number) => {
       if (!(svgRef.current && viewBoxRect)) {
-        return { dw: 0, dh: 0 };
+        return { dh: 0, dw: 0 };
       }
       const r = svgRef.current.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) {
-        return { dw: 0, dh: 0 };
+        return { dh: 0, dw: 0 };
       }
       const vbW = viewBoxRect.maxX - viewBoxRect.minX;
       const vbH = viewBoxRect.maxY - viewBoxRect.minY;
       return {
-        dw: (movementX / r.width) * vbW,
         dh: (movementY / r.height) * vbH,
+        dw: (movementX / r.width) * vbW,
       };
     },
     [viewBoxRect]

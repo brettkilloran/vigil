@@ -18,7 +18,7 @@ async function createFirstNoteAndGetBodyEditor(page: Page) {
   await expect(node).toBeVisible({ timeout: 15_000 });
   const bodyEditor = node.locator('[data-node-body-editor="true"]');
   await expect(bodyEditor).toBeVisible({ timeout: 15_000 });
-  return { node, bodyEditor };
+  return { bodyEditor, node };
 }
 
 function insertBlocksButton(page: Page, name: string) {
@@ -268,15 +268,15 @@ test.describe("text editing hardening", () => {
       const selection = window.getSelection();
       const ae = document.activeElement as Node | null;
       return {
-        isFocused: ae != null && (el === ae || el.contains(ae)),
         containsSelection:
           !!selection?.anchorNode && el.contains(selection.anchorNode),
+        isFocused: ae != null && (el === ae || el.contains(ae)),
       };
     });
 
     expect(caretState).toEqual({
-      isFocused: true,
       containsSelection: true,
+      isFocused: true,
     });
     await expect(focusBody).toContainText("focus-stability");
   });

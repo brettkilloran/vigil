@@ -67,20 +67,17 @@ function isAnswered(a: ClarificationAnswer | undefined): boolean {
 const noOp = { op: "no_op" as const };
 
 const SINGLE_SELECT: LoreImportClarificationItem = {
-  id: "11111111-1111-4111-8111-111111111111",
   category: "structure",
-  severity: "required",
   confidenceScore: 0.38,
-  title: "Where should the chapter on the Ember Consortium live?",
   context:
     "The import produced a new folder “Factions › Ember Consortium”, but your vault already has “Guilds › Ember Consortium”. Choose one home so the notes merge cleanly.",
-  questionKind: "single_select",
+  id: "11111111-1111-4111-8111-111111111111",
   options: [
     {
       id: "opt-existing",
       label: "Merge into Guilds › Ember Consortium",
-      recommended: true,
       planPatchHint: noOp,
+      recommended: true,
     },
     {
       id: "opt-new",
@@ -89,45 +86,45 @@ const SINGLE_SELECT: LoreImportClarificationItem = {
     },
     { id: "opt-both", label: "Keep both (link them)", planPatchHint: noOp },
   ],
+  questionKind: "single_select",
+  severity: "required",
+  title: "Where should the chapter on the Ember Consortium live?",
 };
 
 const MULTI_SELECT: LoreImportClarificationItem = {
-  id: "22222222-2222-4222-8222-222222222222",
   category: "link_semantics",
-  severity: "optional",
   confidenceScore: 0.55,
-  title: "Which roles apply to Captain Irell in the Ashen Pact?",
   context:
     "Pick any that match the source document. Leave empty to fall back on best judgement.",
-  questionKind: "multi_select",
+  id: "22222222-2222-4222-8222-222222222222",
   options: [
     { id: "role-founder", label: "Founder", planPatchHint: noOp },
     {
       id: "role-enforcer",
       label: "Enforcer",
-      recommended: true,
       planPatchHint: noOp,
+      recommended: true,
     },
     { id: "role-liaison", label: "Liaison to the Crown", planPatchHint: noOp },
     { id: "role-exile", label: "Exile", planPatchHint: noOp },
   ],
+  questionKind: "multi_select",
+  severity: "optional",
+  title: "Which roles apply to Captain Irell in the Ashen Pact?",
 };
 
 const CONFIRM_DEFAULT: LoreImportClarificationItem = {
-  id: "33333333-3333-4333-8333-333333333333",
   category: "canon_weight",
-  severity: "required",
   confidenceScore: 0.82,
-  title: "Treat this chapter as current canon?",
   context:
     "The voice reads as narrator rather than an in-world document. We'll mark the notes as canon unless you say otherwise.",
-  questionKind: "confirm_default",
+  id: "33333333-3333-4333-8333-333333333333",
   options: [
     {
       id: "confirm-yes",
       label: "Yes — mark as canon",
-      recommended: true,
       planPatchHint: noOp,
+      recommended: true,
     },
     {
       id: "confirm-no",
@@ -135,6 +132,9 @@ const CONFIRM_DEFAULT: LoreImportClarificationItem = {
       planPatchHint: noOp,
     },
   ],
+  questionKind: "confirm_default",
+  severity: "required",
+  title: "Treat this chapter as current canon?",
 };
 
 type ScenarioKey =
@@ -155,38 +155,32 @@ interface Scenario {
 
 const SCENARIOS: Scenario[] = [
   {
-    key: "single",
-    label: "Single-select (required)",
+    clarifications: [SINGLE_SELECT],
     description:
       "Low-confidence structural decision. Required to apply the import. A “Use recommended” shortcut is offered.",
-    clarifications: [SINGLE_SELECT],
+    key: "single",
+    label: "Single-select (required)",
   },
   {
-    key: "multi",
-    label: "Multi-select (optional)",
+    clarifications: [MULTI_SELECT],
     description:
       "Optional multi-select with a recommended role pre-highlighted. Skipping falls back to best judgement.",
-    clarifications: [MULTI_SELECT],
+    key: "multi",
+    label: "Multi-select (optional)",
   },
   {
-    key: "confirmDefault",
-    label: "Confirm default (required)",
+    clarifications: [CONFIRM_DEFAULT],
     description:
       "High-confidence binary confirmation. Defaults to the recommended option; user can override.",
-    clarifications: [CONFIRM_DEFAULT],
+    key: "confirmDefault",
+    label: "Confirm default (required)",
   },
   {
-    key: "otherFollowUp",
-    label: "“Other…” follow-up card",
+    clarifications: [SINGLE_SELECT],
     description:
       "User typed a free-text answer; the planner offers normalized options to disambiguate.",
-    clarifications: [SINGLE_SELECT],
     initialOtherFollowUp: {
       clarificationId: SINGLE_SELECT.id,
-      title: "Where should the chapter on the Ember Consortium live?",
-      question:
-        "We read your answer as wanting a new top-level folder. Which of these closest matches your intent?",
-      otherText: "Put it under a new Syndicates heading next to Cartels.",
       options: [
         {
           id: "fu-new-top",
@@ -202,14 +196,18 @@ const SCENARIOS: Scenario[] = [
           label: "Rename Guilds to Syndicates and merge",
         },
       ],
+      otherText: "Put it under a new Syndicates heading next to Cartels.",
+      question:
+        "We read your answer as wanting a new top-level folder. Which of these closest matches your intent?",
+      title: "Where should the chapter on the Ember Consortium live?",
     },
+    key: "otherFollowUp",
+    label: "“Other…” follow-up card",
   },
   {
-    key: "allDone",
-    label: "All-set completion",
+    clarifications: [SINGLE_SELECT, CONFIRM_DEFAULT],
     description:
       "Shown when every required clarification is resolved. Gives a direct path to apply the import.",
-    clarifications: [SINGLE_SELECT, CONFIRM_DEFAULT],
     initialAnswers: [
       {
         clarificationId: SINGLE_SELECT.id,
@@ -222,6 +220,8 @@ const SCENARIOS: Scenario[] = [
         selectedOptionIds: ["confirm-yes"],
       },
     ],
+    key: "allDone",
+    label: "All-set completion",
   },
 ];
 
@@ -241,9 +241,9 @@ interface MockPlanStats {
 
 const MOCK_STATS: MockPlanStats = {
   folders: 4,
-  notes: 18,
-  merges: 3,
   links: 7,
+  merges: 3,
+  notes: 18,
   reviewFlags: 1,
 };
 
@@ -587,8 +587,8 @@ function WizardPreview({ scenario }: WizardProps) {
                                 setAnswers((prev) =>
                                   upsertAnswer(prev, {
                                     clarificationId: c.id,
-                                    resolution: "other_text",
                                     otherText: ans?.otherText ?? "",
+                                    resolution: "other_text",
                                   })
                                 )
                               }
@@ -603,8 +603,8 @@ function WizardPreview({ scenario }: WizardProps) {
                                 setAnswers((prev) =>
                                   upsertAnswer(prev, {
                                     clarificationId: c.id,
-                                    resolution: "other_text",
                                     otherText: e.target.value,
+                                    resolution: "other_text",
                                   })
                                 )
                               }

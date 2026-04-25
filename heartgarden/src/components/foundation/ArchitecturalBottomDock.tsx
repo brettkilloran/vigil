@@ -153,21 +153,21 @@ function createIcon(nodeType: NodeTheme): ReactNode {
  * (bullet → numbered → task), then media/divider. Handled in `ArchitecturalCanvasApp` `runFormat`.
  */
 export const DEFAULT_DOC_INSERT_ACTIONS: DockFormatAction[] = [
-  { id: "quote", label: "Quote", command: "formatBlock", value: "blockquote" },
-  { id: "list", label: "Bulleted list", command: "insertUnorderedList" },
-  { id: "numberedList", label: "Numbered list", command: "insertOrderedList" },
-  { id: "checklist", label: "Checklist", command: "arch:checklist" },
-  { id: "insertImage", label: "Insert image", command: "arch:insertImage" },
-  { id: "divider", label: "Divider", command: "insertHorizontalRule" },
+  { command: "formatBlock", id: "quote", label: "Quote", value: "blockquote" },
+  { command: "insertUnorderedList", id: "list", label: "Bulleted list" },
+  { command: "insertOrderedList", id: "numberedList", label: "Numbered list" },
+  { command: "arch:checklist", id: "checklist", label: "Checklist" },
+  { command: "arch:insertImage", id: "insertImage", label: "Insert image" },
+  { command: "insertHorizontalRule", id: "divider", label: "Divider" },
 ];
 
 /** Inline styles first, then block level (matches Word / Google Docs / CKEditor-style toolbars). */
 export const DEFAULT_FORMAT_ACTIONS: DockFormatAction[] = [
-  { id: "bold", label: "Bold", command: "bold" },
-  { id: "italic", label: "Italic", command: "italic" },
-  { id: "underline", label: "Underline", command: "underline" },
-  { id: "strikeThrough", label: "Strikethrough", command: "strikeThrough" },
-  { id: "heading", label: "Heading", command: "formatBlock", value: "h1" },
+  { command: "bold", id: "bold", label: "Bold" },
+  { command: "italic", id: "italic", label: "Italic" },
+  { command: "underline", id: "underline", label: "Underline" },
+  { command: "strikeThrough", id: "strikeThrough", label: "Strikethrough" },
+  { command: "formatBlock", id: "heading", label: "Heading", value: "h1" },
 ];
 
 export const DEFAULT_CREATE_ACTIONS: DockCreateAction[] = [
@@ -672,12 +672,12 @@ export function ArchitecturalFolderColorStrip({
             role={threadCatalog ? "presentation" : "listbox"}
             style={
               spoolMenuPos
-                ? { top: spoolMenuPos.top, left: spoolMenuPos.left, opacity: 1 }
+                ? { left: spoolMenuPos.left, opacity: 1, top: spoolMenuPos.top }
                 : {
-                    top: 0,
                     left: 0,
                     opacity: 0,
                     pointerEvents: "none" as const,
+                    top: 0,
                   }
             }
           >
@@ -956,12 +956,12 @@ export function ArchitecturalConnectionKindPicker({
             role="presentation"
             style={
               spoolMenuPos
-                ? { top: spoolMenuPos.top, left: spoolMenuPos.left, opacity: 1 }
+                ? { left: spoolMenuPos.left, opacity: 1, top: spoolMenuPos.top }
                 : {
-                    top: 0,
                     left: 0,
                     opacity: 0,
                     pointerEvents: "none" as const,
+                    top: 0,
                   }
             }
           >

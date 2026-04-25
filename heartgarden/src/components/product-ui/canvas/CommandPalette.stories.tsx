@@ -12,18 +12,18 @@ const now = Date.now();
 const mockRecentItems: RecentPaletteItem[] = [
   {
     id: "item-note-1",
-    title: "Welcome to this board",
     itemType: "note",
     spaceId: "root",
     spaceName: "Root",
+    title: "Welcome to this board",
     updatedAt: now,
   },
   {
     id: "item-code-1",
-    title: "Sample sync config",
     itemType: "note",
     spaceId: "root",
     spaceName: "Root",
+    title: "Sample sync config",
     updatedAt: now - 60_000,
   },
 ];
@@ -31,25 +31,25 @@ const mockRecentItems: RecentPaletteItem[] = [
 const mockRecentFolders: RecentPaletteFolder[] = [
   {
     id: "folder-1",
-    title: "Research folder",
     parentSpaceId: "root",
     parentSpaceName: "Root",
+    title: "Research folder",
     updatedAt: now,
   },
 ];
 
 const meta = {
-  title: "Heartgarden/Product UI/Canvas/Command palette",
   component: CommandPalette,
   parameters: {
-    layout: "fullscreen",
     docs: {
       description: {
         component:
           "Cmd+K palette: recent items, folders, spaces, and actions. Remote suggestions load only after two+ characters (hits `/api/search/suggest` in production).",
       },
     },
+    layout: "fullscreen",
   },
+  title: "Heartgarden/Product UI/Canvas/Command palette",
 } satisfies Meta<typeof CommandPalette>;
 
 export default meta;
@@ -57,50 +57,50 @@ type Story = StoryObj<typeof meta>;
 
 export const Open: Story = {
   args: {
-    open: true,
-    onClose: fn(),
+    actions: [],
     currentSpaceId: "root",
     items: [],
-    spaces: [],
-    actions: [],
-    recentItems: [],
-    recentFolders: [],
+    onClose: fn(),
+    onOpenRecentFolder: fn(),
+    onRecordRecentItem: fn(),
+    onRunAction: fn(),
     onSelectItem: fn(),
     onSelectSpace: fn(),
-    onRecordRecentItem: fn(),
-    onOpenRecentFolder: fn(),
-    onRunAction: fn(),
+    open: true,
+    recentFolders: [],
+    recentItems: [],
+    spaces: [],
   },
   render: () => (
     <CommandPalette
       actions={[
         {
           id: "new-note",
-          label: "New note",
           keywords: ["create", "note"],
+          label: "New note",
         },
         {
           id: "new-folder",
-          label: "New folder",
           keywords: ["create", "folder"],
+          label: "New folder",
         },
       ]}
       currentSpaceId="root"
       items={[
         {
           id: "pal-1",
-          title: "Try these next",
           itemType: "checklist",
+          snippet: "Open the Research folder",
           spaceId: "root",
           spaceName: "Root",
-          snippet: "Open the Research folder",
+          title: "Try these next",
         },
         {
           id: "pal-2",
-          title: "Reference image",
           itemType: "image",
           spaceId: "root",
           spaceName: "Root",
+          title: "Reference image",
         },
       ]}
       onClose={fn()}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type {
   CanvasEntity,
   CanvasGraph,
@@ -21,18 +22,18 @@ function noteEntity(
   width = 280
 ): Extract<CanvasEntity, { kind: "content" }> {
   return {
+    bodyHtml: "<div>x</div>",
     id,
     kind: "content",
-    title: "T",
-    theme: "default",
     rotation: 0,
-    width,
-    tapeRotation: 0,
-    tapeVariant: "clear",
-    bodyHtml: "<div>x</div>",
+    slots: { [spaceId]: { x, y } },
     stackId: null,
     stackOrder: null,
-    slots: { [spaceId]: { x, y } },
+    tapeRotation: 0,
+    tapeVariant: "clear",
+    theme: "default",
+    title: "T",
+    width,
   };
 }
 
@@ -60,7 +61,7 @@ describe("worldRectFromViewport", () => {
 
 describe("entityIntersectsWorldRect", () => {
   const space = "s1";
-  const rect = { left: 0, top: 0, right: 500, bottom: 400 };
+  const rect = { bottom: 400, left: 0, right: 500, top: 0 };
   const emptyExc = new Set<string>();
 
   it("detects overlap", () => {
@@ -85,41 +86,41 @@ describe("connectionIntersectsWorldRect", () => {
   const space = "s1";
   const pin = { anchor: "topLeftInset" as const, insetX: 14, insetY: 18 };
   const graph: CanvasGraph = {
-    rootSpaceId: space,
-    spaces: {
-      [space]: {
-        id: space,
-        name: "R",
-        parentSpaceId: null,
-        entityIds: ["a", "b"],
-      },
-    },
+    connections: {},
     entities: {
       a: noteEntity("a", space, 0, 0),
       b: noteEntity("b", space, 400, 0),
     },
-    connections: {},
+    rootSpaceId: space,
+    spaces: {
+      [space]: {
+        entityIds: ["a", "b"],
+        id: space,
+        name: "R",
+        parentSpaceId: null,
+      },
+    },
   };
   const conn: CanvasPinConnection = {
-    id: "c1",
-    sourceEntityId: "a",
-    targetEntityId: "b",
-    sourcePin: pin,
-    targetPin: pin,
     color: "#000",
     createdAt: 0,
+    id: "c1",
+    sourceEntityId: "a",
+    sourcePin: pin,
+    targetEntityId: "b",
+    targetPin: pin,
     updatedAt: 0,
   };
 
   it("keeps long segment that crosses the viewport", () => {
-    const worldRect = { left: 150, top: -100, right: 250, bottom: 500 };
+    const worldRect = { bottom: 500, left: 150, right: 250, top: -100 };
     expect(
       connectionIntersectsWorldRect(conn, graph, space, worldRect, new Set())
     ).toBe(true);
   });
 
   it("drops segment fully outside", () => {
-    const worldRect = { left: 5000, top: 5000, right: 5100, bottom: 5100 };
+    const worldRect = { bottom: 5100, left: 5000, right: 5100, top: 5000 };
     expect(
       connectionIntersectsWorldRect(conn, graph, space, worldRect, new Set())
     ).toBe(false);
@@ -130,17 +131,17 @@ describe("approximateConnectionPinWorld", () => {
   it("uses slot + default insets for content", () => {
     const space = "s1";
     const graph: CanvasGraph = {
+      connections: {},
+      entities: { a: noteEntity("a", space, 10, 20) },
       rootSpaceId: space,
       spaces: {
         [space]: {
+          entityIds: ["a"],
           id: space,
           name: "R",
           parentSpaceId: null,
-          entityIds: ["a"],
         },
       },
-      entities: { a: noteEntity("a", space, 10, 20) },
-      connections: {},
     };
     const p = approximateConnectionPinWorld(
       "a",
@@ -155,9 +156,9 @@ describe("approximateConnectionPinWorld", () => {
 describe("buildCullExceptionEntityIds", () => {
   it("unions inputs", () => {
     const s = buildCullExceptionEntityIds({
-      selectedNodeIds: ["a"],
-      draggedNodeIds: ["b"],
       connectionSourceId: "c",
+      draggedNodeIds: ["b"],
+      selectedNodeIds: ["a"],
     });
     expect([...s].sort()).toEqual(["a", "b", "c"]);
   });
@@ -165,7 +166,7 @@ describe("buildCullExceptionEntityIds", () => {
 
 describe("collapsedStackIntersectsWorldRect", () => {
   const space = "s1";
-  const rect = { left: 0, top: 0, right: 100, bottom: 100 };
+  const rect = { bottom: 100, left: 0, right: 100, top: 0 };
 
   it("true if union overlaps", () => {
     const entities = [
@@ -182,8 +183,8 @@ describe("rectsIntersect", () => {
   it("false when separated", () => {
     expect(
       rectsIntersect(
-        { left: 0, top: 0, right: 1, bottom: 1 },
-        { left: 2, top: 2, right: 3, bottom: 3 }
+        { bottom: 1, left: 0, right: 1, top: 0 },
+        { bottom: 3, left: 2, right: 3, top: 2 }
       )
     ).toBe(false);
   });

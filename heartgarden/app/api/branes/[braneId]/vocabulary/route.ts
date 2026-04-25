@@ -20,7 +20,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -35,7 +35,7 @@ export async function GET(
   const braneId = parseSpaceIdParam(rawBraneId);
   if (!braneId) {
     return Response.json(
-      { ok: false, error: "Invalid brane id" },
+      { error: "Invalid brane id", ok: false },
       { status: 400 }
     );
   }
@@ -46,7 +46,7 @@ export async function GET(
     .limit(1);
   if (!brane) {
     return Response.json(
-      { ok: false, error: "Brane not found" },
+      { error: "Brane not found", ok: false },
       { status: 404 }
     );
   }
@@ -58,8 +58,8 @@ export async function GET(
   const requestEtag = req.headers.get("if-none-match")?.trim();
   if (requestEtag && requestEtag === payload.etag) {
     return new Response(null, {
+      headers: { "Cache-Control": "private, max-age=15", ETag: payload.etag },
       status: 304,
-      headers: { ETag: payload.etag, "Cache-Control": "private, max-age=15" },
     });
   }
   return Response.json(
@@ -68,7 +68,7 @@ export async function GET(
       ...payload,
     },
     {
-      headers: { ETag: payload.etag, "Cache-Control": "private, max-age=15" },
+      headers: { "Cache-Control": "private, max-age=15", ETag: payload.etag },
     }
   );
 }

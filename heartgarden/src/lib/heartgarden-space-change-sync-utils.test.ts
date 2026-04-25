@@ -18,9 +18,9 @@ describe("buildCollabMergeProtectedContentIds", () => {
   it("is empty when focus is closed", () => {
     expect(
       buildCollabMergeProtectedContentIds({
-        focusOpen: false,
-        focusDirty: true,
         activeNodeId: "a",
+        focusDirty: true,
+        focusOpen: false,
         inlineContentDirtyIds: new Set(),
       }).size
     ).toBe(0);
@@ -29,9 +29,9 @@ describe("buildCollabMergeProtectedContentIds", () => {
   it("is empty when focus is open but not dirty", () => {
     expect(
       buildCollabMergeProtectedContentIds({
-        focusOpen: true,
-        focusDirty: false,
         activeNodeId: "a",
+        focusDirty: false,
+        focusOpen: true,
         inlineContentDirtyIds: new Set(),
       }).size
     ).toBe(0);
@@ -40,9 +40,9 @@ describe("buildCollabMergeProtectedContentIds", () => {
   it("is empty when focus is dirty but active node id is null", () => {
     expect(
       buildCollabMergeProtectedContentIds({
-        focusOpen: true,
-        focusDirty: true,
         activeNodeId: null,
+        focusDirty: true,
+        focusOpen: true,
         inlineContentDirtyIds: new Set(),
       }).size
     ).toBe(0);
@@ -50,9 +50,9 @@ describe("buildCollabMergeProtectedContentIds", () => {
 
   it("includes active node when focus is open, dirty, and id is set", () => {
     const s = buildCollabMergeProtectedContentIds({
-      focusOpen: true,
-      focusDirty: true,
       activeNodeId: "note-1",
+      focusDirty: true,
+      focusOpen: true,
       inlineContentDirtyIds: new Set(),
     });
     expect([...s]).toEqual(["note-1"]);
@@ -60,9 +60,9 @@ describe("buildCollabMergeProtectedContentIds", () => {
 
   it("unions inline dirty ids with focused dirty node", () => {
     const s = buildCollabMergeProtectedContentIds({
-      focusOpen: true,
-      focusDirty: true,
       activeNodeId: "a",
+      focusDirty: true,
+      focusOpen: true,
       inlineContentDirtyIds: new Set(["b", "c"]),
     });
     expect([...s].sort()).toEqual(["a", "b", "c"]);
@@ -70,9 +70,9 @@ describe("buildCollabMergeProtectedContentIds", () => {
 
   it("includes inline dirty ids even when focus is not protecting", () => {
     const s = buildCollabMergeProtectedContentIds({
-      focusOpen: false,
-      focusDirty: false,
       activeNodeId: null,
+      focusDirty: false,
+      focusOpen: false,
       inlineContentDirtyIds: new Set(["x"]),
     });
     expect([...s]).toEqual(["x"]);
@@ -80,9 +80,9 @@ describe("buildCollabMergeProtectedContentIds", () => {
 
   it("includes saving content ids", () => {
     const s = buildCollabMergeProtectedContentIds({
-      focusOpen: false,
-      focusDirty: false,
       activeNodeId: null,
+      focusDirty: false,
+      focusOpen: false,
       inlineContentDirtyIds: new Set(),
       savingContentIds: new Set(["s1"]),
     });
@@ -126,7 +126,7 @@ describe("parseSpaceChangesResponseJson", () => {
   it("rejects when itemIds required but missing", () => {
     expect(
       parseSpaceChangesResponseJson(
-        { ok: true, items: [] },
+        { items: [], ok: true },
         { requireItemIds: true }
       )
     ).toBeNull();
@@ -134,7 +134,7 @@ describe("parseSpaceChangesResponseJson", () => {
 
   it("accepts when itemIds present", () => {
     const p = parseSpaceChangesResponseJson(
-      { ok: true, items: [], itemIds: ["x"] },
+      { itemIds: ["x"], items: [], ok: true },
       { requireItemIds: true }
     );
     expect(p?.itemIds).toEqual(["x"]);
@@ -142,7 +142,7 @@ describe("parseSpaceChangesResponseJson", () => {
 
   it("parses itemLinksRevision when present", () => {
     const p = parseSpaceChangesResponseJson(
-      { ok: true, items: [], itemIds: ["x"], itemLinksRevision: "3:99:abc" },
+      { itemIds: ["x"], itemLinksRevision: "3:99:abc", items: [], ok: true },
       { requireItemIds: true }
     );
     expect(p?.itemLinksRevision).toBe("3:99:abc");
@@ -151,21 +151,21 @@ describe("parseSpaceChangesResponseJson", () => {
   it("rejects payload when an item row fails shape validation", () => {
     const p = parseSpaceChangesResponseJson(
       {
-        ok: true,
         items: [
           {
+            contentText: 42,
+            height: 10,
             id: "i1",
-            spaceId: "s1",
             itemType: "note",
+            spaceId: "s1",
+            title: "t",
+            width: 10,
             x: 0,
             y: 0,
-            width: 10,
-            height: 10,
             zIndex: 1,
-            title: "t",
-            contentText: 42,
           },
         ],
+        ok: true,
       },
       { requireItemIds: false }
     );
@@ -181,25 +181,30 @@ describe("applySpaceChangeGraphMerge", () => {
     updatedAt: string
   ): CanvasItem {
     return {
+      contentJson: { format: "html", html: "<div>x</div>" },
+      contentText: "",
+      height: 200,
       id,
-      spaceId,
       itemType: "note",
+      spaceId,
+      title,
+      updatedAt,
+      width: 280,
       x: 0,
       y: 0,
-      width: 280,
-      height: 200,
       zIndex: 1,
-      title,
-      contentText: "",
-      contentJson: { format: "html", html: "<div>x</div>" },
-      updatedAt,
     };
   }
 
   it("applies tombstones from server id set", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        note("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -209,20 +214,15 @@ describe("applySpaceChangeGraphMerge", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        note("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const next = applySpaceChangeGraphMerge({
-      prev,
       activeSpaceId: "space-1",
+      prev,
+      protectedContentIds: new Set(),
       rawItems: [note("a", "space-1", "A2", "2020-01-02T00:00:00.000Z")],
       rawSpaceRows: [],
       serverItemIds: new Set(["a"]),
-      protectedContentIds: new Set(),
       tombstoneExemptIds: new Set(),
     });
     expect(next.entities.b).toBeUndefined();
@@ -235,8 +235,13 @@ describe("applySpaceChangeGraphMerge", () => {
     // must treat that as "no authoritative snapshot on this page" rather than
     // an empty set, or the whole subtree gets tombstoned.
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        note("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -246,20 +251,15 @@ describe("applySpaceChangeGraphMerge", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        note("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        note("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const next = applySpaceChangeGraphMerge({
-      prev,
       activeSpaceId: "space-1",
+      prev,
+      protectedContentIds: new Set(),
       rawItems: [],
       rawSpaceRows: [],
       serverItemIds: null,
-      protectedContentIds: new Set(),
       tombstoneExemptIds: new Set(),
     });
     expect(next.entities.a).toBeDefined();
@@ -271,8 +271,10 @@ describe("applySpaceChangeGraphMerge", () => {
 
   it("keeps moved item membership when destination space arrives in same payload", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -282,19 +284,17 @@ describe("applySpaceChangeGraphMerge", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const next = applySpaceChangeGraphMerge({
-      prev,
       activeSpaceId: "space-1",
+      prev,
+      protectedContentIds: new Set(),
       rawItems: [note("a", "space-2", "A moved", "2020-01-02T00:00:00.000Z")],
       rawSpaceRows: [
         { id: "space-2", name: "New space", parentSpaceId: "space-1" },
       ],
       serverItemIds: new Set(["a"]),
-      protectedContentIds: new Set(),
       tombstoneExemptIds: new Set(),
     });
     expect(next.spaces["space-1"]?.entityIds).toEqual([]);
@@ -303,8 +303,10 @@ describe("applySpaceChangeGraphMerge", () => {
 
   it("does not mutate previous graph space membership arrays", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -314,20 +316,18 @@ describe("applySpaceChangeGraphMerge", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [note("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const prevSpace1EntityIds = prev.spaces["space-1"]?.entityIds;
     const next = applySpaceChangeGraphMerge({
-      prev,
       activeSpaceId: "space-1",
+      prev,
+      protectedContentIds: new Set(),
       rawItems: [note("a", "space-2", "A moved", "2020-01-02T00:00:00.000Z")],
       rawSpaceRows: [
         { id: "space-2", name: "New space", parentSpaceId: "space-1" },
       ],
       serverItemIds: new Set(["a"]),
-      protectedContentIds: new Set(),
       tombstoneExemptIds: new Set(),
     });
     expect(next.spaces["space-1"]?.entityIds).toEqual([]);
@@ -340,17 +340,17 @@ describe("collectItemServerUpdatedAtBumps", () => {
   it("skips protected ids", () => {
     const items: CanvasItem[] = [
       {
+        contentText: "",
+        height: 1,
         id: "a",
-        spaceId: "s",
         itemType: "note",
+        spaceId: "s",
+        title: "",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+        width: 1,
         x: 0,
         y: 0,
-        width: 1,
-        height: 1,
         zIndex: 1,
-        title: "",
-        contentText: "",
-        updatedAt: "2024-01-01T00:00:00.000Z",
       },
     ];
     expect(collectItemServerUpdatedAtBumps(items, new Set(["a"]))).toEqual([]);

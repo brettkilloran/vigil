@@ -29,13 +29,13 @@ export async function POST(
     const retry = vaultIndexRateLimitMeta.retry_after_seconds;
     return Response.json(
       {
-        ok: false,
         error: "Too many index requests. Try again in a minute.",
+        ok: false,
         rate_limit: vaultIndexRateLimitMeta,
       },
       {
-        status: 429,
         headers: { "Retry-After": String(retry) },
+        status: 429,
       }
     );
   }
@@ -43,7 +43,7 @@ export async function POST(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -55,13 +55,13 @@ export async function POST(
     .where(eq(items.id, itemId))
     .limit(1);
   if (!row) {
-    return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+    return Response.json({ error: "Not found", ok: false }, { status: 404 });
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtxEarly, row.spaceId))) {
-    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
+    return Response.json({ error: "Forbidden.", ok: false }, { status: 403 });
   }
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtxEarly, row.spaceId))) {
-    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
+    return Response.json({ error: "Forbidden.", ok: false }, { status: 403 });
   }
 
   let refreshLoreMeta = true;
@@ -80,9 +80,9 @@ export async function POST(
   try {
     const result = await reindexItemVault(db, itemId, { refreshLoreMeta });
     return Response.json({
-      ok: result.ok,
       chunks: result.chunks,
       loreMetaUpdated: result.loreMetaUpdated,
+      ok: result.ok,
       skipped: result.skipped ?? null,
     });
   } catch (e) {

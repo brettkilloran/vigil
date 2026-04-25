@@ -1,19 +1,20 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
+
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { ArchitecturalNodeCard } from "@/src/components/foundation/ArchitecturalNodeCard";
 import { buildArchitecturalSeedNodes } from "@/src/components/foundation/architectural-seed";
 
 const seedNodes = buildArchitecturalSeedNodes({
-  taskItem: styles.taskItem,
   done: styles.done,
-  taskCheckbox: styles.taskCheckbox,
-  taskText: styles.taskText,
   mediaFrame: styles.mediaFrame,
   mediaImage: styles.mediaImage,
   mediaImageActions: styles.mediaImageActions,
   mediaUploadBtn: styles.mediaUploadBtn,
+  taskCheckbox: styles.taskCheckbox,
+  taskItem: styles.taskItem,
+  taskText: styles.taskText,
 });
 
 function getSeed(theme: "default" | "code" | "task" | "media") {
@@ -30,54 +31,54 @@ const seedTask = getSeed("task");
 const seedMedia = getSeed("media");
 
 const meta: Meta<typeof ArchitecturalNodeCard> = {
-  title: "Heartgarden/Product UI/Canvas/Node card",
-  component: ArchitecturalNodeCard,
   args: {
-    id: seedDefault.id,
-    title: seedDefault.title,
-    width: seedDefault.width ?? 340,
-    theme: seedDefault.theme,
-    tapeRotation: seedDefault.tapeRotation,
-    bodyHtml: seedDefault.bodyHtml,
-    bodyDoc: seedDefault.bodyDoc ?? null,
     activeTool: "select",
+    bodyDoc: seedDefault.bodyDoc ?? null,
+    bodyHtml: seedDefault.bodyHtml,
     dragged: false,
-    selected: true,
+    id: seedDefault.id,
     onBodyCommit: () => {},
     onExpand: () => {},
+    selected: true,
     showExpandButton: true,
+    tapeRotation: seedDefault.tapeRotation,
     tapeVariant: "clear",
+    theme: seedDefault.theme,
+    title: seedDefault.title,
+    width: seedDefault.width ?? 340,
   },
   argTypes: {
     activeTool: {
       control: "radio",
       options: ["select", "pan"],
     },
+    bodyHtml: { control: "text" },
     onBodyCommit: { control: false },
     onExpand: { control: false },
-    bodyHtml: { control: "text" },
-    title: { control: "text" },
-    theme: { control: "radio", options: ["default", "code", "task", "media"] },
     tapeVariant: { control: "radio", options: ["clear", "masking", "dark"] },
+    theme: { control: "radio", options: ["default", "code", "task", "media"] },
+    title: { control: "text" },
     width: { control: "number" },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalNodeCard,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          height: "100vh",
           position: "relative",
           width: "100vw",
-          height: "100vh",
-          background: "var(--sem-surface-base)",
         }}
       >
         <Story />
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Canvas/Node card",
 };
 
 export default meta;
@@ -87,37 +88,37 @@ export const Default: Story = {};
 
 export const Code: Story = {
   args: {
+    bodyHtml: seedCode.bodyHtml,
     id: seedCode.id,
+    tapeRotation: seedCode.tapeRotation,
+    tapeVariant: "dark",
+    theme: seedCode.theme,
     title: seedCode.title,
     width: seedCode.width,
-    theme: seedCode.theme,
-    tapeRotation: seedCode.tapeRotation,
-    bodyHtml: seedCode.bodyHtml,
-    tapeVariant: "dark",
   },
 };
 
 export const Task: Story = {
   args: {
+    bodyDoc: seedTask.bodyDoc ?? null,
+    bodyHtml: seedTask.bodyHtml,
     id: seedTask.id,
+    tapeRotation: seedTask.tapeRotation,
+    tapeVariant: "masking",
+    theme: seedTask.theme,
     title: seedTask.title,
     width: seedTask.width,
-    theme: seedTask.theme,
-    tapeRotation: seedTask.tapeRotation,
-    bodyHtml: seedTask.bodyHtml,
-    bodyDoc: seedTask.bodyDoc ?? null,
-    tapeVariant: "masking",
   },
 };
 
 export const Media: Story = {
   args: {
+    bodyHtml: seedMedia.bodyHtml,
     id: seedMedia.id,
+    tapeRotation: seedMedia.tapeRotation,
+    tapeVariant: "dark",
+    theme: seedMedia.theme,
     title: seedMedia.title,
     width: seedMedia.width,
-    theme: seedMedia.theme,
-    tapeRotation: seedMedia.tapeRotation,
-    bodyHtml: seedMedia.bodyHtml,
-    tapeVariant: "dark",
   },
 };

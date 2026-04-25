@@ -566,9 +566,9 @@ export function LoreLocationOrdoV7Slab({
       notesHtml: string;
     }) => {
       const html = buildLocationOrdoV7BodyHtml({
-        name: p.name,
         context: p.context,
         detail: p.detail,
+        name: p.name,
         notesInnerHtml: p.notesHtml,
       });
       lastPushed.current = html;
@@ -587,9 +587,9 @@ export function LoreLocationOrdoV7Slab({
       notesTimer.current = setTimeout(() => {
         notesTimer.current = null;
         pushHtml({
-          name,
           context,
           detail,
+          name,
           notesHtml: hgDocToHtml(nextDoc),
         });
       }, 320);
@@ -692,9 +692,9 @@ export function LoreLocationOrdoV7Slab({
             onContextCommit={(next) => {
               setContext(next);
               pushHtml({
-                name,
                 context: next,
                 detail,
+                name,
                 notesHtml: hgDocToHtml(notesDoc),
               });
             }}
@@ -702,9 +702,9 @@ export function LoreLocationOrdoV7Slab({
             onNameCommit={(next) => {
               setName(next);
               pushHtml({
-                name: next,
                 context,
                 detail,
+                name: next,
                 notesHtml: hgDocToHtml(notesDoc),
               });
             }}
@@ -728,9 +728,9 @@ export function LoreLocationOrdoV7Slab({
                       setDetailSlotOpen(false);
                     }
                     pushHtml({
-                      name,
                       context,
                       detail: next,
+                      name,
                       notesHtml: hgDocToHtml(notesDoc),
                     });
                   }}

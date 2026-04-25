@@ -35,12 +35,12 @@ if (realtimeSecret.length < 16) {
 }
 
 const metrics = {
-  wsConnectionsAccepted: 0,
-  wsConnectionsClosed: 0,
-  redisMessagesReceived: 0,
-  fanoutSendCalls: 0,
   /** Last N fanout durations (Redis callback → socket.send), ms */
   fanoutMsRecent: [] as number[],
+  fanoutSendCalls: 0,
+  redisMessagesReceived: 0,
+  wsConnectionsAccepted: 0,
+  wsConnectionsClosed: 0,
 };
 
 const MAX_FANOUT_SAMPLES = 50;
@@ -76,13 +76,13 @@ const server = createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(
       JSON.stringify({
+        fanout: fanoutStats(),
+        fanoutSendCalls: metrics.fanoutSendCalls,
         ok: true,
+        redisMessagesReceived: metrics.redisMessagesReceived,
         rooms: roomMap.size,
         wsConnectionsAccepted: metrics.wsConnectionsAccepted,
         wsConnectionsClosed: metrics.wsConnectionsClosed,
-        redisMessagesReceived: metrics.redisMessagesReceived,
-        fanoutSendCalls: metrics.fanoutSendCalls,
-        fanout: fanoutStats(),
       })
     );
     return;
@@ -166,9 +166,9 @@ wss.on(
 
     ws.send(
       JSON.stringify({
-        type: "realtime.connected",
-        spaceId: tokenSpaceId,
         at: new Date().toISOString(),
+        spaceId: tokenSpaceId,
+        type: "realtime.connected",
       })
     );
   }

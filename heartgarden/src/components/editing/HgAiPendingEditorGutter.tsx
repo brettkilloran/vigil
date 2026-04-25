@@ -3,6 +3,7 @@
 import type { Editor } from "@tiptap/core";
 import type { RefObject } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
 import styles from "@/src/components/editing/HgAiPendingEditorGutter.module.css";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";

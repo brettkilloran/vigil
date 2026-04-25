@@ -23,11 +23,11 @@ export function vigilButtonDataAttrs({
   forceState = "default",
 }: Omit<VigilButtonRecipeOptions, "className"> = {}) {
   return {
-    "data-variant": variant,
-    "data-size": size,
-    "data-tone": tone,
     "data-active": active ? "true" : undefined,
     "data-force-state": forceState === "default" ? undefined : forceState,
+    "data-size": size,
+    "data-tone": tone,
+    "data-variant": variant,
   };
 }
 

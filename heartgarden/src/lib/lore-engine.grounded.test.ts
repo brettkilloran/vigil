@@ -9,18 +9,18 @@ import {
 describe("normalizeGroundedLoreAnswer", () => {
   const sources: LoreSource[] = [
     {
+      excerpt: "alpha",
       itemId: "11111111-1111-1111-1111-111111111111",
-      title: "A",
       spaceId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
       spaceName: "S",
-      excerpt: "alpha",
+      title: "A",
     },
     {
+      excerpt: "beta",
       itemId: "22222222-2222-2222-2222-222222222222",
-      title: "B",
       spaceId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
       spaceName: "S",
-      excerpt: "beta",
+      title: "B",
     },
   ];
 

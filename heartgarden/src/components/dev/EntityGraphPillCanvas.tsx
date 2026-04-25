@@ -92,7 +92,7 @@ export function EntityGraphPillCanvas({
   cameraResetKey: number;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState({ width: 1000, height: 760 });
+  const [viewport, setViewport] = useState({ height: 760, width: 1000 });
   const [camera, setCamera] = useState<CameraTransform>(() =>
     initialCamera(1000, 760)
   );
@@ -272,7 +272,7 @@ export function EntityGraphPillCanvas({
       if (!next) {
         return;
       }
-      setViewport({ width: next.width, height: next.height });
+      setViewport({ height: next.height, width: next.width });
     });
     observer.observe(root);
     return () => observer.disconnect();
@@ -301,7 +301,7 @@ export function EntityGraphPillCanvas({
     const nextX = viewport.width * 0.34 - point.x * nextScale;
     const nextY = viewport.height * 0.5 - point.y * nextScale;
     setAnimatedCamera(true);
-    setCamera({ x: nextX, y: nextY, scale: nextScale });
+    setCamera({ scale: nextScale, x: nextX, y: nextY });
     const timer = window.setTimeout(() => setAnimatedCamera(false), 760);
     return () => window.clearTimeout(timer);
   }, [layout, selectedId, viewport.height, viewport.width]);
@@ -343,11 +343,11 @@ export function EntityGraphPillCanvas({
       return;
     }
     panRef.current = {
+      cameraX: camera.x,
+      cameraY: camera.y,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      cameraX: camera.x,
-      cameraY: camera.y,
     };
     setAnimatedCamera(false);
     setDraggingCanvas(true);
@@ -451,7 +451,7 @@ export function EntityGraphPillCanvas({
     );
     const nextX = event.clientX - rect.left - worldBefore.x * nextScale;
     const nextY = event.clientY - rect.top - worldBefore.y * nextScale;
-    setCamera({ x: nextX, y: nextY, scale: nextScale });
+    setCamera({ scale: nextScale, x: nextX, y: nextY });
   };
 
   return (
@@ -556,11 +556,11 @@ export function EntityGraphPillCanvas({
                   cameraRef.current
                 );
                 nodeDragRef.current = {
-                  pointerId: event.pointerId,
+                  moved: false,
                   nodeId: node.id,
                   offsetX: world.x - point.x,
                   offsetY: world.y - point.y,
-                  moved: false,
+                  pointerId: event.pointerId,
                 };
                 (event.currentTarget as HTMLButtonElement).setPointerCapture(
                   event.pointerId

@@ -145,14 +145,14 @@ function readHgArch(cj: Record<string, unknown> | null): HgArchPayload | null {
   const factionRoster = parseFactionRoster(factionRosterRaw);
   const loreThreadAnchors = parseLoreThreadAnchors(o.loreThreadAnchors);
   return {
-    theme: o.theme as ContentTheme | undefined,
-    tapeVariant: o.tapeVariant as TapeVariant | undefined,
-    rotation: typeof o.rotation === "number" ? o.rotation : undefined,
-    tapeRotation:
-      typeof o.tapeRotation === "number" ? o.tapeRotation : undefined,
     folderColorScheme:
       typeof o.folderColorScheme === "string" ? o.folderColorScheme : undefined,
     loreCard: parseLoreCard(o.loreCard),
+    rotation: typeof o.rotation === "number" ? o.rotation : undefined,
+    tapeRotation:
+      typeof o.tapeRotation === "number" ? o.tapeRotation : undefined,
+    tapeVariant: o.tapeVariant as TapeVariant | undefined,
+    theme: o.theme as ContentTheme | undefined,
     ...(factionRoster ? { factionRoster } : {}),
     ...(loreThreadAnchors ? { loreThreadAnchors } : {}),
   };
@@ -260,24 +260,24 @@ export function canvasItemToEntity(
       return null;
     }
     const folder: CanvasFolderEntity = {
-      id: item.id,
-      title: item.title || "Folder",
-      kind: "folder",
-      theme: "folder",
       childSpaceId,
-      rotation: hg?.rotation ?? 0,
-      width: item.width || FOLDER_CARD_WIDTH,
+      entityMeta: item.entityMeta ?? null,
       height:
         typeof item.height === "number" && item.height > 0
           ? item.height
           : FOLDER_CARD_HEIGHT,
-      tapeRotation: hg?.tapeRotation ?? 0,
-      entityMeta: item.entityMeta ?? null,
-      stackId: item.stackId ?? null,
-      stackOrder: item.stackOrder ?? null,
+      id: item.id,
+      kind: "folder",
+      rotation: hg?.rotation ?? 0,
       slots: {
         [activeSpaceId]: { x: item.x, y: item.y },
       },
+      stackId: item.stackId ?? null,
+      stackOrder: item.stackOrder ?? null,
+      tapeRotation: hg?.tapeRotation ?? 0,
+      theme: "folder",
+      title: item.title || "Folder",
+      width: item.width || FOLDER_CARD_WIDTH,
     };
     if (hg?.folderColorScheme) {
       folder.folderColorScheme =
@@ -334,26 +334,26 @@ export function canvasItemToEntity(
   }
 
   const entity: CanvasContentEntity = {
-    id: item.id,
-    title: item.title || "Untitled",
-    kind: "content",
-    theme,
-    rotation: hg?.rotation ?? 0,
-    width: item.width || UNIFIED_NODE_WIDTH,
+    bodyDoc,
+    bodyHtml,
+    entityMeta: item.entityMeta ?? null,
     height:
       typeof item.height === "number" && item.height > 0
         ? item.height
         : DEFAULT_CONTENT_CARD_HEIGHT,
-    tapeRotation: hg?.tapeRotation ?? 0,
-    tapeVariant: hg?.tapeVariant ?? tapeVariantForTheme(theme),
-    bodyHtml,
-    bodyDoc,
-    entityMeta: item.entityMeta ?? null,
-    stackId: item.stackId ?? null,
-    stackOrder: item.stackOrder ?? null,
+    id: item.id,
+    kind: "content",
+    rotation: hg?.rotation ?? 0,
     slots: {
       [activeSpaceId]: { x: item.x, y: item.y },
     },
+    stackId: item.stackId ?? null,
+    stackOrder: item.stackOrder ?? null,
+    tapeRotation: hg?.tapeRotation ?? 0,
+    tapeVariant: hg?.tapeVariant ?? tapeVariantForTheme(theme),
+    theme,
+    title: item.title || "Untitled",
+    width: item.width || UNIFIED_NODE_WIDTH,
   };
   if (loreCard) {
     entity.loreCard = loreCard;
@@ -400,10 +400,10 @@ export function buildCanvasGraphFromBootstrap(
   const spacesRecord: Record<string, CanvasSpace> = {};
   for (const s of data.spaces) {
     spacesRecord[s.id] = {
+      entityIds: [],
       id: s.id,
       name: s.name,
       parentSpaceId: s.parentSpaceId,
-      entityIds: [],
     };
   }
   const entityIdsBySpace = new Map<string, Set<string>>();
@@ -428,10 +428,10 @@ export function buildCanvasGraphFromBootstrap(
   }
 
   return {
+    connections: {},
+    entities,
     rootSpaceId,
     spaces: spacesRecord,
-    entities,
-    connections: {},
   };
 }
 
@@ -464,19 +464,19 @@ function mergeEntityFromItemProtectingText(
   if (prevEntity.kind === "content" && merged.kind === "content") {
     return {
       ...merged,
-      title: prevEntity.title,
-      bodyHtml: prevEntity.bodyHtml,
       bodyDoc: prevEntity.bodyDoc,
-      loreCard: prevEntity.loreCard ?? merged.loreCard,
+      bodyHtml: prevEntity.bodyHtml,
       factionRoster: prevEntity.factionRoster,
+      loreCard: prevEntity.loreCard ?? merged.loreCard,
       loreThreadAnchors: prevEntity.loreThreadAnchors,
+      title: prevEntity.title,
     };
   }
   if (prevEntity.kind === "folder" && merged.kind === "folder") {
     return {
       ...merged,
-      title: prevEntity.title,
       folderColorScheme: prevEntity.folderColorScheme,
+      title: prevEntity.title,
     };
   }
   return merged;
@@ -498,10 +498,10 @@ export function mergeBootstrapView(
   for (const s of data.spaces) {
     const existing = spacesRecord[s.id];
     spacesRecord[s.id] = {
+      entityIds: affectedSpaceIds.has(s.id) ? [] : (existing?.entityIds ?? []),
       id: s.id,
       name: s.name,
       parentSpaceId: s.parentSpaceId,
-      entityIds: affectedSpaceIds.has(s.id) ? [] : (existing?.entityIds ?? []),
     };
   }
   const entityIdsBySpace = new Map<string, Set<string>>();
@@ -550,13 +550,13 @@ export function mergeBootstrapView(
 
   return {
     ...prev,
-    rootSpaceId,
-    spaces: spacesRecord,
-    entities,
     connections: pruneConnectionsToExistingEntities(
       prev.connections,
       new Set(Object.keys(entities))
     ),
+    entities,
+    rootSpaceId,
+    spaces: spacesRecord,
   };
 }
 
@@ -659,10 +659,10 @@ export function mergeRemoteItemPatches(
     entities[item.id] = merged;
     if (!spacesRecord[item.spaceId]) {
       spacesRecord[item.spaceId] = {
+        entityIds: [],
         id: item.spaceId,
         name: "Loading...",
         parentSpaceId: null,
-        entityIds: [],
       };
       entityIdsBySpace.set(item.spaceId, new Set<string>());
     }
@@ -677,12 +677,12 @@ export function mergeRemoteItemPatches(
 
   return {
     ...prev,
-    spaces: spacesRecord,
-    entities,
     connections: pruneConnectionsToExistingEntities(
       prev.connections,
       new Set(Object.keys(entities))
     ),
+    entities,
+    spaces: spacesRecord,
   };
 }
 
@@ -714,10 +714,10 @@ export function mergeRemoteSpaceRowsIntoGraph(
       };
     } else {
       spacesRecord[row.id] = {
+        entityIds: [],
         id: row.id,
         name: row.name,
         parentSpaceId: row.parentSpaceId,
-        entityIds: [],
       };
     }
   }
@@ -754,9 +754,9 @@ export function removeEntitiesFromGraphAfterRemoteDelete(
   }
   return {
     ...prev,
-    spaces: spacesRecord,
-    entities,
     connections,
+    entities,
+    spaces: spacesRecord,
   };
 }
 
@@ -787,9 +787,9 @@ export function applyServerCanvasItemToGraph(
   }
   return {
     ...prev,
-    spaces: spacesRecord,
-    entities: { ...prev.entities, [item.id]: merged },
     connections: prev.connections,
+    entities: { ...prev.entities, [item.id]: merged },
+    spaces: spacesRecord,
   };
 }
 
@@ -797,10 +797,10 @@ export function buildContentJsonForContentEntity(
   entity: CanvasContentEntity
 ): Record<string, unknown> {
   const hgArch: HgArchPayload = {
-    theme: entity.theme,
-    tapeVariant: entity.tapeVariant,
     rotation: entity.rotation,
     tapeRotation: entity.tapeRotation,
+    tapeVariant: entity.tapeVariant,
+    theme: entity.theme,
   };
   if (entity.loreCard) {
     hgArch.loreCard = entity.loreCard;
@@ -819,15 +819,15 @@ export function buildContentJsonForContentEntity(
   }
   if (entity.bodyDoc != null && contentEntityUsesHgDoc(entity)) {
     return {
-      format: HG_DOC_FORMAT,
       doc: entity.bodyDoc,
+      format: HG_DOC_FORMAT,
       hgArch,
     };
   }
   return {
     format: "html",
-    html: entity.bodyHtml,
     hgArch,
+    html: entity.bodyHtml,
   };
 }
 
@@ -882,10 +882,10 @@ export function entityGeometryOnSpace(entity: CanvasEntity, spaceId: string) {
     }
   }
   return {
+    height,
+    width,
     x: slot?.x ?? 0,
     y: slot?.y ?? 0,
-    width,
-    height,
   };
 }
 
@@ -948,15 +948,15 @@ export function buildContentItemRestorePayload(
   const geom = entityGeometryOnSpace(entity, spaceId);
   const itemType = architecturalItemType(entity);
   const body: Record<string, unknown> = {
+    contentJson: buildContentJsonForContentEntity(entity),
+    contentText: contentPlainTextForEntity(entity),
+    height: geom.height,
     id: entityId,
     itemType,
+    title: entity.title,
+    width: geom.width,
     x: geom.x,
     y: geom.y,
-    width: geom.width,
-    height: geom.height,
-    title: entity.title,
-    contentText: contentPlainTextForEntity(entity),
-    contentJson: buildContentJsonForContentEntity(entity),
   };
   if (entity.loreCard) {
     body.entityType = entity.loreCard.kind;
@@ -967,7 +967,7 @@ export function buildContentItemRestorePayload(
   if (entity.stackOrder != null) {
     body.stackOrder = entity.stackOrder;
   }
-  return { spaceId, body };
+  return { body, spaceId };
 }
 
 /**
@@ -985,15 +985,15 @@ export function buildFolderItemRestorePayload(
   }
   const geom = entityGeometryOnSpace(entity, spaceId);
   const body: Record<string, unknown> = {
+    contentJson: buildContentJsonForFolderEntity(entity),
+    contentText: "",
+    height: geom.height,
     id: entityId,
     itemType: "folder" as const,
+    title: entity.title,
+    width: geom.width,
     x: geom.x,
     y: geom.y,
-    width: geom.width,
-    height: geom.height,
-    title: entity.title,
-    contentText: "",
-    contentJson: buildContentJsonForFolderEntity(entity),
   };
   if (entity.stackId != null) {
     body.stackId = entity.stackId;
@@ -1001,5 +1001,5 @@ export function buildFolderItemRestorePayload(
   if (entity.stackOrder != null) {
     body.stackOrder = entity.stackOrder;
   }
-  return { spaceId, body };
+  return { body, spaceId };
 }

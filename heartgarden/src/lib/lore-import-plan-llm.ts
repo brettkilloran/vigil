@@ -261,9 +261,9 @@ export function buildOutlineChunkListPayload(
   let excerptCap = MAX_EXCERPT;
   for (let attempt = 0; attempt < 14; attempt++) {
     const list = chunks.map((c) => ({
-      id: c.id,
-      heading: c.heading,
       excerpt: c.body.slice(0, excerptCap),
+      heading: c.heading,
+      id: c.id,
     }));
     if (JSON.stringify(list).length <= OUTLINE_CHUNK_LIST_JSON_MAX) {
       return list;
@@ -271,9 +271,9 @@ export function buildOutlineChunkListPayload(
     excerptCap = Math.max(MIN_EXCERPT, Math.floor(excerptCap * 0.62));
   }
   return chunks.map((c) => ({
-    id: c.id,
-    heading: c.heading,
     excerpt: c.body.slice(0, MIN_EXCERPT),
+    heading: c.heading,
+    id: c.id,
   }));
 }
 
@@ -341,14 +341,6 @@ function parseStructuredBody(
       ? nationalityRaw
       : "";
     const result: Extract<LoreImportStructuredBody, { kind: "character" }> = {
-      kind: "character",
-      name: String(o.name ?? "")
-        .trim()
-        .slice(0, 255),
-      role:
-        String(o.role ?? "")
-          .trim()
-          .slice(0, 255) || undefined,
       affiliation:
         String(o.affiliation ?? "")
           .trim()
@@ -357,8 +349,16 @@ function parseStructuredBody(
         String(o.affiliationFactionClientId ?? "")
           .trim()
           .slice(0, 64) || undefined,
+      kind: "character",
+      name: String(o.name ?? "")
+        .trim()
+        .slice(0, 255),
       nationality,
       notesParagraphs: toParagraphs(o.notesParagraphs),
+      role:
+        String(o.role ?? "")
+          .trim()
+          .slice(0, 255) || undefined,
     };
     const hasSignal =
       result.name.length > 0 ||
@@ -392,10 +392,10 @@ function parseStructuredBody(
       trimmedFields.push("detail");
     }
     const result: Extract<LoreImportStructuredBody, { kind: "location" }> = {
-      kind: "location",
-      name: nameTrim.value,
       context: contextTrim.value || undefined,
       detail: detailTrim.value || undefined,
+      kind: "location",
+      name: nameTrim.value,
       notesParagraphs: toParagraphs(o.notesParagraphs),
     };
     if (trimmedFields.length > 0) {
@@ -417,13 +417,13 @@ function parseStructuredBody(
   if (effectiveKind === "faction") {
     const result: Extract<LoreImportStructuredBody, { kind: "faction" }> = {
       kind: "faction",
-      namePrimary: String(o.namePrimary ?? o.name ?? "")
-        .trim()
-        .slice(0, 255),
       nameAccent:
         String(o.nameAccent ?? "")
           .trim()
           .slice(0, 255) || undefined,
+      namePrimary: String(o.namePrimary ?? o.name ?? "")
+        .trim()
+        .slice(0, 255),
       recordParagraphs: toParagraphs(o.recordParagraphs),
     };
     const hasSignal =
@@ -434,15 +434,15 @@ function parseStructuredBody(
   }
   const blocks = parseGenericBlocks(o.blocks);
   if (blocks.length > 0) {
-    return { kind: "generic", blocks };
+    return { blocks, kind: "generic" };
   }
   const fallbackText = String(o.text ?? "").trim();
   if (!fallbackText) {
     return;
   }
   return {
-    kind: "generic",
     blocks: markdownToStructuredBody(fallbackText, { requireH1: false }).blocks,
+    kind: "generic",
   };
 }
 
@@ -472,26 +472,26 @@ export async function runLoreImportOutlineLlm(
   const res = await callAnthropic(
     apiKey,
     {
+      messages: [{ content: user, role: "user" }],
       model,
       system: buildCachedSystem(OUTLINE_SYSTEM),
-      messages: [{ role: "user", content: user }],
     },
-    { label: "lore.import.outline", expectJson: true }
+    { expectJson: true, label: "lore.import.outline" }
   );
   const usage =
     (res.message as unknown as { usage?: Record<string, unknown> }).usage ?? {};
   await emitLlmCall(onLlmCall, {
-    label: "lore.import.outline",
-    model,
     durationMs: coerceOptionalNumber(res.elapsedMs) ?? undefined,
     inputTokens: coerceOptionalNumber(usage.input_tokens),
+    label: "lore.import.outline",
+    model,
     outputTokens: coerceOptionalNumber(usage.output_tokens),
-    stopReason: res.stopReason ?? null,
     responseSnippet: clipResponseSnippet(res.text),
+    stopReason: res.stopReason ?? null,
   });
   const jsonStr = res.jsonText;
   if (!jsonStr) {
-    return { folders: [], notes: [], links: [] };
+    return { folders: [], links: [], notes: [] };
   }
   try {
     const parsed = JSON.parse(jsonStr) as {
@@ -513,11 +513,11 @@ export async function runLoreImportOutlineLlm(
       const parentRaw = o.parentClientId;
       folders.push({
         clientId,
-        title: title.slice(0, 255),
         parentClientId:
           parentRaw === null || parentRaw === undefined
             ? null
             : String(parentRaw).trim() || null,
+        title: title.slice(0, 255),
       });
     }
     const notes: OutlineLlmResult["notes"] = [];
@@ -557,28 +557,28 @@ export async function runLoreImportOutlineLlm(
         String(o.canonicalEntityKind)
       );
       notes.push({
-        clientId,
-        title: title.slice(0, 255),
-        canonicalEntityKind,
-        summary: String(o.summary ?? "").slice(0, 4000),
-        folderClientId:
-          o.folderClientId === null || o.folderClientId === undefined
-            ? null
-            : String(o.folderClientId).trim() || null,
-        sourceChunkIds,
-        sourcePassages,
         body: parseStructuredBody(canonicalEntityKind, o.body),
-        ingestionSignals:
-          o.ingestionSignals && typeof o.ingestionSignals === "object"
-            ? (o.ingestionSignals as IngestionSignals)
-            : undefined,
         campaignEpoch:
           typeof o.campaignEpoch === "number" &&
           Number.isFinite(o.campaignEpoch)
             ? Math.floor(o.campaignEpoch)
             : undefined,
+        canonicalEntityKind,
+        clientId,
+        folderClientId:
+          o.folderClientId === null || o.folderClientId === undefined
+            ? null
+            : String(o.folderClientId).trim() || null,
+        ingestionSignals:
+          o.ingestionSignals && typeof o.ingestionSignals === "object"
+            ? (o.ingestionSignals as IngestionSignals)
+            : undefined,
         loreHistorical:
           typeof o.loreHistorical === "boolean" ? o.loreHistorical : undefined,
+        sourceChunkIds,
+        sourcePassages,
+        summary: String(o.summary ?? "").slice(0, 4000),
+        title: title.slice(0, 255),
       });
     }
     const links: OutlineLlmResult["links"] = [];
@@ -594,18 +594,18 @@ export async function runLoreImportOutlineLlm(
       }
       links.push({
         fromClientId,
-        toClientId,
-        linkType:
-          o.linkType == null ? undefined : String(o.linkType).slice(0, 64),
         linkIntent:
           o.linkIntent === "association" || o.linkIntent === "binding_hint"
             ? o.linkIntent
             : undefined,
+        linkType:
+          o.linkType == null ? undefined : String(o.linkType).slice(0, 64),
+        toClientId,
       });
     }
-    return { folders, notes, links };
+    return { folders, links, notes };
   } catch {
-    return { folders: [], notes: [], links: [] };
+    return { folders: [], links: [], notes: [] };
   }
 }
 
@@ -750,11 +750,11 @@ export function attachBodiesToOutline(
   }
 
   const diagnostics: ChunkAssignmentDiagnostics = {
-    unassignedChunkIds: [],
-    noteClientIdsWithoutChunks: [],
     duplicateAssignments: [],
-    noteClientIdsWithoutGrounding: [],
     duplicateQuotePassages: [],
+    noteClientIdsWithoutChunks: [],
+    noteClientIdsWithoutGrounding: [],
+    unassignedChunkIds: [],
   };
 
   for (const ch of chunks) {
@@ -776,11 +776,11 @@ export function attachBodiesToOutline(
     if (!n.body) {
       const fallbackTitle = n.title?.trim() || "Imported note";
       n.body = {
-        kind: "generic",
         blocks: markdownToStructuredBody(bodyTextFromChunks, {
-          title: fallbackTitle,
           requireH1: true,
+          title: fallbackTitle,
         }).blocks,
+        kind: "generic",
       };
     }
     if (!n.sourcePassages || n.sourcePassages.length === 0) {
@@ -834,8 +834,8 @@ export function attachBodiesToOutline(
   for (const [quote, noteClientIds] of byQuote.entries()) {
     if (noteClientIds.length > 1) {
       diagnostics.duplicateQuotePassages.push({
-        quote: (sampleByQuote.get(quote) ?? quote).slice(0, 280),
         noteClientIds,
+        quote: (sampleByQuote.get(quote) ?? quote).slice(0, 280),
       });
     }
   }
@@ -848,7 +848,7 @@ export function fillNoteBodiesFromChunks(
   notes: OutlineLlmResult["notes"],
   chunks: SourceTextChunk[]
 ): ChunkAssignmentDiagnostics {
-  return attachBodiesToOutline({ folders: [], notes, links: [] }, chunks);
+  return attachBodiesToOutline({ folders: [], links: [], notes }, chunks);
 }
 
 export interface CandidateRow {
@@ -903,38 +903,38 @@ export async function runLoreImportMergeLlm(
   }[];
 }> {
   const payload = notes.map((n) => ({
-    noteClientId: n.clientId,
-    title: n.title,
-    summary: n.summary,
     bodyPreview: n.bodyPreview,
     candidates: candidatesByNoteClientId[n.clientId] ?? [],
+    noteClientId: n.clientId,
     spaceCandidates: spaceCandidatesByNoteClientId[n.clientId] ?? [],
+    summary: n.summary,
+    title: n.title,
   }));
   const user = `NOTES AND CANDIDATES (JSON):\n${JSON.stringify(payload).slice(0, MERGE_USER_JSON_MAX)}`;
 
   const res = await callAnthropic(
     apiKey,
     {
+      messages: [{ content: user, role: "user" }],
       model,
       system: buildCachedSystem(MERGE_SYSTEM),
-      messages: [{ role: "user", content: user }],
     },
-    { label: "lore.import.merge", expectJson: true }
+    { expectJson: true, label: "lore.import.merge" }
   );
   const usage =
     (res.message as unknown as { usage?: Record<string, unknown> }).usage ?? {};
   await emitLlmCall(onLlmCall, {
-    label: "lore.import.merge",
-    model,
     durationMs: coerceOptionalNumber(res.elapsedMs) ?? undefined,
     inputTokens: coerceOptionalNumber(usage.input_tokens),
+    label: "lore.import.merge",
+    model,
     outputTokens: coerceOptionalNumber(usage.output_tokens),
-    stopReason: res.stopReason ?? null,
     responseSnippet: clipResponseSnippet(res.text),
+    stopReason: res.stopReason ?? null,
   });
   const jsonStr = res.jsonText;
   if (!jsonStr) {
-    return { mergeProposals: [], contradictions: [], targetSpaces: [] };
+    return { contradictions: [], mergeProposals: [], targetSpaces: [] };
   }
   try {
     const parsed = JSON.parse(jsonStr) as {
@@ -970,11 +970,11 @@ export async function runLoreImportMergeLlm(
       }
       mergeProposals.push({
         noteClientId,
-        targetItemId,
-        strategy,
         proposedText,
         rationale:
           o.rationale == null ? undefined : String(o.rationale).slice(0, 2000),
+        strategy,
+        targetItemId,
       });
     }
     const contradictions: {
@@ -992,11 +992,11 @@ export async function runLoreImportMergeLlm(
         continue;
       }
       contradictions.push({
+        details:
+          o.details == null ? undefined : String(o.details).slice(0, 8000),
         noteClientId:
           o.noteClientId == null ? undefined : String(o.noteClientId).trim(),
         summary: summary.slice(0, 2000),
-        details:
-          o.details == null ? undefined : String(o.details).slice(0, 8000),
       });
     }
     const targetSpaces: {
@@ -1029,15 +1029,15 @@ export async function runLoreImportMergeLlm(
           ? Math.max(0, Math.min(1, o.confidence))
           : undefined;
       targetSpaces.push({
-        noteClientId,
-        targetSpaceId,
         confidence: rawConfidence,
+        noteClientId,
         reason: o.reason == null ? undefined : String(o.reason).slice(0, 400),
+        targetSpaceId,
       });
     }
-    return { mergeProposals, contradictions, targetSpaces };
+    return { contradictions, mergeProposals, targetSpaces };
   } catch {
-    return { mergeProposals: [], contradictions: [], targetSpaces: [] };
+    return { contradictions: [], mergeProposals: [], targetSpaces: [] };
   }
 }
 
@@ -1121,7 +1121,7 @@ export async function runLoreImportMergeLlmBatched(
     contradictions.push(...r.contradictions);
     targetSpaces.push(...r.targetSpaces);
   }
-  return { mergeProposals, contradictions, targetSpaces };
+  return { contradictions, mergeProposals, targetSpaces };
 }
 
 export interface LoreImportClarifyContext {
@@ -1172,22 +1172,22 @@ export async function runLoreImportClarifyLlm(
   const res = await callAnthropic(
     apiKey,
     {
+      messages: [{ content: user, role: "user" }],
       model,
       system: buildCachedSystem(CLARIFY_SYSTEM),
-      messages: [{ role: "user", content: user }],
     },
-    { label: "lore.import.clarify", expectJson: true }
+    { expectJson: true, label: "lore.import.clarify" }
   );
   const usage =
     (res.message as unknown as { usage?: Record<string, unknown> }).usage ?? {};
   await emitLlmCall(onLlmCall, {
-    label: "lore.import.clarify",
-    model,
     durationMs: coerceOptionalNumber(res.elapsedMs) ?? undefined,
     inputTokens: coerceOptionalNumber(usage.input_tokens),
+    label: "lore.import.clarify",
+    model,
     outputTokens: coerceOptionalNumber(usage.output_tokens),
-    stopReason: res.stopReason ?? null,
     responseSnippet: clipResponseSnippet(res.text),
+    stopReason: res.stopReason ?? null,
   });
   const jsonStr = res.jsonText;
   if (!jsonStr) {
@@ -1209,17 +1209,7 @@ export function ensureOutlineHasFallbackNote(
     return;
   }
   outline.notes.push({
-    clientId: "n_fallback",
-    title: chunks[0]?.heading.slice(0, 255) || "Imported document",
-    canonicalEntityKind: "lore",
-    summary: "Auto-generated from source chunks.",
-    folderClientId: null,
-    sourceChunkIds: chunks.map((c) => c.id),
-    sourcePassages: chunks
-      .slice(0, 6)
-      .map((c) => ({ chunkId: c.id, quote: c.body.slice(0, 280) })),
     body: {
-      kind: "generic",
       blocks: markdownToStructuredBody(
         chunks
           .slice(0, 12)
@@ -1228,10 +1218,20 @@ export function ensureOutlineHasFallbackNote(
           )
           .join("\n\n"),
         {
-          title: chunks[0]?.heading.slice(0, 255) || "Imported document",
           requireH1: true,
+          title: chunks[0]?.heading.slice(0, 255) || "Imported document",
         }
       ).blocks,
+      kind: "generic",
     },
+    canonicalEntityKind: "lore",
+    clientId: "n_fallback",
+    folderClientId: null,
+    sourceChunkIds: chunks.map((c) => c.id),
+    sourcePassages: chunks
+      .slice(0, 6)
+      .map((c) => ({ chunkId: c.id, quote: c.body.slice(0, 280) })),
+    summary: "Auto-generated from source chunks.",
+    title: chunks[0]?.heading.slice(0, 255) || "Imported document",
   });
 }

@@ -46,6 +46,16 @@ describe("POST /api/item-links/sync", () => {
     const db = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(async () => []),
+          })),
+          leftJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [
+                { braneType: "gm", name: "Test Space" },
+              ]),
+            })),
+          })),
           where: vi.fn(() => {
             const result: {
               limit: ReturnType<typeof vi.fn>;
@@ -60,16 +70,6 @@ describe("POST /api/item-links/sync", () => {
             };
             return result;
           }),
-          leftJoin: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(async () => [
-                { name: "Test Space", braneType: "gm" },
-              ]),
-            })),
-          })),
-          innerJoin: vi.fn(() => ({
-            where: vi.fn(async () => []),
-          })),
         })),
       })),
       transaction: vi.fn(async (run: (txn: typeof tx) => Promise<void>) =>
@@ -81,18 +81,16 @@ describe("POST /api/item-links/sync", () => {
     validateLinkTargetsInBraneMock.mockResolvedValue({
       ok: true,
       sourceSpaceId: "space-a",
-      targetSpaceIds: ["space-a"],
       targetIds: [
         "00000000-0000-4000-8000-000000000002",
         "00000000-0000-4000-8000-000000000003",
       ],
+      targetSpaceIds: ["space-a"],
     });
     const { POST } = await import("./route");
 
     const res = await POST(
       new Request("http://localhost/api/item-links/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceItemId: "00000000-0000-4000-8000-000000000001",
           targetIds: [
@@ -100,6 +98,8 @@ describe("POST /api/item-links/sync", () => {
             "00000000-0000-4000-8000-000000000003",
           ],
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       })
     );
 

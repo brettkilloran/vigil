@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { Button } from "@/src/components/ui/Button";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";

@@ -16,17 +16,17 @@ vi.mock("@/src/components/editing/HeartgardenDocEditor", () => ({
 }));
 
 const baseParts: CharacterFocusParts = {
-  portraitSrc: HEARTGARDEN_MEDIA_PLACEHOLDER_SRC,
-  portraitAlt: "",
-  portraitClass: "p",
-  portraitUploadClass: "vigil-btn",
-  portraitUploadLabel: "",
-  portraitIsPlaceholder: true,
-  displayName: "",
-  role: "",
   affiliation: "",
+  displayName: "",
   nationality: "",
   notesHtml: "<p><br></p>",
+  portraitAlt: "",
+  portraitClass: "p",
+  portraitIsPlaceholder: true,
+  portraitSrc: HEARTGARDEN_MEDIA_PLACEHOLDER_SRC,
+  portraitUploadClass: "vigil-btn",
+  portraitUploadLabel: "",
+  role: "",
 };
 
 describe("LoreHybridFocusEditor character identity", () => {
@@ -119,7 +119,7 @@ describe("LoreHybridFocusEditor character identity", () => {
 
     await act(async () => {
       const ev = new InputEvent("input", { bubbles: true, cancelable: true });
-      Object.defineProperty(ev, "target", { value: text, enumerable: true });
+      Object.defineProperty(ev, "target", { enumerable: true, value: text });
       nameField?.dispatchEvent(ev);
     });
 

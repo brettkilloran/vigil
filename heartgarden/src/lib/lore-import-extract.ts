@@ -43,16 +43,16 @@ async function extractLoreEntitiesOneSegment(
   const res = await callAnthropic(
     apiKey,
     {
-      model,
-      system: buildCachedSystem(EXTRACT_SYSTEM),
       messages: [
         {
-          role: "user",
           content: `Source text:\n\n${trimmed || "(empty)"}`,
+          role: "user",
         },
       ],
+      model,
+      system: buildCachedSystem(EXTRACT_SYSTEM),
     },
-    { label: "lore.import.extract", expectJson: true }
+    { expectJson: true, label: "lore.import.extract" }
   );
   if (!res.jsonText) {
     return { entities: [], suggestedLinks: [] };
@@ -91,8 +91,8 @@ function mergeExtractSegments(
         continue;
       }
       byName.set(key, {
-        name,
         kind: e.kind?.trim() || undefined,
+        name,
         summary: e.summary?.trim() || undefined,
       });
       if (byName.size >= EXTRACT_ENTITY_CAP) {
@@ -101,8 +101,8 @@ function mergeExtractSegments(
     }
   }
   const entities: LoreImportEntityDraft[] = [...byName.values()].map((v) => ({
-    name: v.name,
     kind: v.kind ?? "lore",
+    name: v.name,
     summary: v.summary ?? "",
   }));
   const nameKeys = new Set(entities.map((e) => e.name.toLowerCase()));
@@ -128,7 +128,7 @@ function mergeExtractSegments(
         continue;
       }
       seenLinks.add(k);
-      suggestedLinks.push({ fromName: from, toName: to, linkType: lt });
+      suggestedLinks.push({ fromName: from, linkType: lt, toName: to });
     }
   }
   return { entities, suggestedLinks };

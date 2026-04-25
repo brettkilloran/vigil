@@ -7,10 +7,10 @@ import { resolvePostgresUrlFromEnv } from "./src/db/postgres-env-url";
 config({ path: ".env.local" });
 
 export default defineConfig({
-  schema: "./src/db/schema.ts",
-  out: "./drizzle/migrations",
-  dialect: "postgresql",
   dbCredentials: {
     url: resolvePostgresUrlFromEnv() ?? "",
   },
+  dialect: "postgresql",
+  out: "./drizzle/migrations",
+  schema: "./src/db/schema.ts",
 });

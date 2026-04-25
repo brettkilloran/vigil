@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useRef } from "react";
+
 import type { WikiLinkAssistConfig } from "@/src/components/editing/BufferedContentEditable";
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import {
@@ -59,8 +60,8 @@ export function ArchitecturalLoreCharacterCanvasNode({
     MAX_ENTITY_CARD_WIDTH
   );
   const cardStyle = {
-    width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
+    width: `${nodeWidth}px`,
   } as CSSProperties;
 
   const editable = bodyEditable ?? activeTool === "select";

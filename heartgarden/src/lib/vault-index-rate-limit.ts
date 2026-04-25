@@ -10,10 +10,10 @@ export const VAULT_MAX_REINDEX_PER_WINDOW = 4;
 const MAX_REINDEX_PER_WINDOW = VAULT_MAX_REINDEX_PER_WINDOW;
 
 export const vaultIndexRateLimitMeta = {
-  window_ms: WINDOW_MS,
   max_index_requests_per_window: MAX_INDEX_PER_WINDOW,
   max_reindex_requests_per_window: MAX_REINDEX_PER_WINDOW,
   retry_after_seconds: Math.ceil(WINDOW_MS / 1000),
+  window_ms: WINDOW_MS,
 } as const;
 
 interface Bucket {
@@ -44,7 +44,7 @@ function bump(map: Map<string, Bucket>, key: string, max: number): boolean {
   const now = Date.now();
   let b = map.get(key);
   if (!b || now - b.windowStart >= WINDOW_MS) {
-    b = { windowStart: now, count: 0 };
+    b = { count: 0, windowStart: now };
     map.set(key, b);
   }
   b.count += 1;

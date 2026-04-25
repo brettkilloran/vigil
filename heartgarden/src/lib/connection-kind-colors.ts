@@ -85,53 +85,47 @@ const CONNECTION_KIND_TABLE: Record<ConnectionKind, ConnectionKindMeta> =
       }
     > = [
       {
-        kind: "pin",
-        linkType: "pin",
-        label: "Pin",
+        autopopulationKeywords: ["default", "unspecified", "generic"],
         hint: "Default rope — untyped link between two cards.",
+        kind: "pin",
+        label: "Pin",
+        linkType: "pin",
         scheme: "coral",
         semanticFamily: "default",
-        autopopulationKeywords: ["default", "unspecified", "generic"],
       },
       {
-        kind: "bond",
-        linkType: "bond",
-        label: "Bond",
+        autopopulationKeywords: ["trust", "loyalty", "coven", "intimacy"],
         hint: "Trusted personal tie — coven, partner, or sworn ally.",
+        kind: "bond",
+        label: "Bond",
+        linkType: "bond",
         scheme: "rose",
         semanticFamily: "social",
-        autopopulationKeywords: ["trust", "loyalty", "coven", "intimacy"],
       },
       {
-        kind: "affiliation",
-        linkType: "affiliation",
-        label: "Affiliation",
-        hint: "Belongs to or aligns with an organization, bloc, or nation.",
-        scheme: "ocean",
-        semanticFamily: "institutional",
         autopopulationKeywords: [
           "membership",
           "alignment",
           "faction",
           "organization",
         ],
+        hint: "Belongs to or aligns with an organization, bloc, or nation.",
+        kind: "affiliation",
+        label: "Affiliation",
+        linkType: "affiliation",
+        scheme: "ocean",
+        semanticFamily: "institutional",
       },
       {
-        kind: "contract",
-        linkType: "contract",
-        label: "Contract",
+        autopopulationKeywords: ["job", "mission", "employment", "obligation"],
         hint: "Formal mission, paid work, or binding duty.",
+        kind: "contract",
+        label: "Contract",
+        linkType: "contract",
         scheme: "gray",
         semanticFamily: "operational",
-        autopopulationKeywords: ["job", "mission", "employment", "obligation"],
       },
       {
-        kind: "conflict",
-        linkType: "conflict",
-        label: "Conflict",
-        hint: "Opposition, hostile pressure, hunt, or coercion.",
-        scheme: "wine",
-        semanticFamily: "adversarial",
         autopopulationKeywords: [
           "rivalry",
           "hostility",
@@ -139,15 +133,21 @@ const CONNECTION_KIND_TABLE: Record<ConnectionKind, ConnectionKindMeta> =
           "coercion",
           "debt",
         ],
+        hint: "Opposition, hostile pressure, hunt, or coercion.",
+        kind: "conflict",
+        label: "Conflict",
+        linkType: "conflict",
+        scheme: "wine",
+        semanticFamily: "adversarial",
       },
       {
-        kind: "history",
-        linkType: "history",
-        label: "History",
+        autopopulationKeywords: ["former", "origin", "backstory", "legacy"],
         hint: "Former ties, origins, and past events still shaping the present.",
+        kind: "history",
+        label: "History",
+        linkType: "history",
         scheme: "parchment",
         semanticFamily: "historical",
-        autopopulationKeywords: ["former", "origin", "backstory", "legacy"],
       },
     ];
     return Object.fromEntries(
@@ -155,8 +155,8 @@ const CONNECTION_KIND_TABLE: Record<ConnectionKind, ConnectionKindMeta> =
         const meta = schemeMeta(r.scheme);
         const full: ConnectionKindMeta = {
           ...r,
-          swatch: meta.swatch,
           border: meta.border,
+          swatch: meta.swatch,
         };
         return [r.kind, full];
       })
@@ -219,20 +219,20 @@ export function connectionKindFromLinkType(
 }
 
 const LINK_TYPE_ALIASES: Record<string, string> = {
-  // Previous picker vocabulary.
-  reference: "history",
   ally: "bond",
   enemy: "conflict",
-  neutral: "pin",
-  quest: "contract",
-  lore: "history",
-  other: "history",
   // Import-era role tags.
   faction: "affiliation",
-  location: "history",
-  npc: "bond",
   // Planned-but-removed semantic.
   leverage: "conflict",
+  location: "history",
+  lore: "history",
+  neutral: "pin",
+  npc: "bond",
+  other: "history",
+  quest: "contract",
+  // Previous picker vocabulary.
+  reference: "history",
 };
 
 export function normalizeLinkTypeAlias(
@@ -254,7 +254,7 @@ function parseOklch(
   if (!m) {
     return null;
   }
-  return { L: Number(m[1]), C: Number(m[2]), H: Number(m[3]) };
+  return { C: Number(m[2]), H: Number(m[3]), L: Number(m[1]) };
 }
 
 function oklchDistance(

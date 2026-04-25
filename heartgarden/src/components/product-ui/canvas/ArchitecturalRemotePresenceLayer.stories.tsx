@@ -1,57 +1,58 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
+
 import { ArchitecturalRemotePresenceCursors } from "@/src/components/foundation/ArchitecturalRemotePresenceLayer";
 import type { SpacePresencePeer } from "@/src/components/foundation/architectural-neon-api";
 
 const peerA: SpacePresencePeer = {
-  clientId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   activeSpaceId: "space-1",
   camera: { x: 0, y: 0, zoom: 1 },
-  pointer: { x: 120, y: 180 },
+  clientId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   displayName: "Avery North",
+  pointer: { x: 120, y: 180 },
   sigil: "thread",
   updatedAt: new Date().toISOString(),
 };
 
 const peerB: SpacePresencePeer = {
-  clientId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   activeSpaceId: "space-1",
   camera: { x: 0, y: 0, zoom: 1 },
-  pointer: { x: 420, y: 260 },
+  clientId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   displayName: "Mina Cedar",
+  pointer: { x: 420, y: 260 },
   sigil: "quill",
   updatedAt: new Date().toISOString(),
 };
 
 const meta: Meta<typeof ArchitecturalRemotePresenceCursors> = {
-  title: "Heartgarden/Product UI/Canvas/Remote presence cursors",
-  component: ArchitecturalRemotePresenceCursors,
   args: {
+    nameplateEnabled: true,
     peers: [peerA, peerB],
     prefersReducedMotion: false,
-    nameplateEnabled: true,
   },
   argTypes: {
     prefersReducedMotion: { control: "boolean" },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalRemotePresenceCursors,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          height: "100vh",
           position: "relative",
           width: "100vw",
-          height: "100vh",
-          background: "var(--sem-surface-base)",
         }}
       >
         <Story />
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Canvas/Remote presence cursors",
 };
 
 export default meta;

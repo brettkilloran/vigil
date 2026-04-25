@@ -85,18 +85,18 @@ const DEMO_THESIS_THREAD_LOC_CHAR = "hg-demo-thesis-loc-char";
 function buildDemoRootPinThreadConnection(): CanvasPinConnection {
   const t = 1_700_000_000_000;
   return {
-    id: DEMO_ROOT_PIN_THREAD_ID,
-    sourceEntityId: "node-1",
-    targetEntityId: "home-stack-c",
-    sourcePin: DEMO_SEED_CONTENT_PIN,
-    targetPin: DEMO_SEED_CONTENT_PIN,
     color: "oklch(0.68 0.32 48)",
+    createdAt: t,
+    id: DEMO_ROOT_PIN_THREAD_ID,
     linkType: "pin",
     slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
-    createdAt: t,
-    updatedAt: t,
-    syncState: "local-only",
+    sourceEntityId: "node-1",
+    sourcePin: DEMO_SEED_CONTENT_PIN,
     syncError: null,
+    syncState: "local-only",
+    targetEntityId: "home-stack-c",
+    targetPin: DEMO_SEED_CONTENT_PIN,
+    updatedAt: t,
   };
 }
 
@@ -109,18 +109,18 @@ function buildDemoThesisPinThread(
 ): CanvasPinConnection {
   const t = 1_700_000_001_000 + timeOffsetMs;
   return {
-    id,
-    sourceEntityId,
-    targetEntityId,
-    sourcePin: DEMO_SEED_CONTENT_PIN,
-    targetPin: DEMO_SEED_CONTENT_PIN,
     color,
+    createdAt: t,
+    id,
     linkType: "pin",
     slackMultiplier: DEFAULT_LINK_SLACK_MULTIPLIER,
-    createdAt: t,
-    updatedAt: t,
-    syncState: "local-only",
+    sourceEntityId,
+    sourcePin: DEMO_SEED_CONTENT_PIN,
     syncError: null,
+    syncState: "local-only",
+    targetEntityId,
+    targetPin: DEMO_SEED_CONTENT_PIN,
+    updatedAt: t,
   };
 }
 
@@ -153,20 +153,20 @@ function seedDemoFactionBodyHtml(): string {
   const { upper, lower } =
     factionArchiveRailTextsFromObjectId("demo-faction-seed");
   return buildFactionArchive091BodyHtml({
-    orgPrimaryInnerHtml: "Ratcatchers",
     orgAccentInnerHtml: "Warrant & recovery · L1 circuit",
+    orgPrimaryInnerHtml: "Ratcatchers",
+    railLower: lower,
+    railUpper: upper,
     recordInnerHtml:
       "<p>Demo faction for the <strong>Demo subspace folder</strong>: a compact warrant unit tied to <strong>Arbiter Station Lagrange 1</strong>. The structured roster below lists sample members (including Morgan as lead warder).</p>",
-    railUpper: upper,
-    railLower: lower,
   });
 }
 
 function seedDemoLocationBodyHtml(): string {
   return buildLocationOrdoV7BodyHtml({
-    name: "Arbiter Station Lagrange 1",
     context: "Earth–Moon L1 · admin corridor",
     detail: "Ratcatchers field office · civilian hearings deck",
+    name: "Arbiter Station Lagrange 1",
     notesInnerHtml:
       "<p>Demo station: neutral ground where the <strong>Ratcatchers</strong> log warrants and hand-offs. Threads on the board link this place to Morgan and the faction card.</p>",
   });
@@ -176,40 +176,31 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
   /* Root demo: welcome + stack (row 1); checklist under welcome; image tight under stack; folder below (2× row step from grid). */
   return [
     {
+      bodyDoc: DEMO_ROOT_WELCOME_DOC,
+      bodyHtml: hgDocToHtml(DEMO_ROOT_WELCOME_DOC),
       id: "node-1",
+      rotation: -2.6,
+      tapeRotation: -2.2,
+      tapeVariant: "masking",
+      theme: "default",
       title: "Start here — how this board works",
       x: DEMO_ROOT_GRID_OX,
       y: DEMO_ROOT_GRID_OY,
-      rotation: -2.6,
-      theme: "default",
-      tapeRotation: -2.2,
-      tapeVariant: "masking",
-      bodyDoc: DEMO_ROOT_WELCOME_DOC,
-      bodyHtml: hgDocToHtml(DEMO_ROOT_WELCOME_DOC),
     },
     {
-      id: "node-3",
-      title: "Try these steps",
-      x: DEMO_ROOT_GRID_OX,
-      y: DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP,
-      rotation: -3.1,
-      width: 340,
-      theme: "task",
-      tapeRotation: -2.4,
-      tapeVariant: "masking",
       bodyDoc: demoRootTaskDoc(),
       bodyHtml: hgDocToHtml(demoRootTaskDoc()),
+      id: "node-3",
+      rotation: -3.1,
+      tapeRotation: -2.4,
+      tapeVariant: "masking",
+      theme: "task",
+      title: "Try these steps",
+      width: 340,
+      x: DEMO_ROOT_GRID_OX,
+      y: DEMO_ROOT_GRID_OY + DEMO_ROOT_ROW_STEP,
     },
     {
-      id: "node-4",
-      title: "Image card (double-click for gallery)",
-      x: DEMO_ROOT_STACK_COL_OX,
-      y: DEMO_ROOT_IMAGE_Y,
-      rotation: 2.2,
-      width: 340,
-      theme: "media",
-      tapeRotation: 1.6,
-      tapeVariant: "dark",
       bodyHtml: `
         <div class="${tokens.mediaFrame}" data-architectural-media-root="true">
           <img class="${tokens.mediaImage}" src="/caliginia-sphere.png" alt="Abstract sphere render used as sample media" />
@@ -219,6 +210,15 @@ export function buildArchitecturalSeedNodes(tokens: StyleTokens): CanvasNode[] {
         </div>
         <div data-architectural-media-notes="true"><p>Media cards accept uploads and keep captions here. Replace the image to try your own file.</p></div>
       `,
+      id: "node-4",
+      rotation: 2.2,
+      tapeRotation: 1.6,
+      tapeVariant: "dark",
+      theme: "media",
+      title: "Image card (double-click for gallery)",
+      width: 340,
+      x: DEMO_ROOT_STACK_COL_OX,
+      y: DEMO_ROOT_IMAGE_Y,
     },
   ];
 }
@@ -248,9 +248,6 @@ export function buildArchitecturalSeedGraph(
   const entities = createContentSeedMap(tokens);
   const spaces: Record<string, CanvasSpace> = {
     root: {
-      id: "root",
-      name: ROOT_SPACE_DISPLAY_NAME,
-      parentSpaceId: null,
       entityIds: [
         "node-1",
         "home-stack-a",
@@ -260,77 +257,80 @@ export function buildArchitecturalSeedGraph(
         "node-4",
         "folder-1",
       ],
+      id: "root",
+      name: ROOT_SPACE_DISPLAY_NAME,
+      parentSpaceId: null,
     },
     "space-project-thesis": {
+      entityIds: [],
       id: "space-project-thesis",
       name: "Demo subspace folder",
       parentSpaceId: "root",
-      entityIds: [],
     },
   };
 
   entities["folder-1"] = {
-    id: "folder-1",
-    title: "Demo subspace folder",
-    kind: "folder",
-    theme: "folder",
     childSpaceId: "space-project-thesis",
+    id: "folder-1",
+    kind: "folder",
     rotation: -4.2,
-    width: 420,
-    tapeRotation: 0,
     /* Row 3 band — below the image on the stack column (see DEMO_ROOT_FOLDER_Y nudge). */
     slots: {
       root: { x: DEMO_ROOT_FOLDER_X, y: DEMO_ROOT_FOLDER_Y },
     },
+    tapeRotation: 0,
+    theme: "folder",
+    title: "Demo subspace folder",
+    width: 420,
   };
 
   /** Home-board stack (top-right of row 1); pin thread targets `home-stack-c`. */
   const DEMO_HOME_STACK_ID = "demo-home-stack";
   const homeStackSlot = { x: DEMO_ROOT_STACK_COL_OX, y: DEMO_ROOT_GRID_OY };
   entities["home-stack-a"] = {
-    id: "home-stack-a",
-    title: "Sample stack — back card",
-    kind: "content",
-    theme: "default",
-    rotation: 2.1,
-    width: 340,
-    tapeRotation: 1.7,
-    tapeVariant: "masking",
     bodyDoc: DEMO_STACK_HOME_BOTTOM_DOC,
     bodyHtml: hgDocToHtml(DEMO_STACK_HOME_BOTTOM_DOC),
+    id: "home-stack-a",
+    kind: "content",
+    rotation: 2.1,
+    slots: { root: { ...homeStackSlot } },
     stackId: DEMO_HOME_STACK_ID,
     stackOrder: 0,
-    slots: { root: { ...homeStackSlot } },
+    tapeRotation: 1.7,
+    tapeVariant: "masking",
+    theme: "default",
+    title: "Sample stack — back card",
+    width: 340,
   } satisfies CanvasContentEntity;
   entities["home-stack-b"] = {
-    id: "home-stack-b",
-    title: "Sample stack — middle",
-    kind: "content",
-    theme: "task",
-    rotation: 2.1,
-    width: 340,
-    tapeRotation: 1.7,
-    tapeVariant: "masking",
     bodyDoc: DEMO_STACK_HOME_MIDDLE_DOC,
     bodyHtml: hgDocToHtml(DEMO_STACK_HOME_MIDDLE_DOC),
+    id: "home-stack-b",
+    kind: "content",
+    rotation: 2.1,
+    slots: { root: { ...homeStackSlot } },
     stackId: DEMO_HOME_STACK_ID,
     stackOrder: 1,
-    slots: { root: { ...homeStackSlot } },
-  } satisfies CanvasContentEntity;
-  entities["home-stack-c"] = {
-    id: "home-stack-c",
-    title: "Sample stack — top (click stack)",
-    kind: "content",
-    theme: "default",
-    rotation: 2.1,
-    width: 340,
     tapeRotation: 1.7,
     tapeVariant: "masking",
+    theme: "task",
+    title: "Sample stack — middle",
+    width: 340,
+  } satisfies CanvasContentEntity;
+  entities["home-stack-c"] = {
     bodyDoc: DEMO_STACK_HOME_TOP_DOC,
     bodyHtml: hgDocToHtml(DEMO_STACK_HOME_TOP_DOC),
+    id: "home-stack-c",
+    kind: "content",
+    rotation: 2.1,
+    slots: { root: { ...homeStackSlot } },
     stackId: DEMO_HOME_STACK_ID,
     stackOrder: 2,
-    slots: { root: { ...homeStackSlot } },
+    tapeRotation: 1.7,
+    tapeVariant: "masking",
+    theme: "default",
+    title: "Sample stack — top (click stack)",
+    width: 340,
   } satisfies CanvasContentEntity;
 
   /**
@@ -347,56 +347,56 @@ export function buildArchitecturalSeedGraph(
     DEMO_NOTES_HALF_CENTER_OFFSET - DEMO_NOTES_CARD_W / 2;
 
   const folderIntro: CanvasNode = {
-    id: "dossier-01",
-    title: "Inside the folder",
-    x: DEMO_NOTES_TOP_LEFT,
-    y: DEMO_NOTES_TOP_LEFT,
-    rotation: -1.2,
-    width: 340,
-    theme: "default",
-    tapeRotation: -1.1,
-    tapeVariant: "clear",
     bodyDoc: DEMO_RESEARCH_DOSSIER_DOC,
     bodyHtml: hgDocToHtml(DEMO_RESEARCH_DOSSIER_DOC),
+    id: "dossier-01",
+    rotation: -1.2,
+    tapeRotation: -1.1,
+    tapeVariant: "clear",
+    theme: "default",
+    title: "Inside the folder",
+    width: 340,
+    x: DEMO_NOTES_TOP_LEFT,
+    y: DEMO_NOTES_TOP_LEFT,
   };
 
   const folderLoreCharacter: CanvasNode = {
+    bodyHtml: seedDemoCharacterBodyHtml(),
     id: "demo-lore-character",
-    title: "Morgan Vale",
-    x: DEMO_NOTES_TOP_RIGHT,
-    y: DEMO_NOTES_TOP_LEFT,
     rotation: 0.9,
-    width: 340,
-    theme: "default",
     tapeRotation: -1.3,
     tapeVariant: tapeVariantForLoreCard("character", "v11"),
-    bodyHtml: seedDemoCharacterBodyHtml(),
+    theme: "default",
+    title: "Morgan Vale",
+    width: 340,
+    x: DEMO_NOTES_TOP_RIGHT,
+    y: DEMO_NOTES_TOP_LEFT,
   };
 
   const folderLoreFaction: CanvasNode = {
+    bodyHtml: seedDemoFactionBodyHtml(),
     id: "demo-lore-faction",
-    title: "Ratcatchers",
-    x: DEMO_NOTES_TOP_LEFT,
-    y: DEMO_NOTES_TOP_RIGHT,
     rotation: -0.8,
-    width: 340,
-    theme: "default",
     tapeRotation: 1.0,
     tapeVariant: tapeVariantForLoreCard("faction", "v4"),
-    bodyHtml: seedDemoFactionBodyHtml(),
+    theme: "default",
+    title: "Ratcatchers",
+    width: 340,
+    x: DEMO_NOTES_TOP_LEFT,
+    y: DEMO_NOTES_TOP_RIGHT,
   };
 
   const folderLoreLocation: CanvasNode = {
+    bodyHtml: seedDemoLocationBodyHtml(),
     id: "demo-lore-location",
-    title: "Arbiter Station Lagrange 1",
-    x: DEMO_NOTES_TOP_RIGHT,
-    y: DEMO_NOTES_TOP_RIGHT,
     rotation: 1.1,
-    width: 340,
-    theme: "default",
     tapeRotation: -0.9,
     tapeVariant: tapeVariantForLoreCard("location", "v7"),
-    bodyHtml: seedDemoLocationBodyHtml(),
+    theme: "default",
+    title: "Arbiter Station Lagrange 1",
+    width: 340,
+    x: DEMO_NOTES_TOP_RIGHT,
+    y: DEMO_NOTES_TOP_RIGHT,
   };
 
   const folderEntities: CanvasNode[] = [
@@ -418,8 +418,8 @@ export function buildArchitecturalSeedGraph(
         : {}),
       ...(isFaction
         ? {
-            loreCard: { kind: "faction", variant: "v4" } as const,
             factionRoster: createDefaultFactionRosterSeed(),
+            loreCard: { kind: "faction", variant: "v4" } as const,
           }
         : {}),
       ...(isLoc
@@ -442,9 +442,6 @@ export function buildArchitecturalSeedGraph(
   }
 
   return {
-    rootSpaceId: "root",
-    spaces,
-    entities,
     connections: {
       [DEMO_ROOT_PIN_THREAD_ID]: buildDemoRootPinThreadConnection(),
       [DEMO_THESIS_THREAD_INTRO_CHAR]: buildDemoThesisPinThread(
@@ -476,6 +473,9 @@ export function buildArchitecturalSeedGraph(
         3
       ),
     },
+    entities,
+    rootSpaceId: "root",
+    spaces,
   };
 }
 

@@ -12,23 +12,23 @@ describe("lore import round-trip guards", () => {
     const huge = "A".repeat(SOURCE_SECTION_CARD_MAX_CHARS * 2 + 200);
     const drafts = buildSourceCardDraftsFromPlan(
       {
-        importBatchId: "11111111-1111-4111-8111-111111111111",
-        sourceCharCount: huge.length,
-        folders: [],
-        notes: [],
-        links: [],
-        mergeProposals: [],
-        contradictions: [],
-        clarifications: [],
         chunks: [
           {
-            id: "22222222-2222-4222-8222-222222222222",
-            heading: "Incident Report",
-            charStart: 0,
-            charEnd: huge.length,
             body: huge,
+            charEnd: huge.length,
+            charStart: 0,
+            heading: "Incident Report",
+            id: "22222222-2222-4222-8222-222222222222",
           },
         ],
+        clarifications: [],
+        contradictions: [],
+        folders: [],
+        importBatchId: "11111111-1111-4111-8111-111111111111",
+        links: [],
+        mergeProposals: [],
+        notes: [],
+        sourceCharCount: huge.length,
       } as never,
       huge,
       "Import source"
@@ -50,11 +50,11 @@ describe("lore import round-trip guards", () => {
   it("tracks duplicate grounded passages across notes", () => {
     const chunks = [
       {
-        id: "33333333-3333-4333-8333-333333333333",
-        heading: "Document",
         body: "The Obsidian Shard emitted a pulse visible to all divers.",
-        charStart: 0,
         charEnd: 64,
+        charStart: 0,
+        heading: "Document",
+        id: "33333333-3333-4333-8333-333333333333",
       },
     ];
     const outline = {
@@ -62,34 +62,17 @@ describe("lore import round-trip guards", () => {
       links: [],
       notes: [
         {
-          clientId: "n1",
-          title: "Shard",
-          canonicalEntityKind: "item" as const,
-          summary: "",
-          folderClientId: null,
-          sourceChunkIds: [chunks[0]?.id],
-          sourcePassages: [
-            {
-              chunkId: chunks[0]?.id,
-              quote:
-                "The Obsidian Shard emitted a pulse visible to all divers.",
-            },
-          ],
           body: {
-            kind: "generic" as const,
             blocks: [
               {
                 kind: "paragraph",
                 text: "The Obsidian Shard emitted a pulse visible to all divers.",
               },
             ],
+            kind: "generic" as const,
           },
-        },
-        {
-          clientId: "n2",
-          title: "Divers",
-          canonicalEntityKind: "other" as const,
-          summary: "",
+          canonicalEntityKind: "item" as const,
+          clientId: "n1",
           folderClientId: null,
           sourceChunkIds: [chunks[0]?.id],
           sourcePassages: [
@@ -99,15 +82,32 @@ describe("lore import round-trip guards", () => {
                 "The Obsidian Shard emitted a pulse visible to all divers.",
             },
           ],
+          summary: "",
+          title: "Shard",
+        },
+        {
           body: {
-            kind: "generic" as const,
             blocks: [
               {
                 kind: "paragraph",
                 text: "Witnesses saw the same pulse event.",
               },
             ],
+            kind: "generic" as const,
           },
+          canonicalEntityKind: "other" as const,
+          clientId: "n2",
+          folderClientId: null,
+          sourceChunkIds: [chunks[0]?.id],
+          sourcePassages: [
+            {
+              chunkId: chunks[0]?.id,
+              quote:
+                "The Obsidian Shard emitted a pulse visible to all divers.",
+            },
+          ],
+          summary: "",
+          title: "Divers",
         },
       ],
     };

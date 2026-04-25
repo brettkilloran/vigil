@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 import { SmartImportPlanningDemo } from "./SmartImportPlanningDemo";
 
 export const metadata: Metadata = {
-  title: "Smart import planning — style preview",
   description:
     "Dev preview of the simplified Smart Import planning modal (spinner).",
-  robots: { index: false, follow: false },
+  robots: { follow: false, index: false },
+  title: "Smart import planning — style preview",
 };
 
 export default function SmartImportPlanningPage() {

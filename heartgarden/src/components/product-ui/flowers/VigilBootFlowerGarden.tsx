@@ -77,22 +77,22 @@ const LEGACY_SKY_DEEP = "#4a9fd4";
  * blue-greens, olives, teals, chartreuse, blue-teal — not a shared 4-token pool).
  */
 const FOLIAGE = [
-  { stem: "oklch(0.31 0.09 152)", leaf: "oklch(0.44 0.14 144)" },
-  { stem: "oklch(0.33 0.1 132)", leaf: "oklch(0.45 0.13 126)" },
-  { stem: "oklch(0.29 0.08 162)", leaf: "oklch(0.42 0.12 154)" },
-  { stem: "oklch(0.34 0.11 122)", leaf: "oklch(0.51 0.16 118)" },
-  { stem: "oklch(0.3 0.09 175)", leaf: "oklch(0.44 0.13 166)" },
-  { stem: "oklch(0.35 0.1 128)", leaf: "oklch(0.52 0.15 124)" },
-  { stem: "oklch(0.32 0.1 212)", leaf: "oklch(0.43 0.13 206)" },
+  { leaf: "oklch(0.44 0.14 144)", stem: "oklch(0.31 0.09 152)" },
+  { leaf: "oklch(0.45 0.13 126)", stem: "oklch(0.33 0.1 132)" },
+  { leaf: "oklch(0.42 0.12 154)", stem: "oklch(0.29 0.08 162)" },
+  { leaf: "oklch(0.51 0.16 118)", stem: "oklch(0.34 0.11 122)" },
+  { leaf: "oklch(0.44 0.13 166)", stem: "oklch(0.3 0.09 175)" },
+  { leaf: "oklch(0.52 0.15 124)", stem: "oklch(0.35 0.1 128)" },
+  { leaf: "oklch(0.43 0.13 206)", stem: "oklch(0.32 0.1 212)" },
   /** Blue-named varieties: green stems so blue reads on petals, not stalks */
-  { stem: "oklch(0.31 0.09 158)", leaf: "oklch(0.44 0.13 152)" },
-  { stem: "oklch(0.32 0.1 162)", leaf: "oklch(0.43 0.12 156)" },
-  { stem: "oklch(0.3 0.09 172)", leaf: "oklch(0.45 0.12 168)" },
+  { leaf: "oklch(0.44 0.13 152)", stem: "oklch(0.31 0.09 158)" },
+  { leaf: "oklch(0.43 0.12 156)", stem: "oklch(0.32 0.1 162)" },
+  { leaf: "oklch(0.45 0.12 168)", stem: "oklch(0.3 0.09 172)" },
   /** Magenta blooms — cool blue-green stem so hot pink doesn’t clash with foliage */
-  { stem: "oklch(0.3 0.07 168)", leaf: "oklch(0.42 0.11 162)" },
+  { leaf: "oklch(0.42 0.11 162)", stem: "oklch(0.3 0.07 168)" },
   /** Rainbow rares — near-neutral stems so ROYGBV petals stay the read */
-  { stem: "oklch(0.29 0.05 285)", leaf: "oklch(0.4 0.09 275)" },
-  { stem: "oklch(0.29 0.06 210)", leaf: "oklch(0.4 0.09 200)" },
+  { leaf: "oklch(0.4 0.09 275)", stem: "oklch(0.29 0.05 285)" },
+  { leaf: "oklch(0.4 0.09 200)", stem: "oklch(0.29 0.06 210)" },
 ] as const;
 
 /** `ap` = percentage of `a` in OKLCH mix (canvas fillStyle). */
@@ -138,29 +138,29 @@ function sampleCssColorToRgb(cssColor: string): {
   b: number;
 } {
   if (typeof document === "undefined") {
-    return { r: 55, g: 38, b: 28 };
+    return { b: 28, g: 38, r: 55 };
   }
   const c = document.createElement("canvas");
   c.width = 1;
   c.height = 1;
   const ctx = c.getContext("2d", { willReadFrequently: true });
   if (!ctx) {
-    return { r: 55, g: 38, b: 28 };
+    return { b: 28, g: 38, r: 55 };
   }
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, 1, 1);
   ctx.fillStyle = expandBootFlowerCanvasColor(cssColor);
   ctx.fillRect(0, 0, 1, 1);
   const d = ctx.getImageData(0, 0, 1, 1).data;
-  return { r: d[0]!, g: d[1]!, b: d[2]! };
+  return { b: d[2]!, g: d[1]!, r: d[0]! };
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const n = hex.slice(1);
   return {
-    r: Number.parseInt(n.slice(0, 2), 16),
-    g: Number.parseInt(n.slice(2, 4), 16),
     b: Number.parseInt(n.slice(4, 6), 16),
+    g: Number.parseInt(n.slice(2, 4), 16),
+    r: Number.parseInt(n.slice(0, 2), 16),
   };
 }
 
@@ -437,28 +437,25 @@ export interface Species {
 
 export const SPECIES: Species[] = [
   {
-    name: "Periwinkle",
-    stem: FOLIAGE[0].stem,
-    leaf: FOLIAGE[0].leaf,
     bloom: mixOklch(LEGACY_BLUE_PETAL, "oklch(0.56 0.22 272)", 42),
     bloomCore: mixOklch(LEGACY_BLUE_HOT, SYS_ACCENT, 78),
     bloomHalo: mixOklch(LEGACY_BLUE_DEEP, ORANGE_MID, 88),
-    energyMin: 18,
+    branchEnergyFrac: 0.52,
+    branchEnergyMin: 14,
+    branchGate: 0.88,
     energyMax: 38,
-    wander: 1.15,
-    upJitter: 0.45,
+    energyMin: 18,
+    lateralRun: 0.35,
+    leaf: FOLIAGE[0].leaf,
+    name: "Periwinkle",
     sinAmp: 0.85,
     sinFreq: 0.11,
-    branchGate: 0.88,
-    branchEnergyMin: 14,
-    branchEnergyFrac: 0.52,
-    lateralRun: 0.35,
     spike: null,
+    stem: FOLIAGE[0].stem,
+    upJitter: 0.45,
+    wander: 1.15,
   },
   {
-    name: "Raspberry",
-    stem: FOLIAGE[1].stem,
-    leaf: FOLIAGE[1].leaf,
     bloom: mixOklch(
       "oklch(0.62 0.26 330)",
       mixOklch(ORANGE_POP, SYS_ACCENT, 42),
@@ -470,98 +467,98 @@ export const SPECIES: Species[] = [
       48
     ),
     bloomHalo: mixOklch("oklch(0.52 0.22 328)", SYS_DANGER_400, 58),
-    energyMin: 22,
+    branchEnergyFrac: 0.48,
+    branchEnergyMin: 16,
+    branchGate: 0.9,
     energyMax: 48,
-    wander: 0.75,
-    upJitter: 0.25,
+    energyMin: 22,
+    lateralRun: 0.2,
+    leaf: FOLIAGE[1].leaf,
+    name: "Raspberry",
     sinAmp: 0.35,
     sinFreq: 0.07,
-    branchGate: 0.9,
-    branchEnergyMin: 16,
-    branchEnergyFrac: 0.48,
-    lateralRun: 0.2,
     spike: SYS_DANGER_400,
+    stem: FOLIAGE[1].stem,
+    upJitter: 0.25,
+    wander: 0.75,
   },
   {
-    name: "Indigo",
-    stem: FOLIAGE[2].stem,
-    leaf: FOLIAGE[2].leaf,
     bloom: mixOklch(LEGACY_ROYAL_PETAL, "oklch(0.5 0.24 278)", 38),
     bloomCore: mixOklch(LEGACY_ROYAL_HOT, ORANGE_SOFT, 82),
     bloomHalo: mixOklch(LEGACY_ROYAL_DEEP, SYS_ACCENT, 86),
-    energyMin: 16,
+    branchEnergyFrac: 0.55,
+    branchEnergyMin: 12,
+    branchGate: 0.84,
     energyMax: 36,
-    wander: 1.4,
-    upJitter: 0.55,
+    energyMin: 16,
+    lateralRun: 0.5,
+    leaf: FOLIAGE[2].leaf,
+    name: "Indigo",
     sinAmp: 1.1,
     sinFreq: 0.14,
-    branchGate: 0.84,
-    branchEnergyMin: 12,
-    branchEnergyFrac: 0.55,
-    lateralRun: 0.5,
     spike: null,
+    stem: FOLIAGE[2].stem,
+    upJitter: 0.55,
+    wander: 1.4,
   },
   {
-    name: "Marigold",
-    stem: FOLIAGE[3].stem,
-    leaf: FOLIAGE[3].leaf,
     bloom: mixOklch("oklch(0.74 0.2 52)", ORANGE_POP, 38),
     bloomCore: mixOklch("oklch(0.82 0.19 48)", ORANGE_MID, 44),
     bloomHalo: mixOklch("oklch(0.68 0.18 46)", ORANGE_POP, 50),
-    energyMin: 14,
+    branchEnergyFrac: 0.58,
+    branchEnergyMin: 10,
+    branchGate: 0.82,
     energyMax: 30,
-    wander: 1.6,
-    upJitter: 0.7,
+    energyMin: 14,
+    lateralRun: 0.65,
+    leaf: FOLIAGE[3].leaf,
+    name: "Marigold",
     sinAmp: 1.25,
     sinFreq: 0.17,
-    branchGate: 0.82,
-    branchEnergyMin: 10,
-    branchEnergyFrac: 0.58,
-    lateralRun: 0.65,
     spike: null,
+    stem: FOLIAGE[3].stem,
+    upJitter: 0.7,
+    wander: 1.6,
   },
   {
-    name: "Sky",
-    stem: FOLIAGE[4].stem,
-    leaf: FOLIAGE[4].leaf,
     bloom: mixOklch(LEGACY_SKY_PETAL, "oklch(0.66 0.12 236)", 40),
     bloomCore: mixOklch(LEGACY_SKY_HOT, SYS_ACCENT, 76),
     bloomHalo: mixOklch(LEGACY_SKY_DEEP, ORANGE_SOFT, 88),
-    energyMin: 20,
+    branchEnergyFrac: 0.5,
+    branchEnergyMin: 14,
+    branchGate: 0.86,
     energyMax: 42,
-    wander: 1.0,
-    upJitter: 0.4,
+    energyMin: 20,
+    lateralRun: 0.4,
+    leaf: FOLIAGE[4].leaf,
+    name: "Sky",
     sinAmp: 0.65,
     sinFreq: 0.1,
-    branchGate: 0.86,
-    branchEnergyMin: 14,
-    branchEnergyFrac: 0.5,
-    lateralRun: 0.4,
     spike: null,
+    stem: FOLIAGE[4].stem,
+    upJitter: 0.4,
+    wander: 1.0,
   },
   {
-    name: "Poppy",
-    stem: FOLIAGE[5].stem,
-    leaf: FOLIAGE[5].leaf,
     bloom: mixOklch("oklch(0.52 0.24 27)", SYS_DANGER_400, 50),
     bloomCore: mixOklch("oklch(0.76 0.17 28)", SYS_DANGER_300, 46),
     bloomHalo: mixOklch(SYS_DANGER_500, "oklch(0.4 0.15 24)", 55),
-    energyMin: 12,
+    branchEnergyFrac: 0.6,
+    branchEnergyMin: 9,
+    branchGate: 0.8,
     energyMax: 28,
-    wander: 1.9,
-    upJitter: 0.85,
+    energyMin: 12,
+    lateralRun: 0.7,
+    leaf: FOLIAGE[5].leaf,
+    name: "Poppy",
     sinAmp: 1.4,
     sinFreq: 0.2,
-    branchGate: 0.8,
-    branchEnergyMin: 9,
-    branchEnergyFrac: 0.6,
-    lateralRun: 0.7,
     spike: null,
+    stem: FOLIAGE[5].stem,
+    upJitter: 0.85,
+    wander: 1.9,
   },
   {
-    name: "Plum",
-    stem: FOLIAGE[6].stem,
-    leaf: FOLIAGE[6].leaf,
     bloom: mixOklch(
       "oklch(0.58 0.22 305)",
       mixOklch(ORANGE_MID, SYS_ACCENT, 45),
@@ -577,23 +574,23 @@ export const SPECIES: Species[] = [
       mixOklch("oklch(0.5 0.2 300)", SYS_DANGER_400, 50),
       48
     ),
-    energyMin: 24,
+    branchEnergyFrac: 0.5,
+    branchEnergyMin: 15,
+    branchGate: 0.87,
     energyMax: 52,
-    wander: 0.65,
-    upJitter: 0.3,
+    energyMin: 24,
+    lateralRun: 0.25,
+    leaf: FOLIAGE[6].leaf,
+    name: "Plum",
     sinAmp: 0.45,
     sinFreq: 0.09,
-    branchGate: 0.87,
-    branchEnergyMin: 15,
-    branchEnergyFrac: 0.5,
-    lateralRun: 0.25,
     spike: SYS_DANGER_500,
+    stem: FOLIAGE[6].stem,
+    upJitter: 0.3,
+    wander: 0.65,
   },
   /** Helio-cultivar yellow; green stem/leaf from FOLIAGE[7]. */
   {
-    name: "Buttercup",
-    stem: FOLIAGE[7].stem,
-    leaf: FOLIAGE[7].leaf,
     bloom: mixOklch(
       "oklch(0.8 0.2 96)",
       mixOklch(ORANGE_SOFT, SYS_ACCENT, 62),
@@ -601,119 +598,122 @@ export const SPECIES: Species[] = [
     ),
     bloomCore: mixOklch("oklch(0.93 0.14 100)", ORANGE_SOFT, 58),
     bloomHalo: mixOklch("oklch(0.66 0.17 92)", ORANGE_MID, 52),
-    energyMin: 18,
+    branchEnergyFrac: 0.52,
+    branchEnergyMin: 14,
+    branchGate: 0.88,
     energyMax: 38,
-    wander: 1.12,
-    upJitter: 0.44,
+    energyMin: 18,
+    lateralRun: 0.35,
+    leaf: FOLIAGE[7].leaf,
+    name: "Buttercup",
     sinAmp: 0.82,
     sinFreq: 0.11,
-    branchGate: 0.88,
-    branchEnergyMin: 14,
-    branchEnergyFrac: 0.52,
-    lateralRun: 0.35,
     spike: null,
+    stem: FOLIAGE[7].stem,
+    upJitter: 0.44,
+    wander: 1.12,
   },
   /** Acid chartreuse (hue ~124–142). */
   {
-    name: "Chartreuse",
-    stem: FOLIAGE[8].stem,
-    leaf: FOLIAGE[8].leaf,
     bloom: mixOklch("oklch(0.72 0.28 132)", "oklch(0.66 0.24 140)", 46),
     bloomCore: mixOklch("oklch(0.9 0.2 126)", ORANGE_SOFT, 76),
     bloomHalo: mixOklch("oklch(0.52 0.22 138)", "oklch(0.44 0.18 148)", 52),
-    energyMin: 16,
+    branchEnergyFrac: 0.55,
+    branchEnergyMin: 12,
+    branchGate: 0.84,
     energyMax: 36,
-    wander: 1.35,
-    upJitter: 0.52,
+    energyMin: 16,
+    lateralRun: 0.48,
+    leaf: FOLIAGE[8].leaf,
+    name: "Chartreuse",
     sinAmp: 1.05,
     sinFreq: 0.14,
-    branchGate: 0.84,
-    branchEnergyMin: 12,
-    branchEnergyFrac: 0.55,
-    lateralRun: 0.48,
     spike: null,
+    stem: FOLIAGE[8].stem,
+    upJitter: 0.52,
+    wander: 1.35,
   },
   /** Sky-thread blues. */
   {
-    name: "Azure",
-    stem: FOLIAGE[9].stem,
-    leaf: FOLIAGE[9].leaf,
     bloom: mixOklch(LEGACY_SKY_PETAL, SYS_ACCENT, 86),
     bloomCore: mixOklch(LEGACY_SKY_HOT, SYS_ACCENT, 84),
     bloomHalo: mixOklch(LEGACY_SKY_DEEP, SYS_ACCENT, 82),
-    energyMin: 20,
+    branchEnergyFrac: 0.5,
+    branchEnergyMin: 14,
+    branchGate: 0.86,
     energyMax: 42,
-    wander: 1.02,
-    upJitter: 0.42,
+    energyMin: 20,
+    lateralRun: 0.42,
+    leaf: FOLIAGE[9].leaf,
+    name: "Azure",
     sinAmp: 0.62,
     sinFreq: 0.1,
-    branchGate: 0.86,
-    branchEnergyMin: 14,
-    branchEnergyFrac: 0.5,
-    lateralRun: 0.42,
     spike: null,
+    stem: FOLIAGE[9].stem,
+    upJitter: 0.42,
+    wander: 1.02,
   },
   /** Saturated magenta (hue ~348–358). */
   {
-    name: "Fuchsia",
-    stem: FOLIAGE[10].stem,
-    leaf: FOLIAGE[10].leaf,
     bloom: mixOklch("oklch(0.58 0.3 352)", "oklch(0.5 0.26 348)", 42),
     bloomCore: mixOklch("oklch(0.84 0.17 2)", SYS_ACCENT, 74),
     bloomHalo: mixOklch("oklch(0.42 0.24 350)", SYS_DANGER_400, 58),
-    energyMin: 18,
+    branchEnergyFrac: 0.53,
+    branchEnergyMin: 13,
+    branchGate: 0.86,
     energyMax: 40,
-    wander: 1.18,
-    upJitter: 0.48,
+    energyMin: 18,
+    lateralRun: 0.4,
+    leaf: FOLIAGE[10].leaf,
+    name: "Fuchsia",
     sinAmp: 0.92,
     sinFreq: 0.12,
-    branchGate: 0.86,
-    branchEnergyMin: 13,
-    branchEnergyFrac: 0.53,
-    lateralRun: 0.4,
     spike: null,
+    stem: FOLIAGE[10].stem,
+    upJitter: 0.48,
+    wander: 1.18,
   },
   /**
    * Rare Spectrum — red / chartreuse / blue-violet layers in pixel blooms.
    * Spawn: see `VIGIL_BOOT_FLOWER_RARE_SPAWN_EACH` (last `VIGIL_BOOT_FLOWER_RARE_COUNT` species).
    */
   {
-    name: "Spectrum",
-    stem: FOLIAGE[11].stem,
-    leaf: FOLIAGE[11].leaf,
     bloom: mixOklch("oklch(0.6 0.28 28)", SYS_DANGER_400, 46),
     bloomCore: mixOklch("oklch(0.84 0.22 128)", ORANGE_SOFT, 68),
     bloomHalo: mixOklch("oklch(0.52 0.26 278)", LEGACY_BLUE_PETAL, 52),
-    energyMin: 20,
+    branchEnergyFrac: 0.54,
+    branchEnergyMin: 14,
+    branchGate: 0.85,
     energyMax: 44,
-    wander: 1.25,
-    upJitter: 0.55,
+    energyMin: 20,
+    lateralRun: 0.45,
+    leaf: FOLIAGE[11].leaf,
+    name: "Spectrum",
     sinAmp: 1.0,
     sinFreq: 0.13,
-    branchGate: 0.85,
-    branchEnergyMin: 14,
-    branchEnergyFrac: 0.54,
-    lateralRun: 0.45,
     spike: null,
+    stem: FOLIAGE[11].stem,
+    upJitter: 0.55,
+    wander: 1.25,
   },
   {
-    name: "Confetti",
-    stem: FOLIAGE[12].stem,
-    leaf: FOLIAGE[12].leaf,
     bloom: mixOklch("oklch(0.5 0.36 322)", LEGACY_ROYAL_PETAL, 18),
     bloomCore: mixOklch("oklch(0.9 0.2 195)", LEGACY_SKY_HOT, 22),
     bloomHalo: mixOklch("oklch(0.64 0.32 128)", ORANGE_POP, 15),
-    energyMin: 18,
+    branchEnergyFrac: 0.535,
+    branchEnergyMin: 13,
+    branchGate: 0.855,
     energyMax: 42,
-    wander: 1.22,
-    upJitter: 0.52,
+    energyMin: 18,
+    lateralRun: 0.43,
+    leaf: FOLIAGE[12].leaf,
+    name: "Confetti",
     sinAmp: 0.98,
     sinFreq: 0.125,
-    branchGate: 0.855,
-    branchEnergyMin: 13,
-    branchEnergyFrac: 0.535,
-    lateralRun: 0.43,
     spike: null,
+    stem: FOLIAGE[12].stem,
+    upJitter: 0.52,
+    wander: 1.22,
   },
 ];
 
@@ -2600,7 +2600,7 @@ export const VigilBootFlowerGarden = function VigilBootFlowerGarden({
   const witheringRef = useRef<Map<string, WitherCell>>(new Map());
   const frameRef = useRef(0);
   const rafRef = useRef<number>(0);
-  const cssSizeRef = useRef({ w: 0, h: 0 });
+  const cssSizeRef = useRef({ h: 0, w: 0 });
   const reducedMotionRef = useRef(false);
   const gardenRngRef = useRef<GardenRng>({ s: 0x6a_09_e6_67 });
   const bloomShapeOrderRef = useRef<BloomShape[]>([...BLOOM_SHAPES]);
@@ -2613,7 +2613,7 @@ export const VigilBootFlowerGarden = function VigilBootFlowerGarden({
     const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
     const w = window.innerWidth;
     const h = window.innerHeight;
-    cssSizeRef.current = { w, h };
+    cssSizeRef.current = { h, w };
     canvas.width = Math.floor(w * dpr);
     canvas.height = Math.floor(h * dpr);
     canvas.style.width = `${w}px`;
@@ -2651,8 +2651,8 @@ export const VigilBootFlowerGarden = function VigilBootFlowerGarden({
     const onThemeMutation = () => invalidateVigilBootFlowerAccentCache();
     const observer = new MutationObserver(onThemeMutation);
     observer.observe(root, {
-      attributes: true,
       attributeFilter: ["class", "style", "data-theme"],
+      attributes: true,
     });
     return () => observer.disconnect();
   }, []);
@@ -2743,14 +2743,14 @@ export const VigilBootFlowerGarden = function VigilBootFlowerGarden({
           DEAD_CELL_COLORS[bi++ % DEAD_CELL_COLORS.length]!
         );
         withering.set(k, {
-          r0: r,
-          g0: g,
           b0: b,
-          r1: dead.r,
-          g1: dead.g,
           b1: dead.b,
-          startMs,
           durationMs: WITHER_MS,
+          g0: g,
+          g1: dead.g,
+          r0: r,
+          r1: dead.r,
+          startMs,
         });
       }
     },
@@ -2811,22 +2811,22 @@ export const VigilBootFlowerGarden = function VigilBootFlowerGarden({
       }
 
       particlesRef.current.push({
-        x: gx,
-        y: gy,
-        energy,
-        species,
-        rnd,
         age: 0,
-        dir: rnd[1]! > 0.5 ? 1 : -1,
         bloomShape,
+        dir: rnd[1]! > 0.5 ? 1 : -1,
+        energy,
+        rnd,
+        species,
         vineLeafy,
         vineThorny,
+        x: gx,
+        y: gy,
       });
     },
     [active]
   );
 
-  useImperativeHandle(ref, () => ({ spawnAt, cutAt, clearAll }), [
+  useImperativeHandle(ref, () => ({ clearAll, cutAt, spawnAt }), [
     spawnAt,
     cutAt,
     clearAll,
@@ -3012,16 +3012,16 @@ export const VigilBootFlowerGarden = function VigilBootFlowerGarden({
               i === p.age % 10 ? gardenRandU01(gardenRngRef.current) : v
             );
             next.push({
-              x: p.x,
-              y: p.y,
-              energy: childEnergy,
-              species: p.species,
-              rnd: branchRnd,
               age: 0,
-              dir: -p.dir,
               bloomShape: p.bloomShape,
+              dir: -p.dir,
+              energy: childEnergy,
+              rnd: branchRnd,
+              species: p.species,
               vineLeafy: p.vineLeafy,
               vineThorny: p.vineThorny,
+              x: p.x,
+              y: p.y,
             });
           }
         }

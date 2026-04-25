@@ -76,14 +76,14 @@ function sharedProps({
 >) {
   return {
     className: cx("vigil-btn", className),
-    "data-variant": variant,
+    "data-active": isActive ? "true" : undefined,
+    "data-disabled": disabled ? "true" : undefined,
+    "data-force-state": forceState === "default" ? undefined : forceState,
+    "data-icon-only": iconOnly ? "true" : undefined,
+    "data-loading": isLoading ? "true" : undefined,
     "data-size": size,
     "data-tone": tone,
-    "data-active": isActive ? "true" : undefined,
-    "data-loading": isLoading ? "true" : undefined,
-    "data-icon-only": iconOnly ? "true" : undefined,
-    "data-force-state": forceState === "default" ? undefined : forceState,
-    "data-disabled": disabled ? "true" : undefined,
+    "data-variant": variant,
   };
 }
 
@@ -127,14 +127,14 @@ export const Button = function Button({
     return cloneElement(child, {
       ...sharedProps({
         className: cx(child.props.className, className),
-        variant,
-        size,
-        tone,
+        disabled: mergedDisabled,
+        forceState,
+        iconOnly,
         isActive,
         isLoading,
-        iconOnly,
-        forceState,
-        disabled: mergedDisabled,
+        size,
+        tone,
+        variant,
       }),
       "aria-busy": isLoading || undefined,
       children: (
@@ -160,14 +160,14 @@ export const Button = function Button({
       type="button"
       {...sharedProps({
         className,
-        variant,
-        size,
-        tone,
+        disabled: mergedDisabled,
+        forceState,
+        iconOnly,
         isActive,
         isLoading,
-        iconOnly,
-        forceState,
-        disabled: mergedDisabled,
+        size,
+        tone,
+        variant,
       })}
       {...buttonProps}
     >

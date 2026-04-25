@@ -104,8 +104,8 @@ export async function GET(
 
   if (process.env.PLAYWRIGHT_E2E === "1") {
     return Response.json({
-      ok: true,
       items: [],
+      ok: true,
       spaces: [] as {
         id: string;
         name: string;
@@ -114,15 +114,15 @@ export async function GET(
       }[],
       ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(0).toISOString(),
-      itemLinksRevision: "0:0:",
       hasMore: false,
+      itemLinksRevision: "0:0:",
     });
   }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -140,7 +140,7 @@ export async function GET(
     const parsed = Date.parse(sinceRaw);
     if (!Number.isFinite(parsed)) {
       return Response.json(
-        { ok: false, error: "Invalid since" },
+        { error: "Invalid since", ok: false },
         { status: 400 }
       );
     }
@@ -167,13 +167,13 @@ export async function GET(
       spaceId
     );
     return Response.json({
-      ok: true,
       items: [],
+      ok: true,
       spaces: [],
       ...(includeItemIds ? { itemIds: [] as string[] } : {}),
       cursor: new Date(sinceMs).toISOString(),
-      itemLinksRevision,
       hasMore: false,
+      itemLinksRevision,
     });
   }
 
@@ -292,12 +292,12 @@ export async function GET(
   const hasMore = itemHasMore || spaceHasMore;
 
   return Response.json({
-    ok: true,
     items: changedItems,
+    ok: true,
     ...(spacePayload.length > 0 ? { spaces: spacePayload } : {}),
     ...(includeItemIds && itemIds !== undefined ? { itemIds } : {}),
     cursor,
-    itemLinksRevision,
     hasMore,
+    itemLinksRevision,
   });
 }

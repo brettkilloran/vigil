@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", suggestions: [] },
+      { error: "Database not configured", ok: false, suggestions: [] },
       { status: 503 }
     );
   }
@@ -52,13 +52,13 @@ export async function GET(req: Request) {
   }
   const rows = await suggestItems(db, q, filters);
   const suggestions = rows.map((row) => ({
+    entityType: row.item.entityType,
     id: row.item.id,
+    itemType: row.item.itemType,
+    snippet: row.snippet ?? row.item.contentText.slice(0, 180),
     spaceId: row.space.id,
     spaceName: row.space.name,
     title: row.item.title,
-    itemType: row.item.itemType,
-    entityType: row.item.entityType,
-    snippet: row.snippet ?? row.item.contentText.slice(0, 180),
     updatedAt: row.item.updatedAt,
   }));
   return Response.json({ ok: true, suggestions });

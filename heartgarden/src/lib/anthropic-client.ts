@@ -52,13 +52,13 @@ const JSON_REPAIR_PROMPT =
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
 const MAX_OUTPUT_TOKENS_BY_LABEL: Record<string, number> = {
-  "lore.item_meta": 4096,
-  "lore.query.answer": 8192,
-  "lore.import.outline": 16_384,
-  "lore.import.merge": 16_384,
+  "lore.consistency": 8192,
   "lore.import.clarify": 16_384,
   "lore.import.extract": 8192,
-  "lore.consistency": 8192,
+  "lore.import.merge": 16_384,
+  "lore.import.outline": 16_384,
+  "lore.item_meta": 4096,
+  "lore.query.answer": 8192,
 };
 
 const THINKING_ENABLED_LABELS = new Set<string>([
@@ -108,7 +108,7 @@ function cacheControlForSystem(): Record<string, unknown> | null {
   }
   const ttl = getCacheTtl();
   return ttl === "1h"
-    ? { type: "ephemeral", ttl: "1h" }
+    ? { ttl: "1h", type: "ephemeral" }
     : { type: "ephemeral" };
 }
 
@@ -261,7 +261,7 @@ function resolveThinking(
     typeof override === "number"
       ? Math.floor(override)
       : envInt("HEARTGARDEN_ANTHROPIC_THINKING_BUDGET", 8192, 1024, 64_000);
-  return { type: "enabled", budget_tokens: budget };
+  return { budget_tokens: budget, type: "enabled" };
 }
 
 async function createWithRetry(
@@ -326,7 +326,7 @@ async function runCompletion(args: {
 
   let messages = [...baseMessages];
   if (args.expectJson && args.includeJsonPrefill) {
-    messages.push({ role: "assistant", content: "{" });
+    messages.push({ content: "{", role: "assistant" });
   }
 
   let text = "";
@@ -369,10 +369,10 @@ async function runCompletion(args: {
     continuationCount += 1;
     messages = [
       ...messages,
-      { role: "assistant", content: piece },
+      { content: piece, role: "assistant" },
       {
-        role: "user",
         content: args.expectJson ? CONTINUE_JSON_PROMPT : CONTINUE_TEXT_PROMPT,
+        role: "user",
       },
     ];
   }
@@ -381,11 +381,11 @@ async function runCompletion(args: {
     throw new Error(`${args.label}: no Anthropic response received`);
   }
   return {
-    message: lastMessage,
-    text,
-    stopReason,
     continuationCount,
+    message: lastMessage,
     retryCount,
+    stopReason,
+    text,
   };
 }
 
@@ -427,13 +427,13 @@ export function getAnthropicClient(apiKey: string): Anthropic {
 export function buildCachedSystem(text: string): Anthropic.TextBlockParam[] {
   const cacheControl = cacheControlForSystem();
   if (!cacheControl) {
-    return [{ type: "text", text }];
+    return [{ text, type: "text" }];
   }
   return [
     {
-      type: "text",
-      text,
       cache_control: cacheControl as unknown as Anthropic.CacheControlEphemeral,
+      text,
+      type: "text",
     },
   ];
 }
@@ -458,12 +458,12 @@ export async function callAnthropic(
   let initial: RunCompletionResult;
   try {
     initial = await runCompletion({
-      client,
       baseParams: params,
-      label,
+      client,
       deadlineMs,
       expectJson,
       includeJsonPrefill,
+      label,
       maxOutputTokens,
       thinking,
     });
@@ -471,12 +471,12 @@ export async function callAnthropic(
     if (includeJsonPrefill && isAssistantPrefillUnsupportedError(error)) {
       includeJsonPrefill = false;
       initial = await runCompletion({
-        client,
         baseParams: params,
-        label,
+        client,
         deadlineMs,
         expectJson,
         includeJsonPrefill: false,
+        label,
         maxOutputTokens,
         thinking,
       });
@@ -499,21 +499,21 @@ export async function callAnthropic(
     parsedJson = parsed.parsed;
     if (parsedJson === null) {
       const repair = await runCompletion({
-        client,
         baseParams: {
           ...(params as unknown as Record<string, unknown>),
           messages: [
             ...(Array.isArray((params as { messages?: unknown }).messages)
               ? ([...(params as { messages: unknown[] }).messages] as unknown[])
               : []),
-            { role: "assistant", content: text },
-            { role: "user", content: JSON_REPAIR_PROMPT },
+            { content: text, role: "assistant" },
+            { content: JSON_REPAIR_PROMPT, role: "user" },
           ],
         } as AnthropicCreateParams,
-        label: `${label}.json_repair`,
+        client,
         deadlineMs,
         expectJson: true,
         includeJsonPrefill,
+        label: `${label}.json_repair`,
         maxOutputTokens,
         thinking,
       });
@@ -533,39 +533,39 @@ export async function callAnthropic(
     {};
   const elapsedMs = Date.now() - started;
   logDebug({
-    label,
-    model: (params as { model?: unknown }).model,
-    stopReason,
-    retries: retryCount,
+    cacheCreationInputTokens: usage.cache_creation_input_tokens ?? null,
+    cacheReadInputTokens: usage.cache_read_input_tokens ?? null,
     continuations: continuationCount,
     elapsedMs,
     inputTokens: usage.input_tokens ?? null,
+    label,
+    model: (params as { model?: unknown }).model,
     outputTokens: usage.output_tokens ?? null,
-    cacheCreationInputTokens: usage.cache_creation_input_tokens ?? null,
-    cacheReadInputTokens: usage.cache_read_input_tokens ?? null,
+    retries: retryCount,
+    stopReason,
   });
   logSampledMetric({
-    label,
-    model: (params as { model?: unknown }).model,
-    stopReason,
-    retries: retryCount,
+    cacheCreationInputTokens: usage.cache_creation_input_tokens ?? null,
+    cacheReadInputTokens: usage.cache_read_input_tokens ?? null,
     continuations: continuationCount,
     elapsedMs,
     inputTokens: usage.input_tokens ?? null,
+    label,
+    model: (params as { model?: unknown }).model,
     outputTokens: usage.output_tokens ?? null,
-    cacheCreationInputTokens: usage.cache_creation_input_tokens ?? null,
-    cacheReadInputTokens: usage.cache_read_input_tokens ?? null,
+    retries: retryCount,
+    stopReason,
   });
 
   return {
-    message: finalMessage,
-    text,
-    stopReason,
     continuationCount,
-    retryCount,
-    jsonText,
-    parsedJson,
     elapsedMs,
+    jsonText,
+    message: finalMessage,
+    parsedJson,
+    retryCount,
+    stopReason,
+    text,
   };
 }
 
@@ -585,13 +585,13 @@ async function fetchAnthropicStreamResponse(args: {
     );
     try {
       const res = await fetch(ANTHROPIC_MESSAGES_URL, {
-        method: "POST",
+        body: JSON.stringify(args.body),
         headers: {
+          "anthropic-version": "2023-06-01",
           "content-type": "application/json",
           "x-api-key": args.apiKey,
-          "anthropic-version": "2023-06-01",
         },
-        body: JSON.stringify(args.body),
+        method: "POST",
         signal: ctrl.signal,
       });
       if (
@@ -668,8 +668,8 @@ export async function* callAnthropicTextStream(
   for (;;) {
     const body = {
       ...(params as unknown as Record<string, unknown>),
-      messages,
       max_tokens: maxOutputTokens,
+      messages,
       stream: true,
       ...(thinking ? { thinking } : {}),
     };
@@ -744,17 +744,17 @@ export async function* callAnthropicTextStream(
     continuationCount += 1;
     messages = [
       ...messages,
-      { role: "assistant", content: continuationText },
-      { role: "user", content: CONTINUE_TEXT_PROMPT },
+      { content: continuationText, role: "assistant" },
+      { content: CONTINUE_TEXT_PROMPT, role: "user" },
     ];
   }
   logSampledMetric({
-    label,
-    model: (params as { model?: unknown }).model,
-    mode: "stream",
-    stopReason: finalStopReason,
     continuations: continuationCount,
     elapsedMs: Date.now() - started,
+    label,
+    mode: "stream",
+    model: (params as { model?: unknown }).model,
     outputChars,
+    stopReason: finalStopReason,
   });
 }

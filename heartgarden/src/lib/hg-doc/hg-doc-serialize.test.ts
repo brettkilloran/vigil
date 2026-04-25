@@ -6,18 +6,18 @@ import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 describe("hgDocToPlainText", () => {
   it("extracts text from paragraphs and headings", () => {
     const doc = {
-      type: "doc",
       content: [
         {
-          type: "heading",
           attrs: { level: 1 },
-          content: [{ type: "text", text: "Hello" }],
+          content: [{ text: "Hello", type: "text" }],
+          type: "heading",
         },
         {
+          content: [{ text: "world", type: "text" }],
           type: "paragraph",
-          content: [{ type: "text", text: "world" }],
         },
       ],
+      type: "doc",
     };
     expect(hgDocToPlainText(doc)).toBe("Hello world");
   });

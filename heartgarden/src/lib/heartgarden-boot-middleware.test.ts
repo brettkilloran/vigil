@@ -18,7 +18,7 @@ vi.mock("@/src/lib/heartgarden-boot-edge", () => ({
 describe("proxy boot gate", () => {
   beforeEach(() => {
     verifyMock.mockReset();
-    verifyMock.mockResolvedValue({ tier: "access", exp: 9_999_999_999 });
+    verifyMock.mockResolvedValue({ exp: 9_999_999_999, tier: "access" });
   });
 
   it("allows GET /api/heartgarden/boot without cookie when gate is on", async () => {

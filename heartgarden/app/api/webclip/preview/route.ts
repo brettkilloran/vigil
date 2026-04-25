@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     json = await req.json();
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON" },
+      { error: "Invalid JSON", ok: false },
       { status: 400 }
     );
   }
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: "Invalid url" },
+      { error: "Invalid url", ok: false },
       { status: 400 }
     );
   }
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   const url = parsed.data.url;
   if (!/^https?:\/\//i.test(url)) {
     return NextResponse.json(
-      { ok: false, error: "HTTP(S) only" },
+      { error: "HTTP(S) only", ok: false },
       { status: 400 }
     );
   }
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     startUrl = new URL(url);
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid url" },
+      { error: "Invalid url", ok: false },
       { status: 400 }
     );
   }
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
     await assertWebclipFetchTargetAllowed(startUrl);
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Blocked URL target" },
+      { error: "Blocked URL target", ok: false },
       { status: 400 }
     );
   }
@@ -104,13 +104,13 @@ export async function POST(req: Request) {
       for (let hop = 0; hop <= WEBCLIP_MAX_REDIRECTS; hop += 1) {
         await assertWebclipFetchTargetAllowed(current);
         res = await fetch(current, {
-          signal: ctrl.signal,
           headers: {
+            Accept: "text/html,application/xhtml+xml",
             "User-Agent":
               "Mozilla/5.0 (compatible; heartgarden-Webclip/1.0; +https://github.com)",
-            Accept: "text/html,application/xhtml+xml",
           },
           redirect: "manual",
+          signal: ctrl.signal,
         });
         const status = res.status;
         const isRedirect = status >= 300 && status < 400;
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
       error.message.startsWith("Blocked webclip target:")
     ) {
       return NextResponse.json(
-        { ok: false, error: "Blocked redirect target" },
+        { error: "Blocked redirect target", ok: false },
         { status: 400 }
       );
     }
@@ -148,10 +148,10 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({
-    ok: true,
-    url,
     ogImage,
+    ok: true,
     pageTitle,
     screenshotUrl: webclipMshotUrl(url, 900),
+    url,
   });
 }

@@ -103,17 +103,17 @@ export function writeSpaceCamera(spaceId: string, camera: CameraState): void {
               typeof v.lastSeenAt === "number" && Number.isFinite(v.lastSeenAt)
                 ? v.lastSeenAt
                 : 0;
-            map[k] = { x: v.x, y: v.y, zoom: v.zoom, lastSeenAt };
+            map[k] = { lastSeenAt, x: v.x, y: v.y, zoom: v.zoom };
           }
         }
       }
     }
     const now = Date.now();
     map[spaceId] = {
+      lastSeenAt: now,
       x: camera.x,
       y: camera.y,
       zoom: camera.zoom,
-      lastSeenAt: now,
     };
 
     const entries = Object.entries(map);

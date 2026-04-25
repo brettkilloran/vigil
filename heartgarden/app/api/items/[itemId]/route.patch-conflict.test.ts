@@ -34,30 +34,30 @@ const SPACE_ID = "00000000-0000-4000-8000-0000000000bb";
 
 function mockExistingRow(updatedAt: Date) {
   return {
-    id: ITEM_ID,
-    spaceId: SPACE_ID,
-    itemType: "note",
-    x: 0,
-    y: 0,
-    width: 280,
-    height: 200,
-    zIndex: 1,
-    title: "T",
-    contentText: "",
-    searchBlob: "",
-    contentJson: null,
-    imageUrl: null,
-    imageMeta: null,
     color: null,
-    entityType: null,
+    contentJson: null,
+    contentText: "",
+    createdAt: new Date("2019-01-01"),
     entityMeta: null,
-    stackId: null,
-    stackOrder: null,
-    loreSummary: null,
+    entityType: null,
+    height: 200,
+    id: ITEM_ID,
+    imageMeta: null,
+    imageUrl: null,
+    itemType: "note",
     loreAliases: null,
     loreIndexedAt: null,
-    createdAt: new Date("2019-01-01"),
+    loreSummary: null,
+    searchBlob: "",
+    spaceId: SPACE_ID,
+    stackId: null,
+    stackOrder: null,
+    title: "T",
     updatedAt,
+    width: 280,
+    x: 0,
+    y: 0,
+    zIndex: 1,
   };
 }
 
@@ -71,15 +71,15 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     const db = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            limit: vi.fn(async () => [mockExistingRow(serverTime)]),
-          })),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
               limit: vi.fn(async () => [
-                { name: "Test Space", braneType: "gm" },
+                { braneType: "gm", name: "Test Space" },
               ]),
             })),
+          })),
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [mockExistingRow(serverTime)]),
           })),
         })),
       })),
@@ -89,11 +89,11 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     const { PATCH } = await import("./route");
     const res = await PATCH(
       new Request(`http://localhost/api/items/${ITEM_ID}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: "Next",
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       }),
       { params: Promise.resolve({ itemId: ITEM_ID }) }
     );
@@ -109,15 +109,15 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     const db = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            limit: vi.fn(async () => [mockExistingRow(serverTime)]),
-          })),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
               limit: vi.fn(async () => [
-                { name: "Test Space", braneType: "gm" },
+                { braneType: "gm", name: "Test Space" },
               ]),
             })),
+          })),
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [mockExistingRow(serverTime)]),
           })),
         })),
       })),
@@ -127,12 +127,12 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     const { PATCH } = await import("./route");
     const res = await PATCH(
       new Request(`http://localhost/api/items/${ITEM_ID}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Next",
           baseUpdatedAt: "2020-01-01T00:00:00.000Z",
+          title: "Next",
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       }),
       { params: Promise.resolve({ itemId: ITEM_ID }) }
     );
@@ -159,15 +159,15 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     const db = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            limit: vi.fn(async () => [mockExistingRow(serverTime)]),
-          })),
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
               limit: vi.fn(async () => [
-                { name: "Test Space", braneType: "gm" },
+                { braneType: "gm", name: "Test Space" },
               ]),
             })),
+          })),
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [mockExistingRow(serverTime)]),
           })),
         })),
       })),
@@ -184,12 +184,12 @@ describe("PATCH /api/items/[itemId] baseUpdatedAt conflict", () => {
     const { PATCH } = await import("./route");
     const res = await PATCH(
       new Request(`http://localhost/api/items/${ITEM_ID}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Next",
           baseUpdatedAt: serverTime.toISOString(),
+          title: "Next",
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       }),
       { params: Promise.resolve({ itemId: ITEM_ID }) }
     );

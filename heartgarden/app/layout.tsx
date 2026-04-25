@@ -14,45 +14,45 @@ import { HEARTGARDEN_BRAND_ICON_PATH } from "@/src/lib/brand-mark";
 import "./globals.css";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
   display: "swap",
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
   display: "swap",
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
 });
 
 const lora = Lora({
-  variable: "--font-lora",
-  subsets: ["latin"],
   display: "swap",
   style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-lora",
 });
 
 /** Lore character ID plate (v11) — Inter + Playfair for caps / display contrast. */
 const hgIdInter = Inter({
-  variable: "--font-hg-id-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
   display: "swap",
+  subsets: ["latin"],
+  variable: "--font-hg-id-inter",
+  weight: ["400", "500", "600"],
 });
 
 const hgIdPlayfair = Playfair_Display({
-  variable: "--font-hg-id-playfair",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
+  subsets: ["latin"],
+  variable: "--font-hg-id-playfair",
+  weight: ["400", "500", "600", "700"],
 });
 
 const notoSansJP = Noto_Sans_JP({
-  variable: "--font-noto-sans-jp",
-  weight: "700",
-  subsets: ["latin"],
   display: "swap",
   preload: true,
+  subsets: ["latin"],
+  variable: "--font-noto-sans-jp",
+  weight: "700",
 });
 
 /**
@@ -60,26 +60,26 @@ const notoSansJP = Noto_Sans_JP({
  * Safari trackpad). In-canvas zoom is handled in `ArchitecturalCanvasApp`.
  */
 export const viewport: Viewport = {
-  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  width: "device-width",
 };
 
 export const metadata: Metadata = {
-  title: "heartgarden",
-  description: "Infinite canvas TTRPG worldbuilding",
   applicationName: "heartgarden",
+  description: "Infinite canvas TTRPG worldbuilding",
   generator: `heartgarden/${HEARTGARDEN_APP_VERSION_LABEL}`,
-  manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: HEARTGARDEN_BRAND_ICON_PATH, type: "image/svg+xml" }],
     apple: [{ url: HEARTGARDEN_BRAND_ICON_PATH }],
+    icon: [{ type: "image/svg+xml", url: HEARTGARDEN_BRAND_ICON_PATH }],
   },
+  manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "heartgarden",
     description: "Infinite canvas TTRPG worldbuilding",
+    title: "heartgarden",
   },
+  title: "heartgarden",
 };
 
 export default function RootLayout({

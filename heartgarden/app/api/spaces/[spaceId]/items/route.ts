@@ -38,8 +38,20 @@ import { buildSearchBlob } from "@/src/lib/search-blob";
 import { listItemsForSpace } from "@/src/lib/spaces";
 
 const createBody = z.object({
+  /** Maps to `items.entity_type` via `persistedEntityTypeFromCanonical` when `entityType` is omitted. */
+  canonical_entity_kind: z
+    .enum(["npc", "location", "faction", "quest", "item", "lore", "other"])
+    .optional(),
+  color: z.string().max(64).optional(),
+  contentJson: z.record(z.string(), z.any()).optional(),
+  contentText: z.string().optional(),
+  entityMeta: z.record(z.string(), z.any()).optional(),
+  entityType: z.string().max(64).optional(),
+  height: z.number().positive().max(4000).optional(),
   /** When set, insert this row id (used for undo-after-delete restore). Must not already exist. */
   id: z.string().uuid().optional(),
+  imageMeta: z.record(z.string(), z.any()).optional(),
+  imageUrl: z.string().max(8192).optional(),
   itemType: z.enum([
     "note",
     "sticky",
@@ -48,31 +60,19 @@ const createBody = z.object({
     "webclip",
     "folder",
   ]),
-  x: z.number().default(0),
-  y: z.number().default(0),
-  /** Omit for type-based defaults (e.g. note 340×270, checklist 340×188, character 340×453). */
-  width: z.number().positive().max(4000).optional(),
-  height: z.number().positive().max(4000).optional(),
-  title: z.string().max(255).optional(),
-  contentText: z.string().optional(),
-  contentJson: z.record(z.string(), z.any()).optional(),
-  /** Applied when synthesizing `contentJson` for note/sticky (default/code/task). */
-  theme: z.enum(["default", "code", "task"]).optional(),
-  color: z.string().max(64).optional(),
-  entityType: z.string().max(64).optional(),
-  entityMeta: z.record(z.string(), z.any()).optional(),
-  imageUrl: z.string().max(8192).optional(),
-  imageMeta: z.record(z.string(), z.any()).optional(),
-  /** Omit for max(existing zIndex)+1 in this space (starts at 101 if empty). */
-  zIndex: z.number().int().optional(),
-  stackId: z.string().uuid().nullable().optional(),
-  stackOrder: z.number().int().nullable().optional(),
-  /** Maps to `items.entity_type` via `persistedEntityTypeFromCanonical` when `entityType` is omitted. */
-  canonical_entity_kind: z
-    .enum(["npc", "location", "faction", "quest", "item", "lore", "other"])
-    .optional(),
   /** Shell layout for character (v11) / faction (v4 Archive-091) / location (v2–v3). */
   lore_variant: z.enum(["v1", "v2", "v3", "v11"]).optional(),
+  stackId: z.string().uuid().nullable().optional(),
+  stackOrder: z.number().int().nullable().optional(),
+  /** Applied when synthesizing `contentJson` for note/sticky (default/code/task). */
+  theme: z.enum(["default", "code", "task"]).optional(),
+  title: z.string().max(255).optional(),
+  /** Omit for type-based defaults (e.g. note 340×270, checklist 340×188, character 340×453). */
+  width: z.number().positive().max(4000).optional(),
+  x: z.number().default(0),
+  y: z.number().default(0),
+  /** Omit for max(existing zIndex)+1 in this space (starts at 101 if empty). */
+  zIndex: z.number().int().optional(),
 });
 
 /**
@@ -93,7 +93,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -117,7 +117,7 @@ export async function GET(
       const parsed = Number.parseInt(limitRaw, 10);
       if (!Number.isFinite(parsed) || parsed <= 0) {
         return Response.json(
-          { ok: false, error: 'limit must be a positive integer or "all"' },
+          { error: 'limit must be a positive integer or "all"', ok: false },
           { status: 400 }
         );
       }
@@ -133,10 +133,10 @@ export async function GET(
 
   const rows = await listItemsForSpace(db, spaceId, { limit, offset });
   const payload: Record<string, unknown> = {
-    ok: true,
     items: rows.map(rowToCanvasItem),
-    total,
     offset,
+    ok: true,
+    total,
   };
   if (limit != null) {
     payload.limit = limit;
@@ -153,7 +153,7 @@ export async function POST(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -168,7 +168,7 @@ export async function POST(
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = createBody.safeParse(json);
@@ -200,7 +200,7 @@ export async function POST(
       .limit(1);
     if (existing) {
       return Response.json(
-        { ok: false, error: "Item id already exists" },
+        { error: "Item id already exists", ok: false },
         { status: 409 }
       );
     }
@@ -231,9 +231,9 @@ export async function POST(
   ) {
     return Response.json(
       {
-        ok: false,
         error:
           "Lore shells (character / faction / location) require itemType note or sticky",
+        ok: false,
       },
       { status: 400 }
     );
@@ -245,15 +245,15 @@ export async function POST(
   let contentJson: Record<string, unknown> | null =
     (parsed.data.contentJson as Record<string, unknown> | undefined) ?? null;
   const jsonValidation = validateItemWriteJsonPayload({
-    entityType,
-    entityMeta: parsed.data.entityMeta,
     contentJson,
+    entityMeta: parsed.data.entityMeta,
+    entityType,
     imageMeta: parsed.data.imageMeta,
     routeTag: "POST /api/spaces/[spaceId]/items",
   });
   if (!jsonValidation.ok) {
     return Response.json(
-      { ok: false, error: jsonValidation.error },
+      { error: jsonValidation.error, ok: false },
       { status: 400 }
     );
   }
@@ -292,8 +292,8 @@ export async function POST(
   ) {
     return Response.json(
       {
-        ok: false,
         error: "contentText is required when contentJson is omitted for notes",
+        ok: false,
       },
       { status: 400 }
     );
@@ -304,8 +304,8 @@ export async function POST(
     (t === "note" || t === "sticky" || t === "checklist")
   ) {
     const synthesized = synthesizeContentJsonForCreateItem({
-      itemType: t,
       contentText,
+      itemType: t,
       theme,
     });
     if (synthesized) {
@@ -342,36 +342,36 @@ export async function POST(
       : parsed.data.zIndex;
 
   const searchBlob = buildSearchBlob({
-    title,
-    contentText,
     contentJson,
-    entityType,
+    contentText,
     entityMeta: entityMetaForRow,
-    imageUrl: parsed.data.imageUrl ?? null,
+    entityType,
     imageMeta: parsed.data.imageMeta ?? null,
-    loreSummary: null,
+    imageUrl: parsed.data.imageUrl ?? null,
     loreAliases: null,
+    loreSummary: null,
+    title,
   });
 
   const [row] = await db
     .insert(items)
     .values({
       ...(parsed.data.id ? { id: parsed.data.id } : {}),
-      spaceId,
+      color,
+      contentJson,
+      contentText,
+      entityMeta: entityMetaForRow,
+      entityType,
+      height,
+      imageMeta: parsed.data.imageMeta ?? null,
+      imageUrl: parsed.data.imageUrl ?? null,
       itemType: t,
+      searchBlob,
+      spaceId,
+      title,
+      width,
       x: parsed.data.x,
       y: parsed.data.y,
-      width,
-      height,
-      title,
-      contentText,
-      searchBlob,
-      contentJson,
-      color,
-      entityType,
-      entityMeta: entityMetaForRow,
-      imageUrl: parsed.data.imageUrl ?? null,
-      imageMeta: parsed.data.imageMeta ?? null,
       zIndex,
       ...(parsed.data.stackId === undefined
         ? {}
@@ -393,13 +393,13 @@ export async function POST(
   if (row) {
     after(async () => {
       await publishHeartgardenSpaceInvalidation(db, {
-        originSpaceId: spaceId,
-        reason: "item.created",
         itemId: row.id,
         lookupSpaceIds: [spaceId],
+        originSpaceId: spaceId,
+        reason: "item.created",
       });
     });
   }
 
-  return Response.json({ ok: true, item: rowToCanvasItem(row!) });
+  return Response.json({ item: rowToCanvasItem(row!), ok: true });
 }

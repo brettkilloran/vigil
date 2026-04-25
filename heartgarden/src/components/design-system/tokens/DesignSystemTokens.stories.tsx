@@ -62,11 +62,11 @@ function titleForPrefix(prefix: string): string {
 function swatchStyle(name: string): CSSProperties {
   const tokenRef = `var(${name})`;
   const common: CSSProperties = {
-    width: 36,
-    height: 24,
-    borderRadius: 6,
-    border: "1px solid var(--sem-border-strong)",
     background: "transparent",
+    border: "1px solid var(--sem-border-strong)",
+    borderRadius: 6,
+    height: 24,
+    width: 36,
   };
 
   if (name.includes("shadow")) {
@@ -80,8 +80,8 @@ function swatchStyle(name: string): CSSProperties {
   if (name.includes("radius")) {
     return {
       ...common,
-      borderRadius: tokenRef,
       background: "var(--sys-color-neutral-100)",
+      borderRadius: tokenRef,
     };
   }
 
@@ -123,14 +123,14 @@ function TokenCatalog() {
   return (
     <div
       style={{
-        minHeight: "100vh",
         background: "var(--sem-surface-base)",
         color: "var(--sem-text-primary)",
-        padding: 28,
         fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+        minHeight: "100vh",
+        padding: 28,
       }}
     >
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ margin: "0 auto", maxWidth: 1100 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
           Design System Token Source of Truth
         </h1>
@@ -152,44 +152,44 @@ function TokenCatalog() {
               </h2>
               <div
                 style={{
+                  background: "var(--sem-surface-elevated)",
                   border: "1px solid var(--sem-border-subtle)",
                   borderRadius: 12,
                   overflow: "hidden",
-                  background: "var(--sem-surface-elevated)",
                 }}
               >
                 {sectionRows.map((row, idx) => (
                   <div
                     key={row.name}
                     style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "44px minmax(260px, 1fr) minmax(320px, 1fr)",
                       alignItems: "center",
-                      gap: 12,
-                      padding: "10px 12px",
                       borderTop:
                         idx === 0
                           ? "none"
                           : "1px solid color-mix(in oklch, var(--sem-border-subtle) 70%, transparent)",
+                      display: "grid",
+                      gap: 12,
+                      gridTemplateColumns:
+                        "44px minmax(260px, 1fr) minmax(320px, 1fr)",
+                      padding: "10px 12px",
                     }}
                   >
                     <div style={swatchStyle(row.name)} />
                     <code
                       style={{
-                        fontSize: 13,
                         color: "var(--sem-text-secondary)",
+                        fontSize: 13,
                       }}
                     >
                       {row.name}
                     </code>
                     <code
                       style={{
-                        fontSize: 13,
                         color: "var(--sem-text-primary)",
-                        whiteSpace: "nowrap",
+                        fontSize: 13,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                       title={row.value}
                     >
@@ -207,17 +207,17 @@ function TokenCatalog() {
 }
 
 const meta: Meta<typeof TokenCatalog> = {
-  title: "Heartgarden/Design System/Tokens/Source of truth",
   component: TokenCatalog,
   parameters: {
-    layout: "fullscreen",
     docs: {
       description: {
         component:
           "Auto-discovers and renders all design-system token variables from `:root` using DS prefixes (`--sys-*`, `--sem-*`, `--cmp-*`, `--vigil-*`, `--theme-*`).",
       },
     },
+    layout: "fullscreen",
   },
+  title: "Heartgarden/Design System/Tokens/Source of truth",
 };
 
 export default meta;

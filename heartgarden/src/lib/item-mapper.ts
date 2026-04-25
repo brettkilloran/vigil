@@ -29,29 +29,29 @@ function asItemType(v: string): ItemType {
 
 export function rowToCanvasItem(row: ItemRow): CanvasItem {
   return {
-    id: row.id,
-    spaceId: row.spaceId,
-    itemType: asItemType(row.itemType),
-    x: row.x,
-    y: row.y,
-    width: row.width,
-    height: row.height,
-    zIndex: row.zIndex,
-    title: row.title,
-    contentText: row.contentText,
-    contentJson: row.contentJson ?? undefined,
-    imageUrl: row.imageUrl,
-    imageMeta: row.imageMeta ?? undefined,
     color: row.color,
-    entityType: row.entityType,
+    contentJson: row.contentJson ?? undefined,
+    contentText: row.contentText,
     entityMeta: row.entityMeta ?? undefined,
+    entityType: row.entityType,
+    height: row.height,
+    id: row.id,
+    imageMeta: row.imageMeta ?? undefined,
+    imageUrl: row.imageUrl,
+    itemType: asItemType(row.itemType),
+    spaceId: row.spaceId,
     stackId: row.stackId,
     stackOrder: row.stackOrder ?? undefined,
+    title: row.title,
     updatedAt:
       row.updatedAt instanceof Date
         ? row.updatedAt.toISOString()
         : row.updatedAt
           ? String(row.updatedAt)
           : undefined,
+    width: row.width,
+    x: row.x,
+    y: row.y,
+    zIndex: row.zIndex,
   };
 }

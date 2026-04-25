@@ -58,7 +58,7 @@ async function hmacSha256(
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
     keyMaterial,
-    { name: "HMAC", hash: "SHA-256" },
+    { hash: "SHA-256", name: "HMAC" },
     false,
     ["sign"]
   );
@@ -151,7 +151,7 @@ export async function verifyBootSessionCookieEdge(
   if (o.exp <= now) {
     return null;
   }
-  return { tier, exp: o.exp };
+  return { exp: o.exp, tier };
 }
 
 export function isHeartgardenBootApiAllowlisted(pathname: string): boolean {

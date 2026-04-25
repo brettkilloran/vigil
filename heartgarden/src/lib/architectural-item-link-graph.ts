@@ -10,9 +10,9 @@ import { resolveSlackMultiplierForDisplay } from "@/src/lib/item-link-meta";
 function shallowCloneGraph(graph: CanvasGraph): CanvasGraph {
   return {
     ...graph,
-    spaces: { ...graph.spaces },
-    entities: { ...graph.entities },
     connections: { ...graph.connections },
+    entities: { ...graph.entities },
+    spaces: { ...graph.spaces },
   };
 }
 
@@ -94,19 +94,19 @@ export function mergeHydratedDbConnections(
       edge.slackMultiplier
     );
     merged[connectionId] = {
-      id: connectionId,
-      sourceEntityId: src.id,
-      targetEntityId: tgt.id,
-      sourcePin,
-      targetPin,
       color: edge.color ?? opts.fallbackColor,
-      slackMultiplier,
       createdAt: now,
-      updatedAt: now,
       dbLinkId: edge.id,
-      syncState: "synced",
-      syncError: null,
+      id: connectionId,
       linkType: edge.linkType ?? "pin",
+      slackMultiplier,
+      sourceEntityId: src.id,
+      sourcePin,
+      syncError: null,
+      syncState: "synced",
+      targetEntityId: tgt.id,
+      targetPin,
+      updatedAt: now,
     };
   }
 

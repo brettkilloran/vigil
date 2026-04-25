@@ -59,7 +59,7 @@ export async function resolveOrCreateBraneByType(
   braneType: BraneType
 ): Promise<{ id: string; name: string; braneType: string }> {
   const [existing] = await db
-    .select({ id: branes.id, name: branes.name, braneType: branes.braneType })
+    .select({ braneType: branes.braneType, id: branes.id, name: branes.name })
     .from(branes)
     .where(eq(branes.braneType, braneType))
     .limit(1);
@@ -75,20 +75,20 @@ export async function resolveOrCreateBraneByType(
   const [created] = await db
     .insert(branes)
     .values({
-      name: defaultName,
       braneType,
+      name: defaultName,
     })
     .onConflictDoNothing({ target: [branes.braneType] })
     .returning({
+      braneType: branes.braneType,
       id: branes.id,
       name: branes.name,
-      braneType: branes.braneType,
     });
   if (created) {
     return created;
   }
   const [afterConflict] = await db
-    .select({ id: branes.id, name: branes.name, braneType: branes.braneType })
+    .select({ braneType: branes.braneType, id: branes.id, name: branes.name })
     .from(branes)
     .where(eq(branes.braneType, braneType))
     .limit(1);
@@ -173,8 +173,8 @@ export async function resolveOrCreateImplicitPlayerRootSpace(db: VigilDb) {
   const [created] = await db
     .insert(spaces)
     .values({
-      name: HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME,
       braneId: playerBrane.id,
+      name: HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME,
     })
     .returning();
   return created!;
@@ -205,7 +205,7 @@ async function ensureDevGmWorkspaceSpace(db: VigilDb): Promise<void> {
   const gmBrane = await resolveOrCreateBraneByType(db, "gm");
   await db
     .insert(spaces)
-    .values({ id, name: "Dev workspace", braneId: gmBrane.id });
+    .values({ braneId: gmBrane.id, id, name: "Dev workspace" });
 }
 
 /**
@@ -222,7 +222,7 @@ export async function resolveActiveSpaceGmWorkspace(
     const gmBrane = await resolveOrCreateBraneByType(db, "gm");
     const [created] = await db
       .insert(spaces)
-      .values({ name: "Main space", braneId: gmBrane.id })
+      .values({ braneId: gmBrane.id, name: "Main space" })
       .returning();
     allSpaces = [created!];
   }
@@ -254,7 +254,7 @@ export async function resolveActiveSpace(
     const gmBrane = await resolveOrCreateBraneByType(db, "gm");
     const [created] = await db
       .insert(spaces)
-      .values({ name: "Main space", braneId: gmBrane.id })
+      .values({ braneId: gmBrane.id, name: "Main space" })
       .returning();
     allSpaces = [created!];
   }
@@ -322,22 +322,22 @@ export async function assertSpaceReparentAllowed(
 > {
   const child = await assertSpaceExists(db, spaceId);
   if (!child) {
-    return { ok: false, error: "space_not_found" };
+    return { error: "space_not_found", ok: false };
   }
   if (newParentId !== null) {
     const parent = await assertSpaceExists(db, newParentId);
     if (!parent) {
-      return { ok: false, error: "parent_not_found" };
+      return { error: "parent_not_found", ok: false };
     }
   }
   if (newParentId !== null) {
     const descendants = await fetchDescendantSpaceIds(db, spaceId);
     if (descendants.has(newParentId)) {
-      return { ok: false, error: "would_create_cycle" };
+      return { error: "would_create_cycle", ok: false };
     }
   }
   if (newParentId === spaceId) {
-    return { ok: false, error: "would_create_cycle" };
+    return { error: "would_create_cycle", ok: false };
   }
   return { ok: true };
 }
@@ -596,13 +596,13 @@ function toSearchRows(
 ): SearchRow[] {
   return rows.map((row) => ({
     item: row.item,
+    score: row.score,
+    snippet: row.snippet,
     space: {
       id: row.spaceId,
       name: row.spaceName,
       parentSpaceId: row.parentSpaceId,
     },
-    score: row.score,
-    snippet: row.snippet,
   }));
 }
 
@@ -631,10 +631,10 @@ export async function searchItemsFTS(
   const rows = await db
     .select({
       item: items,
-      spaceId: spaces.id,
-      spaceName: spaces.name,
       parentSpaceId: spaces.parentSpaceId,
       score: rankExpr,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
@@ -671,11 +671,11 @@ export async function searchItemsFTSWithSnippets(
   const rows = await db
     .select({
       item: items,
-      spaceId: spaces.id,
-      spaceName: spaces.name,
       parentSpaceId: spaces.parentSpaceId,
       score: rankExpr,
       snippet: snippetExpr,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
@@ -713,10 +713,10 @@ export async function searchItemsFuzzy(
   const rows = await db
     .select({
       item: items,
-      spaceId: spaces.id,
-      spaceName: spaces.name,
       parentSpaceId: spaces.parentSpaceId,
       score: similarityExpr,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
@@ -775,11 +775,11 @@ export async function suggestItems(
   const ftsRows = await db
     .select({
       item: items,
-      spaceId: spaces.id,
-      spaceName: spaces.name,
       parentSpaceId: spaces.parentSpaceId,
       score: rankExpr,
       snippet: sql<string>`ts_headline('english', coalesce(${items.searchBlob}, ''), ${tsQuery})`,
+      spaceId: spaces.id,
+      spaceName: spaces.name,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
@@ -851,20 +851,20 @@ export async function getItemLinksResolved(
     }
   }
   if (peerIds.size === 0) {
-    return { outgoing: [], incoming: [] };
+    return { incoming: [], outgoing: [] };
   }
   const peerRows = await db
     .select({
       id: items.id,
-      title: items.title,
       itemType: items.itemType,
+      title: items.title,
     })
     .from(items)
     .where(inArray(items.id, [...peerIds]));
   const peerMap = new Map(
     peerRows.map((p) => [
       p.id,
-      { id: p.id, title: p.title, itemType: p.itemType },
+      { id: p.id, itemType: p.itemType, title: p.title },
     ])
   );
 
@@ -875,9 +875,9 @@ export async function getItemLinksResolved(
       const to = peerMap.get(l.targetItemId);
       if (to) {
         outgoing.push({
+          label: l.label,
           linkId: l.id,
           linkType: l.linkType,
-          label: l.label,
           to,
         });
       }
@@ -885,15 +885,15 @@ export async function getItemLinksResolved(
       const from = peerMap.get(l.sourceItemId);
       if (from) {
         incoming.push({
+          from,
+          label: l.label,
           linkId: l.id,
           linkType: l.linkType,
-          label: l.label,
-          from,
         });
       }
     }
   }
-  return { outgoing, incoming };
+  return { incoming, outgoing };
 }
 
 /**
@@ -906,7 +906,7 @@ export async function deleteSpaceSubtree(
 ): Promise<{ ok: true; deletedIds: string[] } | { ok: false; error: string }> {
   const root = await assertSpaceExists(db, spaceId);
   if (!root) {
-    return { ok: false, error: "Space not found" };
+    return { error: "Space not found", ok: false };
   }
 
   const inTree = await fetchDescendantSpaceIds(db, spaceId);
@@ -914,10 +914,10 @@ export async function deleteSpaceSubtree(
     .select({ c: sql<number>`count(*)::int` })
     .from(spaces);
   if (inTree.size >= (total?.c ?? 0)) {
-    return { ok: false, error: "Cannot delete all spaces" };
+    return { error: "Cannot delete all spaces", ok: false };
   }
   // Single statement delete over the computed subtree id set; avoids N sequential deletes.
   const deletedIds = [...inTree];
   await db.delete(spaces).where(inArray(spaces.id, deletedIds));
-  return { ok: true, deletedIds };
+  return { deletedIds, ok: true };
 }

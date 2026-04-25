@@ -53,7 +53,7 @@ export function moveTopLevelBlock(
   }
   blocks.splice(insertAt, 0, moved);
 
-  const ok = editor.commands.setContent({ type: "doc", content: blocks });
+  const ok = editor.commands.setContent({ content: blocks, type: "doc" });
   if (ok) {
     editor.commands.focus();
   }

@@ -87,31 +87,9 @@ export function expandHgAiPendingRangeBeforeEdit(
  * Renders as `<span data-hg-ai-pending="true" class="hgAiPending">`.
  */
 export const HgAiPending = Mark.create({
-  name: "hgAiPending",
-  inclusive: false,
-
-  parseHTML() {
-    return [
-      { tag: 'span[data-hg-ai-pending="true"]' },
-      { tag: "span.hgAiPending" },
-    ];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      "span",
-      mergeAttributes(HTMLAttributes, {
-        "data-hg-ai-pending": "true",
-        class: "hgAiPending",
-      }),
-      0,
-    ];
-  },
-
   addProseMirrorPlugins() {
     return [
       new Plugin({
-        key: hgAiPendingClearKey,
         appendTransaction(transactions, oldState, newState) {
           if (transactions.some((t) => t.getMeta(HG_AI_PENDING_CLEAR_META))) {
             return null;
@@ -173,7 +151,28 @@ export const HgAiPending = Mark.create({
                 .setMeta("addToHistory", true)
             : null;
         },
+        key: hgAiPendingClearKey,
       }),
+    ];
+  },
+  inclusive: false,
+  name: "hgAiPending",
+
+  parseHTML() {
+    return [
+      { tag: 'span[data-hg-ai-pending="true"]' },
+      { tag: "span.hgAiPending" },
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "span",
+      mergeAttributes(HTMLAttributes, {
+        class: "hgAiPending",
+        "data-hg-ai-pending": "true",
+      }),
+      0,
     ];
   },
 });

@@ -26,10 +26,10 @@ export async function POST(req: Request) {
   if (!env) {
     return NextResponse.json(
       {
-        ok: false,
+        code: "R2_NOT_CONFIGURED",
         error:
           "R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL (public bucket URL, no trailing slash).",
-        code: "R2_NOT_CONFIGURED",
+        ok: false,
       },
       { status: 503 }
     );
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     json = await req.json();
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON body", code: "BAD_REQUEST" },
+      { code: "BAD_REQUEST", error: "Invalid JSON body", ok: false },
       { status: 400 }
     );
   }
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: "Invalid body", code: "BAD_REQUEST" },
+      { code: "BAD_REQUEST", error: "Invalid body", ok: false },
       { status: 400 }
     );
   }
@@ -57,9 +57,9 @@ export async function POST(req: Request) {
   if (!ct.startsWith("image/")) {
     return NextResponse.json(
       {
-        ok: false,
-        error: "Only image/* content types are allowed.",
         code: "INVALID_TYPE",
+        error: "Only image/* content types are allowed.",
+        ok: false,
       },
       { status: 400 }
     );
@@ -69,13 +69,13 @@ export async function POST(req: Request) {
     const db = tryGetDb();
     if (!db) {
       return NextResponse.json(
-        { ok: false, error: "Database not configured", code: "DB_UNAVAILABLE" },
+        { code: "DB_UNAVAILABLE", error: "Database not configured", ok: false },
         { status: 503 }
       );
     }
     if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
       return NextResponse.json(
-        { ok: false, error: "Forbidden.", code: "FORBIDDEN" },
+        { code: "FORBIDDEN", error: "Forbidden.", ok: false },
         { status: 403 }
       );
     }
@@ -88,16 +88,16 @@ export async function POST(req: Request) {
       spaceId: parsed.data.spaceId,
     });
     return NextResponse.json({
-      ok: true,
-      uploadUrl,
-      publicUrl,
-      key,
       headers: { "Content-Type": parsed.data.contentType },
+      key,
+      ok: true,
+      publicUrl,
+      uploadUrl,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Presign failed";
     return NextResponse.json(
-      { ok: false, error: message, code: "PRESIGN_FAILED" },
+      { code: "PRESIGN_FAILED", error: message, ok: false },
       { status: 500 }
     );
   }

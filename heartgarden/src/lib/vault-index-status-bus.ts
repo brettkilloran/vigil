@@ -30,7 +30,7 @@ export function vaultIndexClearInFlight(itemId: string) {
 }
 
 export function vaultIndexSetError(message: string) {
-  lastError = { message, at: Date.now() };
+  lastError = { at: Date.now(), message };
   emit();
   const started = lastError.at;
   window.setTimeout(() => {
@@ -45,9 +45,9 @@ export function getVaultIndexStatusSnapshot() {
   const errorLine =
     lastError && Date.now() - lastError.at < 12_500 ? lastError.message : null;
   return {
-    pendingCount: pendingIds.size,
-    inFlightCount: inFlightIds.size,
     errorLine,
+    inFlightCount: inFlightIds.size,
+    pendingCount: pendingIds.size,
   };
 }
 

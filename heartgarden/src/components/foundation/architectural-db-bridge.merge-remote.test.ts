@@ -19,21 +19,21 @@ function noteItem(
   updatedAt: string
 ): CanvasItem {
   return {
-    id,
-    spaceId,
-    itemType: "note",
-    x: 0,
-    y: 0,
-    width: 280,
-    height: 200,
-    zIndex: 1,
-    title,
-    contentText: "",
     contentJson: {
       format: "html",
       html: '<div contenteditable="true">x</div>',
     },
+    contentText: "",
+    height: 200,
+    id,
+    itemType: "note",
+    spaceId,
+    title,
     updatedAt,
+    width: 280,
+    x: 0,
+    y: 0,
+    zIndex: 1,
   };
 }
 
@@ -46,30 +46,35 @@ function folderItem(
   folderColorScheme?: string
 ): CanvasItem {
   return {
-    id,
-    spaceId,
-    itemType: "folder",
-    x: 0,
-    y: 0,
-    width: 280,
-    height: 200,
-    zIndex: 1,
-    title,
-    contentText: "",
     contentJson: {
       folder: { childSpaceId },
       hgArch:
         typeof folderColorScheme === "string" ? { folderColorScheme } : {},
     },
+    contentText: "",
+    height: 200,
+    id,
+    itemType: "folder",
+    spaceId,
+    title,
     updatedAt,
+    width: 280,
+    x: 0,
+    y: 0,
+    zIndex: 1,
   };
 }
 
 describe("mergeRemoteItemPatches", () => {
   it("updates title from changed item and removes deleted id", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -79,11 +84,6 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const changed = [
@@ -98,8 +98,13 @@ describe("mergeRemoteItemPatches", () => {
 
   it("drops pin threads when a tombstoned entity is removed", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -109,27 +114,22 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prevBase = buildCanvasGraphFromBootstrap(boot);
     const thread: CanvasPinConnection = {
-      id: "conn-1",
-      sourceEntityId: "a",
-      targetEntityId: "b",
-      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
-      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       color: "#888",
+      createdAt: 1,
+      dbLinkId: "00000000-0000-4000-8000-0000000000bb",
+      id: "conn-1",
       linkType: "pin",
       slackMultiplier: 1,
-      createdAt: 1,
-      updatedAt: 1,
-      syncState: "synced",
-      dbLinkId: "00000000-0000-4000-8000-0000000000bb",
+      sourceEntityId: "a",
+      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       syncError: null,
+      syncState: "synced",
+      targetEntityId: "b",
+      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      updatedAt: 1,
     };
     const prev = {
       ...prevBase,
@@ -146,8 +146,13 @@ describe("mergeRemoteItemPatches", () => {
 
   it("does not tombstone ids in the exempt set when missing from server list", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -157,11 +162,6 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const changed = [
@@ -185,8 +185,12 @@ describe("mergeRemoteItemPatches", () => {
 
   it("keeps local title and body when id is protected but applies geometry from server", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "ServerTitle", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -196,10 +200,6 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "ServerTitle", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prevBase = buildCanvasGraphFromBootstrap(boot);
     const ent = prevBase.entities.a;
@@ -212,8 +212,8 @@ describe("mergeRemoteItemPatches", () => {
         ...prevBase.entities,
         a: {
           ...ent,
-          title: "LocalTitle",
           bodyHtml: "<div>local draft</div>",
+          title: "LocalTitle",
         },
       },
     };
@@ -247,8 +247,18 @@ describe("mergeRemoteItemPatches", () => {
   it("keeps local folder title when folder id is protected but applies layout from server", () => {
     const childSpace = "space-child-1";
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        folderItem(
+          "fol1",
+          "space-1",
+          childSpace,
+          "LocalFolder",
+          "2020-01-01T00:00:00.000Z"
+        ),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -264,16 +274,6 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        folderItem(
-          "fol1",
-          "space-1",
-          childSpace,
-          "LocalFolder",
-          "2020-01-01T00:00:00.000Z"
-        ),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const remote = folderItem(
@@ -304,8 +304,19 @@ describe("mergeRemoteItemPatches", () => {
   it("keeps local folder tint when folder id is protected and server row is stale", () => {
     const childSpace = "space-child-2";
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        folderItem(
+          "fol2",
+          "space-1",
+          childSpace,
+          "Tinted",
+          "2020-01-01T00:00:00.000Z",
+          "ocean"
+        ),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -321,17 +332,6 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        folderItem(
-          "fol2",
-          "space-1",
-          childSpace,
-          "Tinted",
-          "2020-01-01T00:00:00.000Z",
-          "ocean"
-        ),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const local = prev.entities.fol2;
@@ -365,8 +365,10 @@ describe("mergeRemoteItemPatches", () => {
 
   it("moves entity to another space in subtree when server row changes spaceId", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -382,8 +384,6 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const moved = noteItem("a", "space-2", "A", "2020-01-02T00:00:00.000Z");
@@ -396,8 +396,13 @@ describe("mergeRemoteItemPatches", () => {
 
   it("with null server id set skips remote tombstones but still applies changed rows", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -407,11 +412,6 @@ describe("mergeRemoteItemPatches", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const changed = [
@@ -430,8 +430,13 @@ describe("mergeRemoteItemPatches", () => {
 describe("mergeBootstrapView", () => {
   it("keeps entity when item moved to another affected space in the same payload", () => {
     const bootPrev: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -447,11 +452,6 @@ describe("mergeBootstrapView", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(bootPrev);
     const bootNext: BootstrapResponse = {
@@ -492,12 +492,12 @@ describe("mergeBootstrapView", () => {
       ),
     ];
     const bootFull: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items,
+      ok: true,
       spaceId: "space-1",
       spaces,
-      items,
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(bootFull);
     const bootTrimmed: BootstrapResponse = {
@@ -511,8 +511,13 @@ describe("mergeBootstrapView", () => {
 
   it("preserves connections between entities that still exist after merge", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -522,26 +527,21 @@ describe("mergeBootstrapView", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const thread: CanvasPinConnection = {
-      id: "local-conn-1",
-      sourceEntityId: "a",
-      targetEntityId: "b",
-      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
-      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       color: "#888",
+      createdAt: 1,
+      id: "local-conn-1",
       linkType: "pin",
       slackMultiplier: 1,
-      createdAt: 1,
-      updatedAt: 1,
-      syncState: "local-only",
+      sourceEntityId: "a",
+      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       syncError: null,
+      syncState: "local-only",
+      targetEntityId: "b",
+      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      updatedAt: 1,
     };
     prev.connections[thread.id] = thread;
     const bootNext: BootstrapResponse = {
@@ -557,8 +557,13 @@ describe("mergeBootstrapView", () => {
 
   it("drops connections when an endpoint entity is removed by merge", () => {
     const bootFull: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z"),
+        noteItem("gone", "space-1", "Gone", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -568,27 +573,22 @@ describe("mergeBootstrapView", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("keep", "space-1", "Keep", "2020-01-01T00:00:00.000Z"),
-        noteItem("gone", "space-1", "Gone", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(bootFull);
     const thread: CanvasPinConnection = {
-      id: "c1",
-      sourceEntityId: "keep",
-      targetEntityId: "gone",
-      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
-      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       color: "#888",
+      createdAt: 1,
+      dbLinkId: "00000000-0000-4000-8000-0000000000aa",
+      id: "c1",
       linkType: "pin",
       slackMultiplier: 1,
-      createdAt: 1,
-      updatedAt: 1,
-      syncState: "synced",
-      dbLinkId: "00000000-0000-4000-8000-0000000000aa",
+      sourceEntityId: "keep",
+      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       syncError: null,
+      syncState: "synced",
+      targetEntityId: "gone",
+      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      updatedAt: 1,
     };
     prev.connections[thread.id] = thread;
     const bootTrimmed: BootstrapResponse = {
@@ -623,12 +623,12 @@ describe("applyServerCanvasItemToGraph", () => {
       })),
     ];
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      ok: true,
       spaceId: "space-1",
       spaces,
-      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const moved = noteItem("a", "space-2", "A2", "2020-01-02T00:00:00.000Z");
@@ -640,8 +640,13 @@ describe("applyServerCanvasItemToGraph", () => {
 
   it("does not prune pin connections when applyServerCanvasItemToGraph moves an entity (policy: connections unchanged)", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [
+        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
+        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
+      ],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -657,27 +662,22 @@ describe("applyServerCanvasItemToGraph", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [
-        noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z"),
-        noteItem("b", "space-1", "B", "2020-01-01T00:00:00.000Z"),
-      ],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prevBase = buildCanvasGraphFromBootstrap(boot);
     const thread: CanvasPinConnection = {
-      id: "conn-move",
-      sourceEntityId: "a",
-      targetEntityId: "b",
-      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
-      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       color: "#888",
+      createdAt: 1,
+      dbLinkId: "00000000-0000-4000-8000-0000000000cc",
+      id: "conn-move",
       linkType: "pin",
       slackMultiplier: 1,
-      createdAt: 1,
-      updatedAt: 1,
-      syncState: "synced",
-      dbLinkId: "00000000-0000-4000-8000-0000000000cc",
+      sourceEntityId: "a",
+      sourcePin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
       syncError: null,
+      syncState: "synced",
+      targetEntityId: "b",
+      targetPin: { anchor: "topLeftInset", insetX: 12, insetY: 12 },
+      updatedAt: 1,
     };
     const prev = {
       ...prevBase,
@@ -692,8 +692,10 @@ describe("applyServerCanvasItemToGraph", () => {
 describe("mergeRemoteSpaceRowsIntoGraph", () => {
   it("inserts stub space row when id was unknown to the client", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -703,25 +705,25 @@ describe("mergeRemoteSpaceRowsIntoGraph", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const next = mergeRemoteSpaceRowsIntoGraph(prev, [
       { id: "space-new", name: "Appeared", parentSpaceId: "space-1" },
     ]);
     expect(next.spaces["space-new"]).toEqual({
+      entityIds: [],
       id: "space-new",
       name: "Appeared",
       parentSpaceId: "space-1",
-      entityIds: [],
     });
   });
 
   it("updates parentSpaceId and name while keeping entityIds", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -737,8 +739,6 @@ describe("mergeRemoteSpaceRowsIntoGraph", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     prev.spaces["space-2"]!.entityIds = ["note-1"];
@@ -754,8 +754,10 @@ describe("mergeRemoteSpaceRowsIntoGraph", () => {
 describe("removeEntitiesFromGraphAfterRemoteDelete", () => {
   it("drops entity from spaces and connections", () => {
     const boot: BootstrapResponse = {
-      ok: true,
+      camera: { x: 0, y: 0, zoom: 1 },
       demo: false,
+      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
+      ok: true,
       spaceId: "space-1",
       spaces: [
         {
@@ -765,8 +767,6 @@ describe("removeEntitiesFromGraphAfterRemoteDelete", () => {
           updatedAt: "2020-01-01T00:00:00.000Z",
         },
       ],
-      items: [noteItem("a", "space-1", "A", "2020-01-01T00:00:00.000Z")],
-      camera: { x: 0, y: 0, zoom: 1 },
     };
     const prev = buildCanvasGraphFromBootstrap(boot);
     const pin = { anchor: "topLeftInset" as const, insetX: 0, insetY: 0 };
@@ -774,13 +774,13 @@ describe("removeEntitiesFromGraphAfterRemoteDelete", () => {
       ...prev,
       connections: {
         c1: {
-          id: "c1",
-          sourceEntityId: "a",
-          targetEntityId: "a",
-          sourcePin: pin,
-          targetPin: pin,
           color: "#000",
           createdAt: 0,
+          id: "c1",
+          sourceEntityId: "a",
+          sourcePin: pin,
+          targetEntityId: "a",
+          targetPin: pin,
           updatedAt: 0,
         },
       },

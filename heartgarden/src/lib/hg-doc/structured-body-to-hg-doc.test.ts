@@ -12,8 +12,8 @@ describe("structuredBodyToHgDoc", () => {
       blocks: [
         { kind: "heading", level: 1, text: "Doc" },
         { kind: "paragraph", text: "Body text" },
-        { kind: "bullet_list", items: ["A", "B"] },
-        { kind: "ordered_list", items: ["C"] },
+        { items: ["A", "B"], kind: "bullet_list" },
+        { items: ["C"], kind: "ordered_list" },
         { kind: "quote", text: "Quote text" },
         { kind: "hr" },
       ],
@@ -31,7 +31,7 @@ describe("structuredBodyToHgDoc", () => {
   it("auto-prepends H1 when required", () => {
     const built = structuredBodyToHgDoc(
       { blocks: [{ kind: "paragraph", text: "Body only" }] },
-      { title: "Canonical Title", requireH1: true }
+      { requireH1: true, title: "Canonical Title" }
     );
     const first = built.doc.content?.[0];
     expect(first?.type).toBe("heading");
@@ -58,8 +58,8 @@ describe("structuredBodyToHgDoc", () => {
   it("passes eval fixtures and heading count expectations", () => {
     for (const fixture of STRUCTURED_BODY_EVAL_FIXTURES) {
       const built = structuredBodyToHgDoc(fixture.input, {
-        title: fixture.title,
         requireH1: true,
+        title: fixture.title,
       });
       expect(built.structureReport.finalHeadingCount.h1).toBeGreaterThanOrEqual(
         fixture.expect.minH1

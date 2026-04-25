@@ -52,7 +52,7 @@ export async function runLoreConsistencyCheck(args: {
 }> {
   const q = `${args.title} ${args.bodyText}`.trim().slice(0, 2000);
   if (!q) {
-    return { issues: [], suggestedNoteTags: [], semanticSummary: null };
+    return { issues: [], semanticSummary: null, suggestedNoteTags: [] };
   }
 
   const hybrid = await hybridRetrieveItems(
@@ -77,11 +77,11 @@ export async function runLoreConsistencyCheck(args: {
         r.item.contentJson as Record<string, unknown> | null | undefined
       );
       return {
-        itemId: r.item.id,
-        title: r.item.title ?? "",
-        itemType: r.item.itemType,
         entityType: r.item.entityType,
         excerpt: String(snippet ?? "").slice(0, 1200),
+        itemId: r.item.id,
+        itemType: r.item.itemType,
+        title: r.item.title ?? "",
         ...(structuredBindingTargets.length
           ? { structuredBindingTargets: structuredBindingTargets.slice(0, 16) }
           : {}),
@@ -96,15 +96,15 @@ export async function runLoreConsistencyCheck(args: {
   const res = await callAnthropic(
     args.apiKey,
     {
+      messages: [{ content: user, role: "user" }],
       model: args.model,
       system: buildCachedSystem(SYSTEM),
-      messages: [{ role: "user", content: user }],
     },
-    { label: "lore.consistency", expectJson: true }
+    { expectJson: true, label: "lore.consistency" }
   );
   const jsonStr = res.jsonText;
   if (!jsonStr) {
-    return { issues: [], suggestedNoteTags: [], semanticSummary: null };
+    return { issues: [], semanticSummary: null, suggestedNoteTags: [] };
   }
   try {
     const parsed = JSON.parse(jsonStr) as {
@@ -139,14 +139,14 @@ export async function runLoreConsistencyCheck(args: {
           : String(o.handlingHint).trim().slice(0, 64);
       const handlingHint = hintRaw || undefined;
       issues.push({
-        summary,
-        severity,
+        candidateItemId,
         details:
           o.details == null
             ? undefined
             : String(o.details).trim().slice(0, 2000),
-        candidateItemId,
         handlingHint,
+        severity,
+        summary,
       });
     }
 
@@ -170,8 +170,8 @@ export async function runLoreConsistencyCheck(args: {
         ? null
         : String(parsed.semanticSummary).trim().slice(0, 500) || null;
 
-    return { issues, suggestedNoteTags, semanticSummary };
+    return { issues, semanticSummary, suggestedNoteTags };
   } catch {
-    return { issues: [], suggestedNoteTags: [], semanticSummary: null };
+    return { issues: [], semanticSummary: null, suggestedNoteTags: [] };
   }
 }

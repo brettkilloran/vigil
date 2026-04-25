@@ -51,15 +51,15 @@ describe("lore canvas shell routing", () => {
       "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     );
     const html = buildFactionArchive091BodyHtml({
-      orgPrimaryInnerHtml: "",
       orgAccentInnerHtml: "",
-      recordInnerHtml: "<p><br></p>",
-      railUpper: upper,
+      orgPrimaryInnerHtml: "",
       railLower: lower,
+      railUpper: upper,
+      recordInnerHtml: "<p><br></p>",
     });
     const entity = {
-      kind: "content" as const,
       bodyHtml: html,
+      kind: "content" as const,
       loreCard: { kind: "faction" as const, variant: "v4" as const },
     };
     expect(shouldRenderLoreFactionArchive091CanvasNode(entity)).toBe(true);

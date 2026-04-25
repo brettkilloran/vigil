@@ -5,20 +5,19 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalToolButton } from "@/src/components/foundation/ArchitecturalToolRail";
 
 const meta: Meta<typeof ArchitecturalToolButton> = {
-  title: "Heartgarden/Product UI/Canvas/Tool button",
-  component: ArchitecturalToolButton,
   args: {
-    label: "Select",
     active: false,
     icon: "+",
+    label: "Select",
     onClick: () => {},
   },
   argTypes: {
-    label: { control: "text" },
     active: { control: "boolean" },
     icon: { control: "text" },
+    label: { control: "text" },
     onClick: { control: false },
   },
+  component: ArchitecturalToolButton,
   decorators: [
     (Story) => (
       <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
@@ -26,6 +25,7 @@ const meta: Meta<typeof ArchitecturalToolButton> = {
       </div>
     ),
   ],
+  title: "Heartgarden/Product UI/Canvas/Tool button",
 };
 
 export default meta;

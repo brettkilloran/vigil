@@ -209,11 +209,11 @@ function normalizeJobProgress(
     return;
   }
   return {
+    message: job.progressMessage ?? undefined,
+    meta: normalizeProgressMeta(job.progressMeta),
     phase: job.progressPhase ?? undefined,
     step: step ?? undefined,
     total: total ?? undefined,
-    message: job.progressMessage ?? undefined,
-    meta: normalizeProgressMeta(job.progressMeta),
     updatedAt: job.lastProgressAt
       ? job.lastProgressAt.toISOString()
       : undefined,
@@ -246,7 +246,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
   const { jobId } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
     return Response.json(
-      { ok: false, error: "Invalid job id" },
+      { error: "Invalid job id", ok: false },
       { status: 400 }
     );
   }
@@ -255,7 +255,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
   const spaceId = url.searchParams.get("spaceId")?.trim() ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(spaceId)) {
     return Response.json(
-      { ok: false, error: "Query parameter spaceId (uuid) is required" },
+      { error: "Query parameter spaceId (uuid) is required", ok: false },
       { status: 400 }
     );
   }
@@ -263,19 +263,19 @@ export async function GET(req: Request, ctx: RouteCtx) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
 
   const [baseJob] = await db
     .select({
+      error: loreImportJobs.error,
       id: loreImportJobs.id,
+      plan: loreImportJobs.plan,
+      progressEvents: loreImportJobs.progressEvents,
       spaceId: loreImportJobs.spaceId,
       status: loreImportJobs.status,
-      plan: loreImportJobs.plan,
-      error: loreImportJobs.error,
-      progressEvents: loreImportJobs.progressEvents,
       updatedAt: loreImportJobs.updatedAt,
     })
     .from(loreImportJobs)
@@ -304,10 +304,11 @@ export async function GET(req: Request, ctx: RouteCtx) {
       if (row) {
         job = {
           ...job,
-          progressPhase:
-            typeof row.progress_phase === "string" ? row.progress_phase : null,
-          progressStep: coerceOptionalInt(row.progress_step),
-          progressTotal: coerceOptionalInt(row.progress_total),
+          lastProgressAt:
+            row.last_progress_at instanceof Date ? row.last_progress_at : null,
+          progressEvents: Array.isArray(row.progress_events)
+            ? (row.progress_events as unknown[])
+            : null,
           progressMessage:
             typeof row.progress_message === "string"
               ? row.progress_message
@@ -316,11 +317,10 @@ export async function GET(req: Request, ctx: RouteCtx) {
             row.progress_meta && typeof row.progress_meta === "object"
               ? (row.progress_meta as Record<string, unknown>)
               : null,
-          progressEvents: Array.isArray(row.progress_events)
-            ? (row.progress_events as unknown[])
-            : null,
-          lastProgressAt:
-            row.last_progress_at instanceof Date ? row.last_progress_at : null,
+          progressPhase:
+            typeof row.progress_phase === "string" ? row.progress_phase : null,
+          progressStep: coerceOptionalInt(row.progress_step),
+          progressTotal: coerceOptionalInt(row.progress_total),
         };
       }
     } catch (error) {
@@ -332,7 +332,7 @@ export async function GET(req: Request, ctx: RouteCtx) {
 
   if (!job || job.spaceId !== spaceId) {
     return Response.json(
-      { ok: false, error: "Job not found" },
+      { error: "Job not found", ok: false },
       { status: 404 }
     );
   }
@@ -352,35 +352,35 @@ export async function GET(req: Request, ctx: RouteCtx) {
     if (!parsed.success) {
       return Response.json(
         {
-          ok: false,
-          status: "failed",
           error: "Stored plan failed validation",
           errorCode: "lore_import_plan_validation_failed",
-          progress: normalizeJobProgress(job),
           events: normalizeJobEvents(job.progressEvents, { running: false }),
+          ok: false,
+          progress: normalizeJobProgress(job),
+          status: "failed",
         },
         { status: 500 }
       );
     }
     return Response.json({
-      ok: true,
       attemptId,
-      status: job.status,
+      events: normalizeJobEvents(job.progressEvents, { running: false }),
+      ok: true,
       plan: parsed.data,
       progress: normalizeJobProgress(job),
-      events: normalizeJobEvents(job.progressEvents, { running: false }),
+      status: job.status,
     });
   }
 
   if (job.status === "ready" && !job.plan) {
     return Response.json(
       {
-        ok: false,
-        status: "failed",
         error: "Job is ready but plan data is missing",
         errorCode: "lore_import_plan_missing",
-        progress: normalizeJobProgress(job),
         events: normalizeJobEvents(job.progressEvents, { running: false }),
+        ok: false,
+        progress: normalizeJobProgress(job),
+        status: "failed",
       },
       { status: 500 }
     );
@@ -389,9 +389,9 @@ export async function GET(req: Request, ctx: RouteCtx) {
   if (job.status === "failed" && job.error) {
     console.error("[lore-import] job failed", {
       attemptId,
+      error: job.error,
       jobId: job.id,
       spaceId: job.spaceId,
-      error: job.error,
     });
   }
 
@@ -401,17 +401,17 @@ export async function GET(req: Request, ctx: RouteCtx) {
   const failedMeta = job.status === "failed" ? readFailedMeta(job) : {};
   const exposeFailureDetail = process.env.HEARTGARDEN_DEBUG_ERRORS === "1";
   return Response.json({
-    ok: true,
     attemptId,
+    ok: true,
     status: job.status,
     ...(progress ? { progress } : {}),
     ...(events.length > 0 ? { events } : {}),
     ...(job.status === "failed"
       ? {
+          code: "lore_import_job_failed",
           error: exposeFailureDetail
             ? job.error || "Import job failed"
             : "Import job failed",
-          code: "lore_import_job_failed",
           errorCode: failedMeta.errorCode,
           lastPhase: failedMeta.lastPhase,
         }
@@ -431,7 +431,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
   const { jobId } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
     return Response.json(
-      { ok: false, error: "Invalid job id" },
+      { error: "Invalid job id", ok: false },
       { status: 400 }
     );
   }
@@ -440,7 +440,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
   const spaceId = url.searchParams.get("spaceId")?.trim() ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(spaceId)) {
     return Response.json(
-      { ok: false, error: "Query parameter spaceId (uuid) is required" },
+      { error: "Query parameter spaceId (uuid) is required", ok: false },
       { status: 400 }
     );
   }
@@ -448,7 +448,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -468,7 +468,7 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
 
   if (!job || job.spaceId !== spaceId) {
     return Response.json(
-      { ok: false, error: "Job not found" },
+      { error: "Job not found", ok: false },
       { status: 404 }
     );
   }
@@ -479,12 +479,12 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
     job.status === "cancelled"
   ) {
     return Response.json({
-      ok: true,
       attemptId,
-      jobId,
-      status: job.status,
       cancelled: job.status === "cancelled",
+      jobId,
       mutable: false,
+      ok: true,
+      status: job.status,
     });
   }
 
@@ -492,18 +492,18 @@ export async function DELETE(req: Request, ctx: RouteCtx) {
   await db
     .update(loreImportJobs)
     .set({
-      status: "cancelled",
       error: "Cancelled by user",
+      status: "cancelled",
       updatedAt: now,
     })
     .where(eq(loreImportJobs.id, jobId));
 
   return Response.json({
-    ok: true,
     attemptId,
-    jobId,
-    status: "cancelled",
     cancelled: true,
+    jobId,
     mutable: true,
+    ok: true,
+    status: "cancelled",
   });
 }

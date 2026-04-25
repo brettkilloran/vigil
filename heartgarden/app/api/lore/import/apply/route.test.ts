@@ -14,40 +14,40 @@ vi.mock("@/src/lib/spaces", () => ({
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", () => ({
-  getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
   enforceGmOnlyBootContext: vi.fn().mockReturnValue(null),
+  getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
   gmMayAccessSpaceIdAsync: gmMayAccessSpaceIdAsyncMock,
   heartgardenApiForbiddenJsonResponse: vi.fn(),
 }));
 
 vi.mock("@/src/lib/lore-import-apply", () => ({
-  loreImportApplyBodySchema: {
-    safeParse: (value: unknown) => ({ success: true, data: value }),
-  },
   applyLoreImportPlan: applyLoreImportPlanMock,
+  loreImportApplyBodySchema: {
+    safeParse: (value: unknown) => ({ data: value, success: true }),
+  },
 }));
 
 const BASE_BODY = {
-  spaceId: "11111111-1111-4111-8111-111111111111",
-  importBatchId: "22222222-2222-4222-8222-222222222222",
-  plan: {
-    importBatchId: "22222222-2222-4222-8222-222222222222",
-    sourceCharCount: 12,
-    chunks: [],
-    folders: [],
-    notes: [],
-    links: [],
-    mergeProposals: [],
-    contradictions: [],
-    clarifications: [],
-    userContext: {
-      granularity: "many",
-      orgMode: "nearby",
-      importScope: "current_subtree",
-    },
-  },
   acceptedMergeProposalIds: [],
   clarificationAnswers: [],
+  importBatchId: "22222222-2222-4222-8222-222222222222",
+  plan: {
+    chunks: [],
+    clarifications: [],
+    contradictions: [],
+    folders: [],
+    importBatchId: "22222222-2222-4222-8222-222222222222",
+    links: [],
+    mergeProposals: [],
+    notes: [],
+    sourceCharCount: 12,
+    userContext: {
+      granularity: "many",
+      importScope: "current_subtree",
+      orgMode: "nearby",
+    },
+  },
+  spaceId: "11111111-1111-4111-8111-111111111111",
 };
 
 describe("POST /api/lore/import/apply", () => {
@@ -64,9 +64,9 @@ describe("POST /api/lore/import/apply", () => {
     );
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/apply", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(BASE_BODY),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
 
     const res = await POST(req);
@@ -84,9 +84,9 @@ describe("POST /api/lore/import/apply", () => {
     );
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/apply", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(BASE_BODY),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
 
     const res = await POST(req);

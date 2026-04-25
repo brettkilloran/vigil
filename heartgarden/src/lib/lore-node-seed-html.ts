@@ -250,11 +250,11 @@ function factionArchive091Seed(
 ): string {
   const { upper, lower } = factionArchiveRailTextsFromObjectId(seedForRails);
   return buildFactionArchive091BodyHtml({
-    orgPrimaryInnerHtml: "",
     orgAccentInnerHtml: "",
-    recordInnerHtml: "",
-    railUpper: upper,
+    orgPrimaryInnerHtml: "",
     railLower: lower,
+    railUpper: upper,
+    recordInnerHtml: "",
   });
 }
 
@@ -276,9 +276,9 @@ function locationV2(): string {
 /** Location v7 · ORDO LUNARIS mono coordinate slab (canvas + focus; notes hidden on canvas). */
 function locationV7(): string {
   return buildLocationOrdoV7BodyHtml({
-    name: "",
     context: "",
     detail: "",
+    name: "",
     notesInnerHtml: "<p><br></p>",
   });
 }
@@ -499,9 +499,9 @@ export function migrateLocationBodyToOrdoV7(bodyHtml: string): string {
     }
     const sourceNotesInnerHtml = `<p>${escapeHtmlV7Field(sourcePlain).replace(/\n/g, "<br />")}</p>`;
     return buildLocationOrdoV7BodyHtml({
-      name: "",
       context: "",
       detail: "",
+      name: "",
       notesInnerHtml: sourceNotesInnerHtml,
     });
   } catch {

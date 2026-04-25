@@ -141,23 +141,23 @@ async function loadNodesByIds(
   }
   const rows = await db
     .select({
-      id: items.id,
-      title: items.title,
-      itemType: items.itemType,
-      entityType: items.entityType,
-      spaceId: items.spaceId,
       braneId: spaces.braneId,
+      entityType: items.entityType,
+      id: items.id,
+      itemType: items.itemType,
+      spaceId: items.spaceId,
+      title: items.title,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
     .where(and(inArray(items.id, ids), eq(spaces.braneId, braneId)));
   return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    itemType: r.itemType,
-    entityType: r.entityType,
-    spaceId: r.spaceId,
     depth: depthByItemId.get(r.id) ?? 0,
+    entityType: r.entityType,
+    id: r.id,
+    itemType: r.itemType,
+    spaceId: r.spaceId,
+    title: r.title,
   }));
 }
 
@@ -179,13 +179,13 @@ async function expandFrontier(
 
   const explicitRows = await db
     .select({
-      id: itemLinks.id,
-      source: itemLinks.sourceItemId,
-      target: itemLinks.targetItemId,
-      linkType: itemLinks.linkType,
-      sourcePin: itemLinks.sourcePin,
-      targetPin: itemLinks.targetPin,
       color: itemLinks.color,
+      id: itemLinks.id,
+      linkType: itemLinks.linkType,
+      source: itemLinks.sourceItemId,
+      sourcePin: itemLinks.sourcePin,
+      target: itemLinks.targetItemId,
+      targetPin: itemLinks.targetPin,
     })
     .from(itemLinks)
     .where(
@@ -196,15 +196,15 @@ async function expandFrontier(
     );
   for (const r of explicitRows) {
     explicit.push({
-      id: r.id,
-      source: r.source,
-      target: r.target,
-      edgeKind: "explicit",
-      matchedTerm: null,
-      linkType: r.linkType,
-      sourcePin: r.sourcePin,
-      targetPin: r.targetPin,
       color: r.color,
+      edgeKind: "explicit",
+      id: r.id,
+      linkType: r.linkType,
+      matchedTerm: null,
+      source: r.source,
+      sourcePin: r.sourcePin,
+      target: r.target,
+      targetPin: r.targetPin,
     });
     neighborIds.add(r.source);
     neighborIds.add(r.target);
@@ -213,9 +213,9 @@ async function expandFrontier(
   const implicitRows = await db
     .select({
       id: entityMentions.id,
+      matchedTerm: entityMentions.matchedTerm,
       source: entityMentions.sourceItemId,
       target: entityMentions.targetItemId,
-      matchedTerm: entityMentions.matchedTerm,
     })
     .from(entityMentions)
     .where(
@@ -229,15 +229,15 @@ async function expandFrontier(
     );
   for (const r of implicitRows) {
     implicit.push({
-      id: r.id,
-      source: r.source,
-      target: r.target,
-      edgeKind: "implicit",
-      matchedTerm: r.matchedTerm,
-      linkType: null,
-      sourcePin: null,
-      targetPin: null,
       color: null,
+      edgeKind: "implicit",
+      id: r.id,
+      linkType: null,
+      matchedTerm: r.matchedTerm,
+      source: r.source,
+      sourcePin: null,
+      target: r.target,
+      targetPin: null,
     });
     neighborIds.add(r.source);
     neighborIds.add(r.target);
@@ -250,7 +250,7 @@ export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -264,7 +264,7 @@ export async function GET(req: Request) {
   const braneId = parseSpaceIdParam(url.searchParams.get("braneId"));
   if (!braneId) {
     return Response.json(
-      { ok: false, error: "Valid braneId is required" },
+      { error: "Valid braneId is required", ok: false },
       { status: 400 }
     );
   }
@@ -286,9 +286,9 @@ export async function GET(req: Request) {
   if (mode === "neighborhood" && !seedItemId) {
     return Response.json(
       {
-        ok: false,
         error:
           "seedItemId is required for neighborhood mode (or pass mode=full to load the whole brane up to limit).",
+        ok: false,
       },
       { status: 400 }
     );
@@ -296,16 +296,16 @@ export async function GET(req: Request) {
 
   const revisionToken = await fetchBraneRevision(db, braneId);
   const etag = buildEtag(braneId, revisionToken, {
+    limit,
+    maxDepth,
     mode,
     seedItemId,
-    maxDepth,
-    limit,
   });
   const ifNoneMatch = req.headers.get("if-none-match")?.trim();
   if (ifNoneMatch && ifNoneMatch === etag) {
     return new Response(null, {
+      headers: { "Cache-Control": "private, max-age=15", ETag: etag },
       status: 304,
-      headers: { ETag: etag, "Cache-Control": "private, max-age=15" },
     });
   }
 
@@ -314,11 +314,11 @@ export async function GET(req: Request) {
     // truncated slice is the freshest part of the brane.
     const allNodes = await db
       .select({
-        id: items.id,
-        title: items.title,
-        itemType: items.itemType,
         entityType: items.entityType,
+        id: items.id,
+        itemType: items.itemType,
         spaceId: items.spaceId,
+        title: items.title,
       })
       .from(items)
       .innerJoin(spaces, eq(spaces.id, items.spaceId))
@@ -331,27 +331,27 @@ export async function GET(req: Request) {
     if (nodeIds.length === 0) {
       return Response.json(
         {
-          ok: true,
+          edges: [],
           mode,
           nodes: [],
-          edges: [],
+          ok: true,
+          totals: { edges: 0, nodes: 0 },
           truncated: false,
-          totals: { nodes: 0, edges: 0 },
         },
-        { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } }
+        { headers: { "Cache-Control": "private, max-age=15", ETag: etag } }
       );
     }
 
     const [explicitEdges, implicitEdges] = await Promise.all([
       db
         .select({
-          id: itemLinks.id,
-          source: itemLinks.sourceItemId,
-          target: itemLinks.targetItemId,
-          linkType: itemLinks.linkType,
-          sourcePin: itemLinks.sourcePin,
-          targetPin: itemLinks.targetPin,
           color: itemLinks.color,
+          id: itemLinks.id,
+          linkType: itemLinks.linkType,
+          source: itemLinks.sourceItemId,
+          sourcePin: itemLinks.sourcePin,
+          target: itemLinks.targetItemId,
+          targetPin: itemLinks.targetPin,
         })
         .from(itemLinks)
         .where(
@@ -363,9 +363,9 @@ export async function GET(req: Request) {
       db
         .select({
           id: entityMentions.id,
+          matchedTerm: entityMentions.matchedTerm,
           source: entityMentions.sourceItemId,
           target: entityMentions.targetItemId,
-          matchedTerm: entityMentions.matchedTerm,
         })
         .from(entityMentions)
         .where(
@@ -379,40 +379,40 @@ export async function GET(req: Request) {
 
     const edges: BraneGraphEdge[] = [
       ...explicitEdges.map((r) => ({
-        id: r.id,
-        source: r.source,
-        target: r.target,
-        edgeKind: "explicit" as const,
-        matchedTerm: null,
-        linkType: r.linkType,
-        sourcePin: r.sourcePin,
-        targetPin: r.targetPin,
         color: r.color,
+        edgeKind: "explicit" as const,
+        id: r.id,
+        linkType: r.linkType,
+        matchedTerm: null,
+        source: r.source,
+        sourcePin: r.sourcePin,
+        target: r.target,
+        targetPin: r.targetPin,
       })),
       ...implicitEdges.map((r) => ({
-        id: r.id,
-        source: r.source,
-        target: r.target,
-        edgeKind: "implicit" as const,
-        matchedTerm: r.matchedTerm,
-        linkType: null,
-        sourcePin: null,
-        targetPin: null,
         color: null,
+        edgeKind: "implicit" as const,
+        id: r.id,
+        linkType: null,
+        matchedTerm: r.matchedTerm,
+        source: r.source,
+        sourcePin: null,
+        target: r.target,
+        targetPin: null,
       })),
     ];
 
     return Response.json(
       {
-        ok: true,
+        edges,
+        limit,
         mode,
         nodes: nodesSlice.map((n) => ({ ...n, depth: 0 })),
-        edges,
+        ok: true,
+        totals: { edges: edges.length, nodes: nodesSlice.length },
         truncated,
-        totals: { nodes: nodesSlice.length, edges: edges.length },
-        limit,
       },
-      { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } }
+      { headers: { "Cache-Control": "private, max-age=15", ETag: etag } }
     );
   }
 
@@ -421,8 +421,8 @@ export async function GET(req: Request) {
   // can prompt for "load more depth" or "raise limit".
   const seedRow = await db
     .select({
-      id: items.id,
       braneId: spaces.braneId,
+      id: items.id,
       spaceId: items.spaceId,
     })
     .from(items)
@@ -432,7 +432,7 @@ export async function GET(req: Request) {
     .then((rows) => rows[0]);
   if (!seedRow || seedRow.braneId !== braneId) {
     return Response.json(
-      { ok: false, error: "seedItemId is not in this brane" },
+      { error: "seedItemId is not in this brane", ok: false },
       { status: 404 }
     );
   }
@@ -490,17 +490,17 @@ export async function GET(req: Request) {
 
   return Response.json(
     {
-      ok: true,
-      mode,
-      seedItemId,
-      maxDepth,
-      nodes,
       edges: finalEdges,
-      truncated: visitedTruncated || frontierTruncated,
       frontierTruncated,
-      totals: { nodes: nodes.length, edges: finalEdges.length },
       limit,
+      maxDepth,
+      mode,
+      nodes,
+      ok: true,
+      seedItemId,
+      totals: { edges: finalEdges.length, nodes: nodes.length },
+      truncated: visitedTruncated || frontierTruncated,
     },
-    { headers: { ETag: etag, "Cache-Control": "private, max-age=15" } }
+    { headers: { "Cache-Control": "private, max-age=15", ETag: etag } }
   );
 }

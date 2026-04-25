@@ -4,6 +4,7 @@ import { ArrowsOutSimple } from "@phosphor-icons/react";
 import type { JSONContent } from "@tiptap/core";
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
+
 import {
   BufferedContentEditable,
   type WikiLinkAssistConfig,
@@ -174,7 +175,7 @@ export function ArchitecturalNodeBody({
         className={`${styles.nodeBody} ${className ?? ""}`.trim()}
         codeSyntaxDark={codeTheme}
         editable={editable}
-        onChange={(doc) => onCommitPayload?.({ kind: "hgDoc", doc })}
+        onChange={(doc) => onCommitPayload?.({ doc, kind: "hgDoc" })}
         placeholder={emptyPlaceholder ?? "Write here, or type / for blocks…"}
         showAiPendingGutter={false}
         surfaceKey={`canvas-${nodeId}`}
@@ -189,9 +190,9 @@ export function ArchitecturalNodeBody({
   return (
     <BufferedContentEditable
       checklistDeletion={{
+        taskCheckbox: styles.taskCheckbox,
         taskItem: styles.taskItem,
         taskText: styles.taskText,
-        taskCheckbox: styles.taskCheckbox,
       }}
       className={`${styles.nodeBody} ${className ?? ""}`.trim()}
       dataAttribute="data-node-body-editor"
@@ -199,7 +200,7 @@ export function ArchitecturalNodeBody({
       editable={editable}
       emptyPlaceholder={emptyPlaceholder ?? null}
       onCommit={(nextHtml) =>
-        onCommitPayload?.({ kind: "html", html: nextHtml })
+        onCommitPayload?.({ html: nextHtml, kind: "html" })
       }
       onDraftDirtyChange={onDraftDirtyChange}
       richDocCommand={onRichDocCommand}
@@ -279,15 +280,15 @@ export function ArchitecturalNodeCard({
       : Math.min(window.devicePixelRatio ?? 1, 2.5)
   );
   const cardStyle = {
-    width: `${nodeWidth}px`,
     "--entity-width": `${nodeWidth}px`,
+    width: `${nodeWidth}px`,
   } as CSSProperties;
 
   const imageCardMedia = useMemo(
     () =>
       isMediaNode
         ? parseArchitecturalMediaFromBody(bodyHtml)
-        : { src: null, alt: "" },
+        : { alt: "", src: null },
     [bodyHtml, isMediaNode]
   );
 
@@ -303,8 +304,8 @@ export function ArchitecturalNodeCard({
       return null;
     }
     return resolveImageDisplayUrl(imageCardMedia.src, {
-      maxCssPixels: nodeWidth * canvasPanZoomScale,
       devicePixelRatio: imageDpr,
+      maxCssPixels: nodeWidth * canvasPanZoomScale,
       useFullResolution: useFullImageResolution,
     });
   }, [

@@ -110,8 +110,8 @@ export function ArchitecturalTooltip({
   const [open, setOpen] = useState(false);
   const [paintOpen, setPaintOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number }>({
-    top: 0,
     left: 0,
+    top: 0,
   });
 
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,7 +212,7 @@ export function ArchitecturalTooltip({
     top = clamp(top, VIEWPORT_MARGIN, vh - th - VIEWPORT_MARGIN);
 
     tip.dataset.side = resolvedSide;
-    setCoords({ top, left });
+    setCoords({ left, top });
   }, [side, avoidSides]);
 
   useLayoutEffect(() => {
@@ -316,10 +316,10 @@ export function ArchitecturalTooltip({
   const triggerChild = cloneElement(
     children as ReactElement<Record<string, unknown>>,
     {
+      "aria-describedby": mergedDescribedBy,
       ref: (node: HTMLElement | null) => {
         assignRef(innerRefOf(children), node);
       },
-      "aria-describedby": mergedDescribedBy,
     }
   );
 
@@ -332,7 +332,7 @@ export function ArchitecturalTooltip({
             id={tipId}
             ref={surfaceRef}
             role="tooltip"
-            style={{ top: coords.top, left: coords.left }}
+            style={{ left: coords.left, top: coords.top }}
           >
             {content}
           </div>,

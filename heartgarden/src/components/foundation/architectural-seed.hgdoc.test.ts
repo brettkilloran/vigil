@@ -4,14 +4,14 @@ import { buildArchitecturalSeedGraph } from "@/src/components/foundation/archite
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 
 const TOKENS = {
-  taskItem: "taskItem",
   done: "done",
-  taskCheckbox: "taskCheckbox",
-  taskText: "taskText",
   mediaFrame: "mediaFrame",
   mediaImage: "mediaImage",
   mediaImageActions: "mediaImageActions",
   mediaUploadBtn: "mediaUploadBtn",
+  taskCheckbox: "taskCheckbox",
+  taskItem: "taskItem",
+  taskText: "taskText",
 };
 
 describe("architectural seed hgDoc migration", () => {

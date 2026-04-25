@@ -4,6 +4,7 @@
  */
 
 import { resolve } from "node:path";
+
 import { config } from "dotenv";
 import { createClient } from "redis";
 

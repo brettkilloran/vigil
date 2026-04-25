@@ -37,7 +37,7 @@ function parseFirstImgFromHtmlFragment(html: string): {
 } {
   const imgMatch = html.match(/<img\b[^>]*>/i);
   if (!imgMatch) {
-    return { src: null, alt: "" };
+    return { alt: "", src: null };
   }
   const tag = imgMatch[0];
   const srcQuoted = /\bsrc\s*=\s*["']([^"']*)["']/i.exec(tag);
@@ -47,7 +47,7 @@ function parseFirstImgFromHtmlFragment(html: string): {
   const altQuoted = /\balt\s*=\s*["']([^"']*)["']/i.exec(tag);
   const altUnquoted = altQuoted ? null : /\balt\s*=\s*([^\s>]+)/i.exec(tag);
   const alt = altQuoted?.[1] ?? altUnquoted?.[1] ?? "";
-  return { src, alt };
+  return { alt, src };
 }
 
 /**
@@ -66,14 +66,14 @@ export function parseArchitecturalMediaFromBody(bodyHtml: string): {
     const parsed = parseFirstImgFromHtmlFragment(inner);
     if (parsed.src) {
       if (isHeartgardenMediaPlaceholderSrc(parsed.src)) {
-        return { src: null, alt: parsed.alt };
+        return { alt: parsed.alt, src: null };
       }
       return parsed;
     }
   }
   const fallback = parseFirstImgFromHtmlFragment(bodyHtml);
   if (fallback.src && isHeartgardenMediaPlaceholderSrc(fallback.src)) {
-    return { src: null, alt: fallback.alt };
+    return { alt: fallback.alt, src: null };
   }
   return fallback;
 }

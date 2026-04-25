@@ -8,7 +8,7 @@ export function jsonPublicError(
   extra?: Record<string, unknown>
 ): Response {
   return Response.json(
-    { ok: false, error: publicMessage, code, ...extra },
+    { code, error: publicMessage, ok: false, ...extra },
     { status }
   );
 }

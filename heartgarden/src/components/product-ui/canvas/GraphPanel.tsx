@@ -150,8 +150,8 @@ export function GraphPanel({
           .slice(0, 12)
           .map((row) => ({
             id: row.id,
-            title: row.title ?? null,
             itemType: row.itemType ?? null,
+            title: row.title ?? null,
           }));
         setSeedSearchResults(hits);
       } catch (err) {
@@ -284,7 +284,7 @@ export function GraphPanel({
   return (
     <aside
       className="relative border-[var(--vigil-border)] border-l bg-[var(--vigil-bg)]"
-      style={{ width, minWidth: 320, maxWidth: 760 }}
+      style={{ maxWidth: 760, minWidth: 320, width }}
     >
       <div
         className="absolute top-0 bottom-0 left-0 z-10 w-1 cursor-col-resize bg-transparent hover:bg-[var(--vigil-border)]/70"

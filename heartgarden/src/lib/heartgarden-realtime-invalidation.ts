@@ -55,10 +55,10 @@ export async function publishHeartgardenSpaceInvalidation(
     return;
   }
   await publishHeartgardenRealtimeEvent({
-    type: "space.invalidate",
-    spaceId: options.originSpaceId,
     originSpaceId: options.originSpaceId,
     reason: options.reason,
+    spaceId: options.originSpaceId,
+    type: "space.invalidate",
     ...(options.itemId ? { itemId: options.itemId } : {}),
     spaceIds,
     updatedAt: new Date().toISOString(),

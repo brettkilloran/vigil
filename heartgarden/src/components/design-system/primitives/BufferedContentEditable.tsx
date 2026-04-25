@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+
 import hostStyles from "@/src/components/editing/BufferedContentEditable.module.css";
 import { SlashCommandAssistPopover } from "@/src/components/editing/SlashCommandAssistPopover";
 import {
@@ -465,11 +466,11 @@ export function BufferedContentEditable({
 
   const { draft, beginEditing, commitNow, cancelEditing, onDraftChange } =
     useEditorSession({
-      value,
       debounceMs,
       normalizeOnCommit,
       onCommit,
       onDraftDirtyChange,
+      value,
     });
 
   const closeSlash = useCallback(() => {
@@ -501,8 +502,8 @@ export function BufferedContentEditable({
     }
     const caretPlain = plain.length;
     slashPlainRangeRef.current = {
-      start: slash.startPlainOffset,
       end: caretPlain,
+      start: slash.startPlainOffset,
     };
     const filtered = filterSlashCommands(
       DEFAULT_SLASH_COMMAND_ITEMS,

@@ -5,21 +5,34 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { Tag, type TagVariant } from "@/src/components/ui/Tag";
 
 const meta: Meta<typeof Tag> = {
-  title: "Heartgarden/Design System/Primitives/Tag",
-  component: Tag,
   args: {
-    variant: "llmLight",
     children: "Unreviewed",
+    variant: "llmLight",
   },
   argTypes: {
+    children: { control: "text" },
     variant: {
       control: "radio",
-      options: ["llmLight", "llmCode", "llmFocusDark", "neutral"],
       description:
         "LLM / ingestion review chips use llmLight (paper), llmCode (dark code card), llmFocusDark (dark focus).",
+      options: ["llmLight", "llmCode", "llmFocusDark", "neutral"],
     },
-    children: { control: "text" },
   },
+  component: Tag,
+  decorators: [
+    (Story) => (
+      <div
+        style={{
+          background: "var(--theme-default-bg)",
+          color: "var(--theme-default-text)",
+          fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+          padding: 20,
+        }}
+      >
+        <Story />
+      </div>
+    ),
+  ],
   parameters: {
     docs: {
       description: {
@@ -28,20 +41,7 @@ const meta: Meta<typeof Tag> = {
       },
     },
   },
-  decorators: [
-    (Story) => (
-      <div
-        style={{
-          background: "var(--theme-default-bg)",
-          color: "var(--theme-default-text)",
-          padding: 20,
-          fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-        }}
-      >
-        <Story />
-      </div>
-    ),
-  ],
+  title: "Heartgarden/Design System/Primitives/Tag",
 };
 
 export default meta;
@@ -62,8 +62,8 @@ export const LlmAndNeutralMatrix: Story = {
       <div>
         <p
           style={{
-            fontSize: 12,
             color: "var(--sem-text-muted)",
+            fontSize: 12,
             margin: "0 0 8px",
           }}
         >
@@ -71,10 +71,10 @@ export const LlmAndNeutralMatrix: Story = {
         </p>
         <div
           style={{
-            padding: 16,
             background: "var(--theme-default-bg)",
-            borderRadius: 8,
             border: "1px solid var(--sem-border-subtle)",
+            borderRadius: 8,
+            padding: 16,
           }}
         >
           <Tag variant="llmLight">Unreviewed</Tag>
@@ -83,8 +83,8 @@ export const LlmAndNeutralMatrix: Story = {
       <div>
         <p
           style={{
-            fontSize: 12,
             color: "var(--sem-text-muted)",
+            fontSize: 12,
             margin: "0 0 8px",
           }}
         >
@@ -92,12 +92,12 @@ export const LlmAndNeutralMatrix: Story = {
         </p>
         <div
           style={{
-            padding: 16,
             background: "var(--theme-code-bg)",
-            color: "var(--theme-code-text)",
-            borderRadius: 8,
             border:
               "1px solid color-mix(in oklch, var(--sys-color-white) 8%, transparent)",
+            borderRadius: 8,
+            color: "var(--theme-code-text)",
+            padding: 16,
           }}
         >
           <Tag variant="llmCode">Unreviewed</Tag>
@@ -106,8 +106,8 @@ export const LlmAndNeutralMatrix: Story = {
       <div>
         <p
           style={{
-            fontSize: 12,
             color: "var(--sem-text-muted)",
+            fontSize: 12,
             margin: "0 0 8px",
           }}
         >
@@ -115,10 +115,10 @@ export const LlmAndNeutralMatrix: Story = {
         </p>
         <div
           style={{
-            padding: 16,
             background:
               "color-mix(in oklch, var(--sys-color-neutral-950) 96%, transparent)",
             borderRadius: 8,
+            padding: 16,
           }}
         >
           <Tag variant="llmFocusDark">Unreviewed</Tag>
@@ -127,8 +127,8 @@ export const LlmAndNeutralMatrix: Story = {
       <div>
         <p
           style={{
-            fontSize: 12,
             color: "var(--sem-text-muted)",
+            fontSize: 12,
             margin: "0 0 8px",
           }}
         >
@@ -136,9 +136,9 @@ export const LlmAndNeutralMatrix: Story = {
         </p>
         <div
           style={{
-            padding: 16,
             background: "var(--sem-surface-base)",
             borderRadius: 8,
+            padding: 16,
           }}
         >
           <Tag variant="neutral">Beta</Tag>
@@ -152,10 +152,10 @@ export const VariantLabels: Story = {
   render: () => (
     <div
       style={{
+        alignItems: "center",
         display: "flex",
         flexWrap: "wrap",
         gap: 8,
-        alignItems: "center",
       }}
     >
       {llmVariants.map((v) => (

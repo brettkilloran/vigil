@@ -57,5 +57,5 @@ export function useVigilTheme() {
     setAndStore(order[(i + 1) % order.length]!);
   }, [preference, setAndStore]);
 
-  return { preference, resolved, setPreference: setAndStore, cyclePreference };
+  return { cyclePreference, preference, resolved, setPreference: setAndStore };
 }

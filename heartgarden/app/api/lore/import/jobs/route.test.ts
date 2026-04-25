@@ -23,8 +23,8 @@ vi.mock("@/src/lib/lore-import-job-process", () => ({
 }));
 
 vi.mock("@/src/lib/heartgarden-api-boot-context", () => ({
-  getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
   enforceGmOnlyBootContext: vi.fn().mockReturnValue(null),
+  getHeartgardenApiBootContext: vi.fn().mockResolvedValue({ role: "gm" }),
   gmMayAccessSpaceIdAsync: gmMayAccessSpaceIdAsyncMock,
   heartgardenApiForbiddenJsonResponse: vi.fn(),
 }));
@@ -49,9 +49,9 @@ describe("POST /api/lore/import/jobs", () => {
   it("returns 400 for invalid JSON body", async () => {
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: "{not-json",
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -63,9 +63,9 @@ describe("POST /api/lore/import/jobs", () => {
   it("returns 400 with hint when body fails schema", async () => {
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/jobs", {
-      method: "POST",
+      body: JSON.stringify({ spaceId: "not-a-uuid", text: "" }),
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: "", spaceId: "not-a-uuid" }),
+      method: "POST",
     });
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -88,13 +88,13 @@ describe("POST /api/lore/import/jobs", () => {
     });
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: "import me",
-        spaceId: "11111111-1111-4111-8111-111111111111",
         fileName: "notes.md",
+        spaceId: "11111111-1111-4111-8111-111111111111",
+        text: "import me",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const res = await POST(req);
     const payload = (await res.json()) as {
@@ -126,12 +126,12 @@ describe("POST /api/lore/import/jobs", () => {
     processLoreImportJobMock.mockResolvedValue(undefined);
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: "import me",
         spaceId: "11111111-1111-4111-8111-111111111111",
+        text: "import me",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const res = await POST(req);
     const payload = (await res.json()) as {
@@ -157,19 +157,19 @@ describe("POST /api/lore/import/jobs", () => {
     });
     const executeMock = vi.fn().mockResolvedValue(undefined);
     tryGetDbMock.mockReturnValue({
+      execute: executeMock,
       insert: () => ({
         values: valuesMock,
       }),
-      execute: executeMock,
     });
     const { POST } = await import("./route");
     const req = new Request("http://localhost/api/lore/import/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: "legacy schema import",
         spaceId: "11111111-1111-4111-8111-111111111111",
+        text: "legacy schema import",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const res = await POST(req);
     const payload = (await res.json()) as {

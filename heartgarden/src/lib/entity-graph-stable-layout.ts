@@ -180,11 +180,11 @@ export function computeStableLayout(
     const start = pinned ?? seeded ?? deterministic;
     const simNode: SimNode = {
       ...node,
-      x: start.x,
-      y: start.y,
+      collisionRadius: estimatedPillCollisionRadius(node.title),
       fx: pinned?.x ?? null,
       fy: pinned?.y ?? null,
-      collisionRadius: estimatedPillCollisionRadius(node.title),
+      x: start.x,
+      y: start.y,
     };
     byId.set(node.id, simNode);
     return simNode;

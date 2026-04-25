@@ -12,8 +12,8 @@ describe("buildBindingPatchForImport", () => {
   it("maps faction → character to a factionRoster stub", () => {
     const patch = buildBindingPatchForImport({
       sourceKind: "faction",
-      targetKind: "npc",
       targetItemId: TARGET_ID,
+      targetKind: "npc",
       targetTitle: "Lyra",
     });
     expect(patch?.kind).toBe("faction.factionRoster");
@@ -31,8 +31,8 @@ describe("buildBindingPatchForImport", () => {
   it("maps character → faction to primaryFactions", () => {
     const patch = buildBindingPatchForImport({
       sourceKind: "character",
-      targetKind: "faction",
       targetItemId: TARGET_ID,
+      targetKind: "faction",
     });
     expect(patch?.kind).toBe("character.primaryFactions");
   });
@@ -40,8 +40,8 @@ describe("buildBindingPatchForImport", () => {
   it("maps character → location to primaryLocations", () => {
     const patch = buildBindingPatchForImport({
       sourceKind: "npc",
-      targetKind: "location",
       targetItemId: TARGET_ID,
+      targetKind: "location",
     });
     expect(patch?.kind).toBe("character.primaryLocations");
   });
@@ -49,8 +49,8 @@ describe("buildBindingPatchForImport", () => {
   it("maps location → character to linkedCharacters", () => {
     const patch = buildBindingPatchForImport({
       sourceKind: "location",
-      targetKind: "character",
       targetItemId: TARGET_ID,
+      targetKind: "character",
     });
     expect(patch?.kind).toBe("location.linkedCharacters");
   });
@@ -59,15 +59,15 @@ describe("buildBindingPatchForImport", () => {
     expect(
       buildBindingPatchForImport({
         sourceKind: "lore",
-        targetKind: "lore",
         targetItemId: TARGET_ID,
+        targetKind: "lore",
       })
     ).toBeNull();
     expect(
       buildBindingPatchForImport({
         sourceKind: "quest",
-        targetKind: "character",
         targetItemId: TARGET_ID,
+        targetKind: "character",
       })
     ).toBeNull();
   });
@@ -78,20 +78,20 @@ describe("mergeHgArchBindingPatches", () => {
     const base = {
       factionRoster: [
         {
+          characterItemId: OTHER_ID,
           id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
           kind: "character" as const,
-          characterItemId: OTHER_ID,
         },
       ],
     };
     const { hgArch, touchedSlots } = mergeHgArchBindingPatches(base, [
       {
-        kind: "faction.factionRoster",
         entry: {
+          characterItemId: TARGET_ID,
           id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
           kind: "character",
-          characterItemId: TARGET_ID,
         },
+        kind: "faction.factionRoster",
       },
     ]);
     expect(Array.isArray(hgArch.factionRoster)).toBe(true);
@@ -103,20 +103,20 @@ describe("mergeHgArchBindingPatches", () => {
     const base = {
       factionRoster: [
         {
+          characterItemId: TARGET_ID,
           id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
           kind: "character" as const,
-          characterItemId: TARGET_ID,
         },
       ],
     };
     const { hgArch, touchedSlots } = mergeHgArchBindingPatches(base, [
       {
-        kind: "faction.factionRoster",
         entry: {
+          characterItemId: TARGET_ID,
           id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
           kind: "character",
-          characterItemId: TARGET_ID,
         },
+        kind: "faction.factionRoster",
       },
     ]);
     expect((hgArch.factionRoster as unknown[]).length).toBe(1);
@@ -125,7 +125,7 @@ describe("mergeHgArchBindingPatches", () => {
 
   it("sets primaryFactionItemId / primaryLocationItemId on loreThreadAnchors", () => {
     const { hgArch, touchedSlots } = mergeHgArchBindingPatches(null, [
-      { kind: "character.primaryFactions", factionItemId: TARGET_ID },
+      { factionItemId: TARGET_ID, kind: "character.primaryFactions" },
       { kind: "character.primaryLocations", locationItemId: OTHER_ID },
     ]);
     const anchors = hgArch.loreThreadAnchors as Record<string, unknown>;
@@ -145,8 +145,8 @@ describe("mergeHgArchBindingPatches", () => {
         loreThreadAnchors: { linkedCharacterItemIds: [OTHER_ID] },
       },
       [
-        { kind: "location.linkedCharacters", characterItemId: TARGET_ID },
-        { kind: "location.linkedCharacters", characterItemId: OTHER_ID },
+        { characterItemId: TARGET_ID, kind: "location.linkedCharacters" },
+        { characterItemId: OTHER_ID, kind: "location.linkedCharacters" },
       ]
     );
     const anchors = hgArch.loreThreadAnchors as Record<string, unknown>;

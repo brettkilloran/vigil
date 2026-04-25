@@ -21,10 +21,10 @@ describe("lore-import-diagnostic", () => {
   it("truncates long summary lines", () => {
     const detail: LoreImportFailureDetail = {
       attemptId: "attempt-a",
-      stage: "parse",
-      operation: "POST /api/lore/import/parse",
       message: "x".repeat(180),
       occurredAtIso: "2026-01-01T00:00:00.000Z",
+      operation: "POST /api/lore/import/parse",
+      stage: "parse",
     };
     const summary = loreImportSummaryLine(detail);
     expect(summary.length).toBeLessThanOrEqual(73);
@@ -33,18 +33,18 @@ describe("lore-import-diagnostic", () => {
   it("formats a copyable support report", () => {
     const detail: LoreImportFailureDetail = {
       attemptId: "attempt-123",
-      stage: "job_poll",
-      operation: "GET /api/lore/import/jobs/[jobId]",
-      message: "Import job failed",
-      responseSnippet: '{"ok":false,"error":"Import job failed"}',
-      httpStatus: 500,
-      jobId: "123e4567-e89b-12d3-a456-426614174000",
-      phase: "outline",
       errorCode: "outline_llm_failed",
       fileName: "chapter-1.md",
-      spaceId: "123e4567-e89b-12d3-a456-426614174001",
-      recommendedAction: "Retry with a smaller source file.",
+      httpStatus: 500,
+      jobId: "123e4567-e89b-12d3-a456-426614174000",
+      message: "Import job failed",
       occurredAtIso: "2026-01-01T00:00:00.000Z",
+      operation: "GET /api/lore/import/jobs/[jobId]",
+      phase: "outline",
+      recommendedAction: "Retry with a smaller source file.",
+      responseSnippet: '{"ok":false,"error":"Import job failed"}',
+      spaceId: "123e4567-e89b-12d3-a456-426614174001",
+      stage: "job_poll",
     };
     const report = formatLoreImportFailureReport(detail);
     expect(report).toContain("attemptId: attempt-123");

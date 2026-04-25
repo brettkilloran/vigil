@@ -93,10 +93,10 @@ export async function GET(req: Request) {
   }
 
   const payload: Record<string, unknown> = {
-    version: 1,
+    items: rows.map(rowToCanvasItem),
     space_id: spaceId,
     total,
-    items: rows.map(rowToCanvasItem),
+    version: 1,
   };
   if (pageLimit != null) {
     payload.limit = pageLimit;

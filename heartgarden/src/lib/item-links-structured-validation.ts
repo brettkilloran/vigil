@@ -52,9 +52,9 @@ export function validateStructuredMirrorItemLink(
   const slotId = readBindingSlotId(meta);
   if (!slotId) {
     return {
-      ok: false,
       error:
         "structured_mirror links require meta.bindingSlotId (see bindings-catalog BindingSlotId)",
+      ok: false,
       status: 400,
     };
   }
@@ -62,8 +62,8 @@ export function validateStructuredMirrorItemLink(
   const slot = BINDING_SLOT_BY_ID[slotId as BindingSlotId];
   if (!slot) {
     return {
-      ok: false,
       error: `Unknown meta.bindingSlotId: ${slotId}`,
+      ok: false,
       status: 400,
     };
   }
@@ -84,16 +84,16 @@ export function validateSlotEndpoints(
 
   if (!(sourceMatches || targetMatches)) {
     return {
-      ok: false,
       error: `structured_mirror for ${slot.id} requires one ${shell} card among the endpoints`,
+      ok: false,
       status: 400,
     };
   }
   if (sourceMatches && targetMatches) {
     return {
-      ok: false,
       error:
         "structured_mirror endpoints are ambiguous (both match slot shell)",
+      ok: false,
       status: 400,
     };
   }
@@ -101,8 +101,8 @@ export function validateSlotEndpoints(
   const boundType = sourceMatches ? tt : st;
   if (!(boundType && slot.targetEntityTypes.includes(boundType))) {
     return {
-      ok: false,
       error: `structured_mirror target must be entity type: ${slot.targetEntityTypes.join(", ")}`,
+      ok: false,
       status: 400,
     };
   }

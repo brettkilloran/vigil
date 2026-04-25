@@ -44,6 +44,7 @@ export function chunkBreadcrumb(path: string[]): string {
 /**
  * Split one section into overlapping chunks, preferring paragraph boundaries.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: paragraph + sentence + char-window splitting; each branch is a distinct boundary heuristic
 function splitSectionText(text: string): string[] {
   const normalized = text.replace(/\r\n?/g, "\n").trim();
   if (!normalized) {
@@ -119,12 +120,12 @@ export function chunkVaultSections(sections: HgDocSection[]): VaultChunk[] {
     if (pieces.length === 0 && section.text.trim()) {
       const chunkText =
         `${breadcrumb} - ${normalizeWhitespace(section.text)}`.trim();
-      out.push({ headingPath, breadcrumb, chunkText });
+      out.push({ breadcrumb, chunkText, headingPath });
       continue;
     }
     for (const piece of pieces) {
       const chunkText = `${breadcrumb} - ${piece}`.trim();
-      out.push({ headingPath, breadcrumb, chunkText });
+      out.push({ breadcrumb, chunkText, headingPath });
     }
   }
   return out;
@@ -137,7 +138,7 @@ export function chunkVaultText(fullText: string): string[] {
     return [];
   }
   const chunks = chunkVaultSections([
-    { headingPath: ["Untitled"], text: body, charRange: [0, body.length] },
+    { charRange: [0, body.length], headingPath: ["Untitled"], text: body },
   ]);
   return chunks.map((c) => c.chunkText);
 }

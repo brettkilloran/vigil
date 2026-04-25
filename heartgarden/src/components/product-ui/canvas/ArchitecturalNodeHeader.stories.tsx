@@ -5,38 +5,38 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalNodeHeader } from "@/src/components/foundation/ArchitecturalNodeCard";
 
 const meta: Meta<typeof ArchitecturalNodeHeader> = {
-  title: "Heartgarden/Product UI/Canvas/Node header",
-  component: ArchitecturalNodeHeader,
   args: {
-    title: "Brief // The second chance",
-    showExpand: true,
-    expandLabel: "Focus Mode",
     buttonTone: "card-light",
+    expandLabel: "Focus Mode",
     onExpand: () => {},
+    showExpand: true,
+    title: "Brief // The second chance",
   },
   argTypes: {
-    title: { control: "text" },
-    showExpand: { control: "boolean" },
-    expandLabel: { control: "text" },
     buttonTone: {
       control: "radio",
       options: ["card-light", "card-dark", "focus-light", "focus-dark"],
     },
+    expandLabel: { control: "text" },
     onExpand: { control: false },
+    showExpand: { control: "boolean" },
+    title: { control: "text" },
   },
+  component: ArchitecturalNodeHeader,
   decorators: [
     (Story) => (
       <div
         style={{
-          width: 360,
           background: "var(--theme-default-bg)",
           color: "var(--theme-default-text)",
+          width: 360,
         }}
       >
         <Story />
       </div>
     ),
   ],
+  title: "Heartgarden/Product UI/Canvas/Node header",
 };
 
 export default meta;
@@ -52,16 +52,16 @@ export const NoExpandButton: Story = {
 
 export const DarkCardActionTone: Story = {
   args: {
-    title: "DAT // sing_1r_boot.ts",
     buttonTone: "card-dark",
+    title: "DAT // sing_1r_boot.ts",
   },
   decorators: [
     (Story) => (
       <div
         style={{
-          width: 360,
           background: "var(--sys-color-neutral-900)",
           color: "var(--sem-text-secondary)",
+          width: 360,
         }}
       >
         <Story />

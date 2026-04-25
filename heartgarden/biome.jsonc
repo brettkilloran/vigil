@@ -4,5 +4,27 @@
     "ultracite/biome/core",
     "ultracite/biome/react",
     "ultracite/biome/next"
-  ]
+  ],
+  "assist": {
+    "actions": {
+      "source": {
+        "useSortedKeys": "on",
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              [":BUN:", ":NODE:"],
+              ":BLANK_LINE:",
+              ":URL:",
+              [":PACKAGE:"],
+              ":BLANK_LINE:",
+              ":ALIAS:",
+              ":BLANK_LINE:",
+              ":PATH:"
+            ]
+          }
+        }
+      }
+    }
+  }
 }

@@ -6,21 +6,21 @@ import { buildItemVaultCorpus } from "@/src/lib/item-searchable-text";
 describe("buildItemVaultCorpus", () => {
   it("includes hgDoc prose and hgArch string leaves", () => {
     const c = buildItemVaultCorpus({
-      title: "T",
-      contentText: "plain",
       contentJson: {
-        format: "hgDoc",
         doc: {
-          type: "doc",
           content: [
             {
+              content: [{ text: "Doc line", type: "text" }],
               type: "paragraph",
-              content: [{ type: "text", text: "Doc line" }],
             },
           ],
+          type: "doc",
         },
+        format: "hgDoc",
         hgArch: { orgNamePrimary: "The Syndicate" },
       },
+      contentText: "plain",
+      title: "T",
     });
     expect(c).toContain("Doc line");
     expect(c).toContain("The Syndicate");
@@ -30,12 +30,12 @@ describe("buildItemVaultCorpus", () => {
 
   it("strips format html fragments", () => {
     const c = buildItemVaultCorpus({
-      title: "",
-      contentText: "",
       contentJson: {
         format: "html",
         html: "<p>Alpha</p><script>x</script>",
       },
+      contentText: "",
+      title: "",
     });
     expect(c).toContain("Alpha");
     expect(c).not.toContain("script");
@@ -43,29 +43,29 @@ describe("buildItemVaultCorpus", () => {
 
   it("emits a kind:<canonicalEntityKind> token for imported items", () => {
     const c = buildItemVaultCorpus({
-      title: "Varin",
-      contentText: "",
       contentJson: null,
+      contentText: "",
       entityMeta: { canonicalEntityKind: "npc", import: true },
+      title: "Varin",
     });
     expect(c).toContain("kind:npc");
   });
 
   it("does not emit kind: for malformed canonicalEntityKind", () => {
     const c = buildItemVaultCorpus({
-      title: "Weird",
-      contentText: "",
       contentJson: null,
+      contentText: "",
       entityMeta: { canonicalEntityKind: "NPC-! ! space" },
+      title: "Weird",
     });
     expect(c).not.toContain("kind:");
   });
 
   it("includes entity_meta strings", () => {
     const c = buildItemVaultCorpus({
-      title: "x",
       contentText: "",
       entityMeta: { customTag: "north-quarter", note: "GM only" },
+      title: "x",
     });
     expect(c).toContain("north-quarter");
     expect(c).toContain("GM only");
@@ -73,9 +73,9 @@ describe("buildItemVaultCorpus", () => {
 
   it("handles empty hgDoc", () => {
     const c = buildItemVaultCorpus({
-      title: "",
+      contentJson: { doc: EMPTY_HG_DOC, format: "hgDoc" },
       contentText: "",
-      contentJson: { format: "hgDoc", doc: EMPTY_HG_DOC },
+      title: "",
     });
     expect(c).toBe("");
   });

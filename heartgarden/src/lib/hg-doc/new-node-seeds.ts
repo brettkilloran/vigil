@@ -10,43 +10,43 @@ export function newDefaultHgDocSeed(): JSONContent {
 /** Fresh checklist card with two starter rows. */
 export function newTaskHgDocSeed(): JSONContent {
   return {
-    type: "doc",
     content: [
       {
-        type: "taskList",
         content: [
           {
-            type: "taskItem",
             attrs: { checked: false },
             content: [
               {
-                type: "paragraph",
                 content: [
                   {
-                    type: "text",
                     text: "Clarify objective and acceptance criteria",
+                    type: "text",
                   },
                 ],
+                type: "paragraph",
               },
             ],
+            type: "taskItem",
           },
           {
-            type: "taskItem",
             attrs: { checked: false },
             content: [
               {
-                type: "paragraph",
                 content: [
                   {
-                    type: "text",
                     text: "Break work into two focused steps",
+                    type: "text",
                   },
                 ],
+                type: "paragraph",
               },
             ],
+            type: "taskItem",
           },
         ],
+        type: "taskList",
       },
     ],
+    type: "doc",
   };
 }

@@ -50,10 +50,10 @@ export function filterPlanLinksToSameCanvasSpace(
     }
     out.push({
       fromClientId: link.fromClientId,
-      toClientId: link.toClientId,
       linkType: normalizeImportItemLinkType(link.linkType),
+      toClientId: link.toClientId,
       ...(link.linkIntent ? { linkIntent: link.linkIntent } : {}),
     });
   }
-  return { links: out, crossSpaceMentions: [], warnings };
+  return { crossSpaceMentions: [], links: out, warnings };
 }

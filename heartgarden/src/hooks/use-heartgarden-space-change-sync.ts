@@ -217,14 +217,14 @@ export function useHeartgardenSpaceChangeSync(options: {
               `poll failure (${data.cause})${data.httpStatus ? ` status=${data.httpStatus}` : ""}: ${data.error}`
             );
             neonSyncReportAuxiliaryFailure({
-              operation: `GET /api/spaces/${activeSpaceId}/changes`,
-              message: data.error,
               cause:
                 data.cause === "http"
                   ? "http"
                   : data.cause === "network"
                     ? "network"
                     : "client",
+              message: data.error,
+              operation: `GET /api/spaces/${activeSpaceId}/changes`,
               ...(data.httpStatus == null
                 ? {}
                 : { httpStatus: data.httpStatus }),
@@ -248,9 +248,9 @@ export function useHeartgardenSpaceChangeSync(options: {
             ? new Set(data.itemIds)
             : null;
           const protectedContentIds = buildCollabMergeProtectedContentIds({
-            focusOpen: focusOpenRef.current,
-            focusDirty: focusDirtyRef.current,
             activeNodeId: activeNodeIdRef.current,
+            focusDirty: focusDirtyRef.current,
+            focusOpen: focusOpenRef.current,
             inlineContentDirtyIds: inlineContentDirtyIdsRef.current,
             savingContentIds: savingContentIdsRef.current,
           });
@@ -265,12 +265,12 @@ export function useHeartgardenSpaceChangeSync(options: {
           }));
           setGraph((prev) =>
             applySpaceChangeGraphMerge({
-              prev,
               activeSpaceId,
+              prev,
+              protectedContentIds,
               rawItems,
               rawSpaceRows: rawSpaces,
               serverItemIds: serverIds,
-              protectedContentIds,
               tombstoneExemptIds: remoteTombstoneExemptIdsRef.current,
             })
           );
@@ -293,8 +293,8 @@ export function useHeartgardenSpaceChangeSync(options: {
         }
 
         onAfterSpaceChangeMerge?.({
-          source,
           itemLinksRevision: lastItemLinksRevision,
+          source,
         });
       } finally {
         inFlightAbort = null;

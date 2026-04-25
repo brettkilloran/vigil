@@ -2,6 +2,7 @@
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { useState } from "react";
+
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
 import { CanvasMinimap } from "@/src/components/foundation/CanvasMinimap";
 import {
@@ -12,71 +13,71 @@ import {
 const SPACE = "space-1";
 
 const mockGraph: CanvasGraph = {
+  connections: {},
+  entities: {
+    n1: {
+      bodyHtml: "",
+      id: "n1",
+      kind: "content",
+      rotation: 0,
+      slots: { [SPACE]: { x: 40, y: 60 } },
+      stackId: null,
+      stackOrder: null,
+      tapeRotation: 0,
+      tapeVariant: "clear",
+      theme: "default",
+      title: "Alpha",
+    },
+    n2: {
+      bodyHtml: "",
+      id: "n2",
+      kind: "content",
+      rotation: 12,
+      slots: { [SPACE]: { x: 520, y: 180 } },
+      stackId: null,
+      stackOrder: null,
+      tapeRotation: 0,
+      tapeVariant: "clear",
+      theme: "default",
+      title: "Beta",
+      width: 300,
+    },
+    n3: {
+      bodyHtml: "",
+      id: "n3",
+      kind: "content",
+      rotation: 0,
+      slots: { [SPACE]: { x: 900, y: 400 } },
+      stackId: "st1",
+      stackOrder: 0,
+      tapeRotation: 0,
+      tapeVariant: "clear",
+      theme: "task",
+      title: "Stack bottom",
+    },
+    n4: {
+      bodyHtml: "",
+      id: "n4",
+      kind: "content",
+      rotation: 0,
+      slots: { [SPACE]: { x: 900, y: 400 } },
+      stackId: "st1",
+      stackOrder: 1,
+      tapeRotation: 0,
+      tapeVariant: "clear",
+      theme: "task",
+      title: "Stack top",
+    },
+  },
   rootSpaceId: SPACE,
   spaces: {
     [SPACE]: {
+      entityIds: ["n1", "n2", "n3", "n4"],
       id: SPACE,
       name: "Garden",
       parentSpaceId: null,
-      entityIds: ["n1", "n2", "n3", "n4"],
     },
   },
-  entities: {
-    n1: {
-      id: "n1",
-      kind: "content",
-      title: "Alpha",
-      theme: "default",
-      rotation: 0,
-      tapeRotation: 0,
-      tapeVariant: "clear",
-      bodyHtml: "",
-      stackId: null,
-      stackOrder: null,
-      slots: { [SPACE]: { x: 40, y: 60 } },
-    },
-    n2: {
-      id: "n2",
-      kind: "content",
-      title: "Beta",
-      theme: "default",
-      rotation: 12,
-      width: 300,
-      tapeRotation: 0,
-      tapeVariant: "clear",
-      bodyHtml: "",
-      stackId: null,
-      stackOrder: null,
-      slots: { [SPACE]: { x: 520, y: 180 } },
-    },
-    n3: {
-      id: "n3",
-      kind: "content",
-      title: "Stack bottom",
-      theme: "task",
-      rotation: 0,
-      tapeRotation: 0,
-      tapeVariant: "clear",
-      bodyHtml: "",
-      stackId: "st1",
-      stackOrder: 0,
-      slots: { [SPACE]: { x: 900, y: 400 } },
-    },
-    n4: {
-      id: "n4",
-      kind: "content",
-      title: "Stack top",
-      theme: "task",
-      rotation: 0,
-      tapeRotation: 0,
-      tapeVariant: "clear",
-      bodyHtml: "",
-      stackId: "st1",
-      stackOrder: 1,
-      slots: { [SPACE]: { x: 900, y: 400 } },
-    },
-  },
-  connections: {},
 };
 
 const collapsed = buildCollapsedStacksList(mockGraph, SPACE);
@@ -90,11 +91,11 @@ function MinimapDemo() {
   return (
     <div
       style={{
+        background: "var(--sem-surface-base, #0f1419)",
+        height: "100vh",
+        padding: 24,
         position: "relative",
         width: "100vw",
-        height: "100vh",
-        background: "var(--sem-surface-base, #0f1419)",
-        padding: 24,
       }}
     >
       <CanvasMinimap
@@ -126,9 +127,9 @@ function MinimapDemo() {
       />
       <p
         style={{
-          marginTop: 16,
-          fontSize: 12,
           color: "var(--vigil-muted, #8a93a3)",
+          fontSize: 12,
+          marginTop: 16,
         }}
       >
         Mock camera: scale {scale.toFixed(2)}, translate (
@@ -140,11 +141,11 @@ function MinimapDemo() {
 }
 
 const meta: Meta<typeof MinimapDemo> = {
-  title: "Heartgarden/Product UI/Canvas/Canvas minimap",
   component: MinimapDemo,
   parameters: {
     layout: "fullscreen",
   },
+  title: "Heartgarden/Product UI/Canvas/Canvas minimap",
 };
 
 export default meta;

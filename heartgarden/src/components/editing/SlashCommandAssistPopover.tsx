@@ -28,7 +28,7 @@ export function SlashCommandAssistPopover({
 
   const pos = useMemo(() => {
     if (!anchorRect) {
-      return { top: 0, left: 0 };
+      return { left: 0, top: 0 };
     }
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -49,7 +49,7 @@ export function SlashCommandAssistPopover({
     if (left < 8) {
       left = 8;
     }
-    return { top, left };
+    return { left, top };
   }, [anchorRect, candidates.length]);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function SlashCommandAssistPopover({
       className="fixed z-[12000] max-h-[min(320px,45vh)] w-[min(300px,calc(100vw-24px))] overflow-auto rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-panel)] py-1 shadow-xl"
       ref={panelRef}
       role="listbox"
-      style={{ top: pos.top, left: pos.left }}
+      style={{ left: pos.left, top: pos.top }}
     >
       {candidates.map((c, i) => (
         <Button

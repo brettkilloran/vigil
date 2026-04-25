@@ -390,8 +390,8 @@ export function VigilFlowRevealOverlay({
 
     const gl = canvas.getContext("webgl", {
       alpha: true,
-      premultipliedAlpha: true,
       antialias: false,
+      premultipliedAlpha: true,
     });
     if (!gl) {
       return;
@@ -444,12 +444,12 @@ export function VigilFlowRevealOverlay({
 
     glRef.current = {
       gl,
+      posBuffer: positionBuffer,
       program,
-      timeLoc,
       progressLoc,
       resLoc,
       softBootLoc,
-      posBuffer: positionBuffer,
+      timeLoc,
     };
 
     startTimeRef.current = Date.now();

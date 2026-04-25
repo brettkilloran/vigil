@@ -63,9 +63,9 @@ const png = Buffer.from(
 );
 
 const put = await fetch(uploadUrl, {
-  method: "PUT",
-  headers: { "Content-Type": "image/png" },
   body: png,
+  headers: { "Content-Type": "image/png" },
+  method: "PUT",
 });
 if (!put.ok) {
   console.error("PUT failed:", put.status, await put.text().catch(() => ""));

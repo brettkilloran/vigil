@@ -5,8 +5,8 @@ import { callAnthropicTextStream } from "./anthropic-client";
 function makeSseResponse(events: unknown[]): Response {
   const body = events.map((evt) => `data: ${JSON.stringify(evt)}\n\n`).join("");
   return new Response(body, {
-    status: 200,
     headers: { "content-type": "text/event-stream; charset=utf-8" },
+    status: 200,
   });
 }
 
@@ -28,18 +28,18 @@ describe("callAnthropicTextStream", () => {
         if (requestBodies.length === 1) {
           return makeSseResponse([
             {
+              delta: { text: "Hello ", type: "text_delta" },
               type: "content_block_delta",
-              delta: { type: "text_delta", text: "Hello " },
             },
-            { type: "message_delta", delta: { stop_reason: "max_tokens" } },
+            { delta: { stop_reason: "max_tokens" }, type: "message_delta" },
           ]);
         }
         return makeSseResponse([
           {
+            delta: { text: "world", type: "text_delta" },
             type: "content_block_delta",
-            delta: { type: "text_delta", text: "world" },
           },
-          { type: "message_delta", delta: { stop_reason: "end_turn" } },
+          { delta: { stop_reason: "end_turn" }, type: "message_delta" },
         ]);
       });
 
@@ -47,8 +47,8 @@ describe("callAnthropicTextStream", () => {
     for await (const chunk of callAnthropicTextStream(
       "key",
       {
+        messages: [{ content: "Say hello world.", role: "user" }],
         model: "claude-sonnet-4-20250514",
-        messages: [{ role: "user", content: "Say hello world." }],
       },
       { label: "lore.query.answer", maxOutputTokens: 16 }
     )) {
@@ -62,11 +62,11 @@ describe("callAnthropicTextStream", () => {
       ? second.messages
       : [];
     expect(secondMessages).toHaveLength(3);
-    expect(secondMessages[1]).toEqual({ role: "assistant", content: "Hello " });
+    expect(secondMessages[1]).toEqual({ content: "Hello ", role: "assistant" });
     expect(secondMessages[2]).toEqual({
-      role: "user",
       content:
         "Continue from where you left off. Do not repeat content already emitted.",
+      role: "user",
     });
   });
 
@@ -74,10 +74,10 @@ describe("callAnthropicTextStream", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       makeSseResponse([
         {
+          delta: { text: "Done.", type: "text_delta" },
           type: "content_block_delta",
-          delta: { type: "text_delta", text: "Done." },
         },
-        { type: "message_delta", delta: { stop_reason: "end_turn" } },
+        { delta: { stop_reason: "end_turn" }, type: "message_delta" },
       ])
     );
 
@@ -85,8 +85,8 @@ describe("callAnthropicTextStream", () => {
     for await (const chunk of callAnthropicTextStream(
       "key",
       {
+        messages: [{ content: "One line.", role: "user" }],
         model: "claude-sonnet-4-20250514",
-        messages: [{ role: "user", content: "One line." }],
       },
       { label: "lore.query.answer", maxOutputTokens: 16 }
     )) {

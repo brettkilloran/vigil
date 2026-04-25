@@ -11,10 +11,10 @@ import {
 describe("heartgarden-presence-body", () => {
   it("parses valid POST body", () => {
     const p = presencePostBodySchema.safeParse({
-      clientId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
       camera: { x: 1, y: -2, zoom: 1.5 },
-      pointer: { x: 10, y: 20 },
+      clientId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
       displayName: "Avery North",
+      pointer: { x: 10, y: 20 },
       sigil: "thread",
     });
     expect(p.success).toBe(true);
@@ -22,8 +22,8 @@ describe("heartgarden-presence-body", () => {
 
   it("rejects zoom out of shell bounds", () => {
     const p = presencePostBodySchema.safeParse({
-      clientId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
       camera: { x: 0, y: 0, zoom: 99 },
+      clientId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     });
     expect(p.success).toBe(false);
   });

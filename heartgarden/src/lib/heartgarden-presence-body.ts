@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import {
   PRESENCE_DISPLAY_NAME_MAX_CHARS,
   PRESENCE_SIGIL_VARIANTS,
@@ -30,10 +31,10 @@ export const presencePointerSchema = z.object({
 export const presenceSigilSchema = z.enum(PRESENCE_SIGIL_VARIANTS);
 
 export const presencePostBodySchema = z.object({
-  clientId: z.string().uuid(),
   camera: presenceCameraSchema,
-  pointer: presencePointerSchema.nullable().optional(),
+  clientId: z.string().uuid(),
   displayName: z.string().max(PRESENCE_DISPLAY_NAME_MAX_CHARS).optional(),
+  pointer: presencePointerSchema.nullable().optional(),
   sigil: presenceSigilSchema.optional(),
 });
 

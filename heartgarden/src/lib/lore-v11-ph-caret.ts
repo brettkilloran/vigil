@@ -94,7 +94,7 @@ function fallbackCaretLineBox(field: HTMLElement): {
   if (!Number.isFinite(lh) || lh <= 0 || cs.lineHeight === "normal") {
     lh = fontSize * 1.2;
   }
-  return { x: 0, y: 0, h: lh };
+  return { h: lh, x: 0, y: 0 };
 }
 
 /**
@@ -114,7 +114,7 @@ function caretBoxForField(field: HTMLElement): {
 
   const fr = field.getBoundingClientRect();
   if (fr.width <= 0 || fr.height <= 0) {
-    return { x: 0, y: 0, h: fb.h };
+    return { h: fb.h, x: 0, y: 0 };
   }
 
   let rr = range.getBoundingClientRect();
@@ -125,13 +125,13 @@ function caretBoxForField(field: HTMLElement): {
     }
   }
   if (rr.width === 0 && rr.height === 0) {
-    return { x: 0, y: 0, h: fb.h };
+    return { h: fb.h, x: 0, y: 0 };
   }
 
   const x = rr.left - fr.left;
   const y = rr.top - fr.top;
   const h = Math.max(rr.height, 1);
-  return { x, y, h };
+  return { h, x, y };
 }
 
 /**

@@ -8,35 +8,31 @@ import { getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
 const bodyHtml = getLoreNodeSeedBodyHtml("location", "v7");
 
 const meta: Meta<typeof ArchitecturalLoreLocationCanvasNode> = {
-  title: "Heartgarden/Product UI/Lore/Lore canvas · location coverage",
-  component: ArchitecturalLoreLocationCanvasNode,
   args: {
-    id: "story-lore-location-ordo-v7",
-    tapeRotation: 2,
-    bodyHtml,
     activeTool: "select",
+    bodyHtml,
     dragged: false,
-    selected: true,
+    id: "story-lore-location-ordo-v7",
     onBodyCommit: () => {},
+    selected: true,
     showStaple: true,
+    tapeRotation: 2,
   },
   argTypes: {
     activeTool: { control: "radio", options: ["select", "pan"] },
     onBodyCommit: { control: false },
     showStaple: { control: "boolean" },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalLoreLocationCanvasNode,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          minHeight: "100vh",
+          padding: 32,
           position: "relative",
           width: "100vw",
-          minHeight: "100vh",
-          background: "var(--sem-surface-base)",
-          padding: 32,
         }}
       >
         <div
@@ -49,6 +45,10 @@ const meta: Meta<typeof ArchitecturalLoreLocationCanvasNode> = {
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Lore/Lore canvas · location coverage",
 };
 
 export default meta;

@@ -9,38 +9,34 @@ import { VigilFlowRevealOverlay } from "@/src/components/transition-experiment/V
  * scenarios skip the overlay in the app, so most stories keep `default`.
  */
 const meta = {
-  title: "Heartgarden/Experiments/Flow reveal overlay",
-  component: VigilFlowRevealOverlay,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Prototype transition veil (WebGL). Renders nothing when `scenario` is not `default` or when the user prefers reduced motion.",
-      },
-    },
+  args: {
+    bootstrapPending: false,
+    navActive: true,
+    scenario: "default",
+    sessionActivated: false,
   },
+  component: VigilFlowRevealOverlay,
   decorators: [
     (Story) => (
       <div
         style={{
-          minHeight: "100vh",
           background:
             "linear-gradient(160deg, var(--sem-bg-canvas, #0f1218) 0%, #1a1520 100%)",
+          minHeight: "100vh",
         }}
       >
         <Story />
         <p
           style={{
-            position: "fixed",
             bottom: 24,
-            left: 24,
-            margin: 0,
-            fontSize: 13,
             color: "var(--sem-text-muted, rgba(255,255,255,0.45))",
             fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-            zIndex: 1,
+            fontSize: 13,
+            left: 24,
+            margin: 0,
             pointerEvents: "none",
+            position: "fixed",
+            zIndex: 1,
           }}
         >
           Sample content behind the overlay (fixed z below the canvas stack).
@@ -48,12 +44,16 @@ const meta = {
       </div>
     ),
   ],
-  args: {
-    scenario: "default",
-    sessionActivated: false,
-    navActive: true,
-    bootstrapPending: false,
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Prototype transition veil (WebGL). Renders nothing when `scenario` is not `default` or when the user prefers reduced motion.",
+      },
+    },
+    layout: "fullscreen",
   },
+  title: "Heartgarden/Experiments/Flow reveal overlay",
 } satisfies Meta<typeof VigilFlowRevealOverlay>;
 
 export default meta;
@@ -61,33 +61,33 @@ type Story = StoryObj<typeof meta>;
 
 export const IdleBeforeActivation: Story = {
   args: {
-    sessionActivated: false,
-    navActive: true,
     bootstrapPending: false,
+    navActive: true,
+    sessionActivated: false,
   },
 };
 
 export const SessionActivatedReveal: Story = {
   args: {
-    sessionActivated: true,
-    navActive: true,
     bootstrapPending: false,
+    navActive: true,
+    sessionActivated: true,
   },
 };
 
 export const BootstrapPending: Story = {
   args: {
-    sessionActivated: false,
-    navActive: true,
     bootstrapPending: true,
+    navActive: true,
+    sessionActivated: false,
   },
 };
 
 export const NonDefaultScenarioSkipsOverlay: Story = {
   args: {
+    navActive: true,
     scenario: "corrupt",
     sessionActivated: true,
-    navActive: true,
   },
   parameters: {
     docs: {

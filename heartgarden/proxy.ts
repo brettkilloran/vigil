@@ -9,7 +9,7 @@ import {
 } from "@/src/lib/heartgarden-boot-edge";
 import { authorizationBearerMatchesMcpServiceKey } from "@/src/lib/heartgarden-mcp-service-key";
 
-const FORBIDDEN = { ok: false, error: "Forbidden." };
+const FORBIDDEN = { error: "Forbidden.", ok: false };
 
 export async function proxy(request: NextRequest) {
   const { gateEnabled, sessionSecret } = readBootGateEnvEdge();

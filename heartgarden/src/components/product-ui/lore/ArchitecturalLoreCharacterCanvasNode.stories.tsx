@@ -8,35 +8,31 @@ import { getLoreNodeSeedBodyHtml } from "@/src/lib/lore-node-seed-html";
 const bodyHtml = getLoreNodeSeedBodyHtml("character", "v11");
 
 const meta: Meta<typeof ArchitecturalLoreCharacterCanvasNode> = {
-  title: "Heartgarden/Product UI/Lore/Lore canvas · character coverage",
-  component: ArchitecturalLoreCharacterCanvasNode,
   args: {
-    id: "story-lore-character-v11",
-    tapeRotation: -3,
-    bodyHtml,
     activeTool: "select",
+    bodyHtml,
     dragged: false,
-    selected: true,
+    id: "story-lore-character-v11",
     onBodyCommit: () => {},
-    tapeVariant: "dark",
+    selected: true,
     showTape: true,
+    tapeRotation: -3,
+    tapeVariant: "dark",
   },
   argTypes: {
     activeTool: { control: "radio", options: ["select", "pan"] },
     onBodyCommit: { control: false },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalLoreCharacterCanvasNode,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          minHeight: "100vh",
+          padding: 32,
           position: "relative",
           width: "100vw",
-          minHeight: "100vh",
-          background: "var(--sem-surface-base)",
-          padding: 32,
         }}
       >
         <div
@@ -49,6 +45,10 @@ const meta: Meta<typeof ArchitecturalLoreCharacterCanvasNode> = {
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Lore/Lore canvas · character coverage",
 };
 
 export default meta;

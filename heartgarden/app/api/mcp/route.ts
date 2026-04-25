@@ -46,9 +46,9 @@ function requestWithStreamableHttpAccept(request: NextRequest): Request {
   const headers = new Headers(request.headers);
   headers.set("accept", merged);
   const init: RequestInit & { duplex?: "half" } = {
-    method: request.method,
-    headers,
     body: request.body,
+    headers,
+    method: request.method,
     signal: request.signal ?? undefined,
   };
   if (request.body) {
@@ -64,25 +64,25 @@ async function handleMcpRequest(request: NextRequest): Promise<Response> {
         error: "HEARTGARDEN_MCP_SERVICE_KEY is not configured on the server.",
       }),
       {
-        status: 503,
         headers: { "Content-Type": "application/json" },
+        status: 503,
       }
     );
   }
   if (!mcpRequestAuthorizedByServiceKey(request)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
       headers: { "Content-Type": "application/json" },
+      status: 401,
     });
   }
 
   if (isLikelyBrowserDocumentNavigation(request)) {
     return new Response(MCP_BROWSER_INFO_HTML, {
-      status: 200,
       headers: {
-        "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store",
+        "Content-Type": "text/html; charset=utf-8",
       },
+      status: 200,
     });
   }
 
@@ -92,14 +92,14 @@ async function handleMcpRequest(request: NextRequest): Promise<Response> {
   const server = createHeartgardenMcpServer({
     baseUrl,
     defaultSpaceId: (process.env.HEARTGARDEN_DEFAULT_SPACE_ID ?? "").trim(),
-    writeKey: (process.env.HEARTGARDEN_MCP_WRITE_KEY ?? "").trim(),
-    serviceKey,
+    gmBreakGlass:
+      (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE ?? "").trim() === "1",
     playerSpaceExcluded: (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "")
       .trim()
       .toLowerCase(),
-    gmBreakGlass:
-      (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE ?? "").trim() === "1",
     readOnly: (process.env.HEARTGARDEN_MCP_READ_ONLY ?? "").trim() === "1",
+    serviceKey,
+    writeKey: (process.env.HEARTGARDEN_MCP_WRITE_KEY ?? "").trim(),
   });
 
   const transport = new WebStandardStreamableHTTPServerTransport({

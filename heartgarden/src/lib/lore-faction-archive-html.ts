@@ -35,10 +35,10 @@ export function factionArchiveRailTextsFromObjectId(objectId: string): {
 } {
   const full = objectId.replace(/\s+/g, "").toUpperCase();
   if (!full) {
-    return { upper: "—", lower: "—" };
+    return { lower: "—", upper: "—" };
   }
   const mid = Math.floor(full.length / 2);
-  return { upper: full.slice(0, mid), lower: full.slice(mid) };
+  return { lower: full.slice(mid), upper: full.slice(0, mid) };
 }
 
 function escapeHtmlText(text: string): string {
@@ -162,13 +162,13 @@ export function parseFactionArchive091BodyHtml(
   }
 
   return {
-    orgPrimaryInnerHtml:
-      (primary.innerHTML || "").trim() || LORE_V9_REDACTED_SENTINEL,
     orgAccentInnerHtml:
       (accent.innerHTML || "").trim() || LORE_V9_REDACTED_SENTINEL,
-    recordInnerHtml: (record.innerHTML || "").trim() || "<p><br></p>",
-    railUpper: (railU?.textContent || "").trim() || "—",
+    orgPrimaryInnerHtml:
+      (primary.innerHTML || "").trim() || LORE_V9_REDACTED_SENTINEL,
     railLower: (railL?.textContent || "").trim() || "—",
+    railUpper: (railU?.textContent || "").trim() || "—",
+    recordInnerHtml: (record.innerHTML || "").trim() || "<p><br></p>",
   };
 }
 

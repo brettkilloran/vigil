@@ -10,13 +10,13 @@ test.describe("/dev/lore-entity-nodes", () => {
   test("shows location v2–v7 seeded previews", async ({ page }) => {
     await page.goto("/dev/lore-entity-nodes");
     await expect(
-      page.getByRole("heading", { name: "Lore entity nodes", level: 1 })
+      page.getByRole("heading", { level: 1, name: "Lore entity nodes" })
     ).toBeVisible({
       timeout: 60_000,
     });
 
     await expect(
-      page.getByRole("heading", { name: "Location", level: 2 })
+      page.getByRole("heading", { level: 2, name: "Location" })
     ).toBeVisible();
 
     await expect(page.getByText("V2 · Postcard band")).toBeVisible();
@@ -55,7 +55,7 @@ test.describe("/dev/lore-entity-nodes", () => {
   }) => {
     await page.goto("/dev/lore-entity-nodes");
     await expect(
-      page.getByRole("heading", { name: "Lore entity nodes", level: 1 })
+      page.getByRole("heading", { level: 1, name: "Lore entity nodes" })
     ).toBeVisible({
       timeout: 60_000,
     });

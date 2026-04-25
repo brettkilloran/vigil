@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import { SmartImportQuestionsDemo } from "./SmartImportQuestionsDemo";
 
 export const metadata: Metadata = {
-  title: "Smart import questions — style preview",
   description: "Dev preview of the Smart Import question wizard flow.",
-  robots: { index: false, follow: false },
+  robots: { follow: false, index: false },
+  title: "Smart import questions — style preview",
 };
 
 export default function SmartImportQuestionsPage() {

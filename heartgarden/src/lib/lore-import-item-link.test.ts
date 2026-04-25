@@ -26,7 +26,7 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
   it("keeps links within the same folder", () => {
     const { links, crossSpaceMentions, warnings } =
       filterPlanLinksToSameCanvasSpace(notes, [
-        { fromClientId: "a", toClientId: "b", linkType: "bond" },
+        { fromClientId: "a", linkType: "bond", toClientId: "b" },
       ]);
     expect(links).toHaveLength(1);
     expect(crossSpaceMentions).toHaveLength(0);
@@ -36,7 +36,7 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
   it("keeps cross-folder links because the brane allows global linking", () => {
     const { links, crossSpaceMentions, warnings } =
       filterPlanLinksToSameCanvasSpace(notes, [
-        { fromClientId: "a", toClientId: "c", linkType: "history" },
+        { fromClientId: "a", linkType: "history", toClientId: "c" },
       ]);
     expect(links).toHaveLength(1);
     expect(links[0]?.fromClientId).toBe("a");
@@ -48,7 +48,7 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
   it("drops links that reference unknown note ids", () => {
     const { links, crossSpaceMentions, warnings } =
       filterPlanLinksToSameCanvasSpace(notes, [
-        { fromClientId: "a", toClientId: "ghost", linkType: "history" },
+        { fromClientId: "a", linkType: "history", toClientId: "ghost" },
       ]);
     expect(links).toHaveLength(0);
     expect(crossSpaceMentions).toHaveLength(0);
@@ -58,7 +58,7 @@ describe("filterPlanLinksToSameCanvasSpace", () => {
 
   it("normalises pin on co-located edges to history", () => {
     const { links } = filterPlanLinksToSameCanvasSpace(notes, [
-      { fromClientId: "a", toClientId: "b", linkType: "pin" },
+      { fromClientId: "a", linkType: "pin", toClientId: "b" },
     ]);
     expect(links[0]?.linkType).toBe("history");
   });

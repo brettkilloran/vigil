@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { prepDemoSession } from "../fixtures/bootstrap";
 
-test.use({ viewport: { width: 390, height: 844 } });
+test.use({ viewport: { height: 844, width: 390 } });
 
 test.describe("visual: boot (mobile width)", () => {
   test.beforeEach(async ({ page }) => {
@@ -19,8 +19,8 @@ test.describe("visual: boot (mobile width)", () => {
     });
 
     const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-      scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
     }));
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
 

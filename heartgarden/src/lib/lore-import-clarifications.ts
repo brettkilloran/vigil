@@ -297,21 +297,21 @@ export function validateClarificationAnswersForApply(
   for (const a of answers) {
     if (seenAnswer.has(a.clarificationId)) {
       return {
-        ok: false,
         error: `Duplicate answer for clarification ${a.clarificationId}`,
+        ok: false,
       };
     }
     seenAnswer.add(a.clarificationId);
     const c = byId.get(a.clarificationId);
     if (!c) {
       return {
-        ok: false,
         error: `Unknown clarification id ${a.clarificationId}`,
+        ok: false,
       };
     }
     const err = validateSingleAnswer(c, a);
     if (err) {
-      return { ok: false, error: err };
+      return { error: err, ok: false };
     }
   }
   for (const c of plan.clarifications) {
@@ -320,8 +320,8 @@ export function validateClarificationAnswersForApply(
     }
     if (!seenAnswer.has(c.id)) {
       return {
-        ok: false,
         error: `Missing answer for required clarification: ${c.title}`,
+        ok: false,
       };
     }
   }
@@ -409,17 +409,17 @@ export function resolveOtherClarificationAnswers(
       continue;
     }
     unresolved.push({
-      index: i,
+      bestScore,
       clarification: c,
+      confidence,
+      index: i,
       otherText,
       scored,
-      bestScore,
-      confidence,
     });
   }
 
   if (unresolved.length === 0) {
-    return { status: "resolved", answers: normalized };
+    return { answers: normalized, status: "resolved" };
   }
 
   unresolved.sort((a, b) => a.confidence - b.confidence);
@@ -430,17 +430,17 @@ export function resolveOtherClarificationAnswers(
     recommended: o.recommended,
   }));
   return {
-    status: "needs_follow_up",
     answers: normalized,
     followUp: {
       clarificationId: target.clarification.id,
-      title: target.clarification.title,
+      confidence: target.confidence,
+      options: topOptions,
+      otherText: target.otherText,
       question:
         "I could not confidently map your `Other` answer. Please choose the closest option, or skip this one and let the model use best judgement.",
-      options: topOptions,
-      confidence: target.confidence,
-      otherText: target.otherText,
+      title: target.clarification.title,
     },
+    status: "needs_follow_up",
   };
 }
 
@@ -552,8 +552,8 @@ export function normalizeClarificationsFromLlm(
       options.push({
         id,
         label,
-        recommended: op.recommended === true ? true : undefined,
         planPatchHint: hint,
+        recommended: op.recommended === true ? true : undefined,
       });
     }
     if (options.length < 2) {
@@ -590,9 +590,7 @@ export function normalizeClarificationsFromLlm(
     }
 
     const built = {
-      id: randomUUID(),
       category,
-      severity,
       confidenceScore:
         typeof o.confidenceScore === "number" &&
         Number.isFinite(o.confidenceScore)
@@ -600,26 +598,11 @@ export function normalizeClarificationsFromLlm(
           : typeof o.confidence === "number" && Number.isFinite(o.confidence)
             ? Math.max(0, Math.min(1, o.confidence))
             : undefined,
-      title,
       context:
         o.context == null ? undefined : String(o.context).trim().slice(0, 4000),
-      questionKind,
+      id: randomUUID(),
       options,
-      relatedNoteClientIds: Array.isArray(o.relatedNoteClientIds)
-        ? o.relatedNoteClientIds
-            .map((x) =>
-              String(x ?? "")
-                .trim()
-                .slice(0, 64)
-            )
-            .filter(Boolean)
-            .slice(0, 20)
-        : undefined,
-      relatedMergeProposalId:
-        typeof o.relatedMergeProposalId === "string" &&
-        /^[0-9a-f-]{36}$/i.test(o.relatedMergeProposalId)
-          ? o.relatedMergeProposalId
-          : undefined,
+      questionKind,
       relatedLink:
         o.relatedLink &&
         typeof o.relatedLink === "object" &&
@@ -636,6 +619,23 @@ export function normalizeClarificationsFromLlm(
               ).slice(0, 64),
             }
           : undefined,
+      relatedMergeProposalId:
+        typeof o.relatedMergeProposalId === "string" &&
+        /^[0-9a-f-]{36}$/i.test(o.relatedMergeProposalId)
+          ? o.relatedMergeProposalId
+          : undefined,
+      relatedNoteClientIds: Array.isArray(o.relatedNoteClientIds)
+        ? o.relatedNoteClientIds
+            .map((x) =>
+              String(x ?? "")
+                .trim()
+                .slice(0, 64)
+            )
+            .filter(Boolean)
+            .slice(0, 20)
+        : undefined,
+      severity,
+      title,
     };
 
     const parsed = loreImportClarificationItemSchema.safeParse(built);
@@ -681,30 +681,30 @@ export function buildChunkAssignmentClarifications(input: {
       {
         id: "drop",
         label: "Leave this chunk only on the source card",
-        recommended: true as const,
         planPatchHint: { op: "no_op" as const },
+        recommended: true as const,
       },
       ...noteOptions.map((n) => ({
         id: `assign_${n.clientId}`,
         label: `Attach "${chunk.heading.slice(0, 80)}" to ${n.title}`,
         planPatchHint: {
-          op: "assign_chunk_to_note" as const,
           chunkId,
           noteClientId: n.clientId,
+          op: "assign_chunk_to_note" as const,
         },
       })),
     ];
     const built = {
-      id: randomUUID(),
       category: "structure" as const,
-      severity: "optional" as const,
       confidenceScore: 0.7,
-      title: `Unassigned chunk: "${chunk.heading.slice(0, 80)}"`,
       context:
         "The outline did not attach this chunk to any note. It still lives on the imported source card, " +
         "but you can pin it to a specific note instead.",
-      questionKind: "single_select" as const,
+      id: randomUUID(),
       options: options.slice(0, 12),
+      questionKind: "single_select" as const,
+      severity: "optional" as const,
+      title: `Unassigned chunk: "${chunk.heading.slice(0, 80)}"`,
     };
     const parsed = loreImportClarificationItemSchema.safeParse(built);
     if (parsed.success) {
@@ -736,33 +736,33 @@ export function buildChunkAssignmentClarifications(input: {
       {
         id: `keep_${a.clientId}`,
         label: `Keep only on ${a.title}`,
-        recommended: true as const,
         planPatchHint: {
-          op: "unassign_chunk" as const,
           chunkId: dup.chunkId,
           noteClientId: b.clientId,
+          op: "unassign_chunk" as const,
         },
+        recommended: true as const,
       },
       {
         id: `keep_${b.clientId}`,
         label: `Keep only on ${b.title}`,
         planPatchHint: {
-          op: "unassign_chunk" as const,
           chunkId: dup.chunkId,
           noteClientId: a.clientId,
+          op: "unassign_chunk" as const,
         },
       },
     ];
     const built = {
-      id: randomUUID(),
       category: "structure" as const,
-      severity: "optional" as const,
       confidenceScore: 0.66,
-      title: "Chunk claimed by 2 notes",
       context: `"${chunk.heading.slice(0, 80)}" is listed on ${a.title} and ${b.title}.`,
-      questionKind: "single_select" as const,
+      id: randomUUID(),
       options,
+      questionKind: "single_select" as const,
       relatedNoteClientIds: [a.clientId, b.clientId],
+      severity: "optional" as const,
+      title: "Chunk claimed by 2 notes",
     };
     const parsed = loreImportClarificationItemSchema.safeParse(built);
     if (parsed.success) {
@@ -779,8 +779,8 @@ export function buildChunkAssignmentClarifications(input: {
       {
         id: "summary_only",
         label: "Keep this note as a summary-only stub",
-        recommended: true as const,
         planPatchHint: { op: "no_op" as const },
+        recommended: true as const,
       },
     ];
     for (const chunkId of input.unassignedChunkIds.slice(0, 5)) {
@@ -792,9 +792,9 @@ export function buildChunkAssignmentClarifications(input: {
         id: `attach_${chunkId}`,
         label: `Attach "${chunk.heading.slice(0, 80)}"`,
         planPatchHint: {
-          op: "assign_chunk_to_note" as const,
           chunkId,
           noteClientId,
+          op: "assign_chunk_to_note" as const,
         },
       });
     }
@@ -802,17 +802,17 @@ export function buildChunkAssignmentClarifications(input: {
       continue;
     }
     const built = {
-      id: randomUUID(),
       category: "structure" as const,
-      severity: "optional" as const,
       confidenceScore: 0.68,
-      title: `Note "${note.title}" has no chunks`,
       context:
         "The outline mentioned this note but did not attach any source chunks. It will be written as a " +
         "placeholder; attach a chunk or leave as a stub for now.",
-      questionKind: "single_select" as const,
+      id: randomUUID(),
       options: options.slice(0, 12),
+      questionKind: "single_select" as const,
       relatedNoteClientIds: [noteClientId],
+      severity: "optional" as const,
+      title: `Note "${note.title}" has no chunks`,
     };
     const parsed = loreImportClarificationItemSchema.safeParse(built);
     if (parsed.success) {
@@ -854,13 +854,10 @@ export function ensureClarificationsForContradictions(
 
     if (merge) {
       const built = {
-        id: randomUUID(),
         category: "conflict" as const,
-        severity: "required" as const,
         confidenceScore: 0.42,
-        title: "Contradiction with an existing card — merge or split?",
         context: ctx || contra.summary,
-        questionKind: "single_select" as const,
+        id: randomUUID(),
         options: [
           {
             id: "keep_merge",
@@ -870,16 +867,19 @@ export function ensureClarificationsForContradictions(
           {
             id: "skip_merge",
             label: "Skip this merge; create a separate new note",
-            recommended: true as const,
             planPatchHint: {
-              op: "discard_merge_proposal" as const,
               mergeProposalId: merge.id,
+              op: "discard_merge_proposal" as const,
             },
+            recommended: true as const,
           },
         ],
+        questionKind: "single_select" as const,
         relatedNoteClientIds: contra.noteClientId
           ? [contra.noteClientId]
           : undefined,
+        severity: "required" as const,
+        title: "Contradiction with an existing card — merge or split?",
       };
       const parsed = loreImportClarificationItemSchema.safeParse(built);
       if (parsed.success) {
@@ -887,28 +887,25 @@ export function ensureClarificationsForContradictions(
       }
     } else {
       const built = {
-        id: randomUUID(),
         category: "conflict" as const,
-        severity: "required" as const,
         confidenceScore: 0.5,
-        title: "Flagged contradiction — confirm import",
         context: ctx || contra.summary,
-        questionKind: "single_select" as const,
+        id: randomUUID(),
         options: contra.noteClientId
           ? [
               {
                 id: "as_current",
                 label: "Treat this note as current lore",
-                recommended: true as const,
                 planPatchHint: { op: "no_op" as const },
+                recommended: true as const,
               },
               {
                 id: "as_historical",
                 label: "Mark this note as historical / past-tense in setting",
                 planPatchHint: {
-                  op: "set_lore_historical" as const,
-                  noteClientId: contra.noteClientId,
                   loreHistorical: true,
+                  noteClientId: contra.noteClientId,
+                  op: "set_lore_historical" as const,
                 },
               },
             ]
@@ -916,8 +913,8 @@ export function ensureClarificationsForContradictions(
               {
                 id: "proceed",
                 label: "Proceed with import",
-                recommended: true as const,
                 planPatchHint: { op: "no_op" as const },
+                recommended: true as const,
               },
               {
                 id: "proceed_ack",
@@ -925,9 +922,12 @@ export function ensureClarificationsForContradictions(
                 planPatchHint: { op: "no_op" as const },
               },
             ],
+        questionKind: "single_select" as const,
         relatedNoteClientIds: contra.noteClientId
           ? [contra.noteClientId]
           : undefined,
+        severity: "required" as const,
+        title: "Flagged contradiction — confirm import",
       };
       const parsed = loreImportClarificationItemSchema.safeParse(built);
       if (parsed.success) {

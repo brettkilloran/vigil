@@ -12,20 +12,20 @@ import {
 describe("hgAiPending mark", () => {
   it("round-trips through HTML export and htmlFragmentToHgDocDoc", () => {
     const doc = {
-      type: "doc",
       content: [
         {
-          type: "paragraph",
           content: [
-            { type: "text", text: "Approved. " },
+            { text: "Approved. ", type: "text" },
             {
-              type: "text",
-              text: "Pending AI line.",
               marks: [{ type: "hgAiPending" }],
+              text: "Pending AI line.",
+              type: "text",
             },
           ],
+          type: "paragraph",
         },
       ],
+      type: "doc",
     } as const;
     const html = hgDocToHtml(doc);
     expect(html).toContain("data-hg-ai-pending");
@@ -35,45 +35,45 @@ describe("hgAiPending mark", () => {
 
   it("stripHgAiPendingFromHgDocJson removes marks", () => {
     const doc = {
-      type: "doc",
       content: [
         {
-          type: "paragraph",
           content: [
-            { type: "text", text: "x", marks: [{ type: "hgAiPending" }] },
+            { marks: [{ type: "hgAiPending" }], text: "x", type: "text" },
           ],
+          type: "paragraph",
         },
       ],
+      type: "doc",
     } as const;
     const stripped = stripHgAiPendingFromHgDocJson(doc);
     expect(hgDocJsonHasHgAiPending(stripped)).toBe(false);
     expect(stripped).toEqual({
-      type: "doc",
       content: [
         {
+          content: [{ text: "x", type: "text" }],
           type: "paragraph",
-          content: [{ type: "text", text: "x" }],
         },
       ],
+      type: "doc",
     });
   });
 
   it("stripHgAiPendingFromHtml unwraps spans emitted by hgDocToHtml", () => {
     const doc = {
-      type: "doc",
       content: [
         {
-          type: "paragraph",
           content: [
-            { type: "text", text: "Approved. " },
+            { text: "Approved. ", type: "text" },
             {
-              type: "text",
-              text: "Pending AI line.",
               marks: [{ type: "hgAiPending" }],
+              text: "Pending AI line.",
+              type: "text",
             },
           ],
+          type: "paragraph",
         },
       ],
+      type: "doc",
     } as const;
     const html = hgDocToHtml(doc);
     const stripped = stripHgAiPendingFromHtml(html);
@@ -96,12 +96,12 @@ describe("hgAiPending mark", () => {
             cb(
               {
                 isText: true,
-                text: "LLLLLLLLLLLLLLLLLLLL",
                 marks: [{ type: markType }],
+                text: "LLLLLLLLLLLLLLLLLLLL",
               },
               1
             );
-            cb({ isText: true, text: " tail", marks: [] }, 21);
+            cb({ isText: true, marks: [], text: " tail" }, 21);
           },
         },
       },

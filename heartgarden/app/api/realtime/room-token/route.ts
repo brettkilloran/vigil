@@ -21,7 +21,7 @@ const bodySchema = z.object({
 export async function POST(req: Request) {
   if (!isHeartgardenRealtimeConfigured()) {
     return Response.json(
-      { ok: false, error: "Realtime not configured" },
+      { error: "Realtime not configured", ok: false },
       { status: 503 }
     );
   }
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -43,13 +43,13 @@ export async function POST(req: Request) {
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -71,15 +71,15 @@ export async function POST(req: Request) {
 
   const exp = Math.floor(Date.now() / 1000) + 60 * 15;
   const token = signHeartgardenRealtimeRoomToken({
-    spaceId: parsed.data.spaceId,
     exp,
     role: bootCtx.role === "gm" ? "gm" : "player",
+    spaceId: parsed.data.spaceId,
   });
 
   return Response.json({
+    expiresAt: new Date(exp * 1000).toISOString(),
     ok: true,
     realtimeUrl: heartgardenRealtimePublicUrlFromEnv(),
     token,
-    expiresAt: new Date(exp * 1000).toISOString(),
   });
 }

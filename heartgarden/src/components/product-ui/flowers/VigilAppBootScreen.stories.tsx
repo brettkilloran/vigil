@@ -47,17 +47,17 @@ function BootScreenStage(props: {
 }
 
 const meta = {
-  title: "Heartgarden/Product UI/Flowers/Boot screen",
   component: VigilAppBootScreen,
   parameters: {
-    layout: "fullscreen",
     docs: {
       description: {
         component:
           "Pre-canvas gate: ambient flowers (portal host), copy, effects toggle, and optional boot PIN console. Activating runs exit animation in-place; callbacks are mocked here.",
       },
     },
+    layout: "fullscreen",
   },
+  title: "Heartgarden/Product UI/Flowers/Boot screen",
 } satisfies Meta<typeof VigilAppBootScreen>;
 
 export default meta;
@@ -65,42 +65,42 @@ type Story = StoryObj<typeof meta>;
 
 export const Ready: Story = {
   args: {
-    technicalReady: true,
-    onActivate: fn(),
-    onExitComplete: fn(),
-    flowerPortalContainer: null,
-    canvasEffectsEnabled: true,
-    onCanvasEffectsEnabledChange: fn(),
     bootGateEnabled: false,
     bootGateStatusReady: true,
+    canvasEffectsEnabled: true,
+    flowerPortalContainer: null,
+    onActivate: fn(),
+    onCanvasEffectsEnabledChange: fn(),
+    onExitComplete: fn(),
+    technicalReady: true,
   },
   render: () => <BootScreenStage technicalReady />,
 };
 
 export const WaitingOnTechnical: Story = {
   args: {
-    technicalReady: false,
-    onActivate: fn(),
-    onExitComplete: fn(),
-    flowerPortalContainer: null,
-    canvasEffectsEnabled: true,
-    onCanvasEffectsEnabledChange: fn(),
     bootGateEnabled: false,
     bootGateStatusReady: true,
+    canvasEffectsEnabled: true,
+    flowerPortalContainer: null,
+    onActivate: fn(),
+    onCanvasEffectsEnabledChange: fn(),
+    onExitComplete: fn(),
+    technicalReady: false,
   },
   render: () => <BootScreenStage technicalReady={false} />,
 };
 
 export const BootPinGate: Story = {
   args: {
-    technicalReady: true,
-    onActivate: fn(),
-    onExitComplete: fn(),
-    flowerPortalContainer: null,
-    canvasEffectsEnabled: true,
-    onCanvasEffectsEnabledChange: fn(),
     bootGateEnabled: true,
     bootGateStatusReady: true,
+    canvasEffectsEnabled: true,
+    flowerPortalContainer: null,
+    onActivate: fn(),
+    onCanvasEffectsEnabledChange: fn(),
+    onExitComplete: fn(),
+    technicalReady: true,
   },
   render: () => <BootScreenStage bootGateEnabled bootGateStatusReady />,
 };

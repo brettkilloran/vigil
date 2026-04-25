@@ -45,14 +45,14 @@ export function normalizeHgDocForCodeTheme(
     return d;
   }
   return {
-    type: "doc",
     content: [
       {
-        type: "codeBlock",
         attrs: { language: "typescript" },
-        content: text ? [{ type: "text", text }] : [],
+        content: text ? [{ text, type: "text" }] : [],
+        type: "codeBlock",
       },
     ],
+    type: "doc",
   };
 }
 

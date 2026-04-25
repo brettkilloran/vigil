@@ -12,10 +12,10 @@ import { assertSpaceExists } from "@/src/lib/spaces";
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  spaceId: z.string().uuid(),
-  title: z.string().max(255).default(""),
   bodyText: z.string().min(1).max(120_000),
   excludeItemId: z.string().uuid().optional(),
+  spaceId: z.string().uuid(),
+  title: z.string().max(255).default(""),
 });
 
 export async function POST(req: Request) {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(
-      { ok: false, error: "ANTHROPIC_API_KEY is not configured" },
+      { error: "ANTHROPIC_API_KEY is not configured", ok: false },
       { status: 503 }
     );
   }
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -45,25 +45,25 @@ export async function POST(req: Request) {
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
 
   if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parsed.data.spaceId))) {
-    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
+    return Response.json({ error: "Forbidden.", ok: false }, { status: 403 });
   }
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
     return Response.json(
-      { ok: false, error: "Space not found" },
+      { error: "Space not found", ok: false },
       { status: 404 }
     );
   }
@@ -73,17 +73,17 @@ export async function POST(req: Request) {
 
   try {
     const result = await runLoreConsistencyCheck({
-      db,
       apiKey: key,
+      bodyText: parsed.data.bodyText,
+      db,
+      excludeItemId: parsed.data.excludeItemId,
       model,
       spaceId: parsed.data.spaceId,
       title: parsed.data.title,
-      bodyText: parsed.data.bodyText,
-      excludeItemId: parsed.data.excludeItemId,
     });
     return Response.json({ ok: true, ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Consistency check failed";
-    return Response.json({ ok: false, error: msg }, { status: 500 });
+    return Response.json({ error: msg, ok: false }, { status: 500 });
   }
 }

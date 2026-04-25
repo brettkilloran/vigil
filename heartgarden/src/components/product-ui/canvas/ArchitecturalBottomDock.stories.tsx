@@ -15,28 +15,24 @@ import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.cs
 import type { ConnectionKind } from "@/src/lib/connection-kind-colors";
 
 const meta: Meta<typeof ArchitecturalBottomDock> = {
-  title: "Heartgarden/Product UI/Canvas/Bottom dock",
-  component: ArchitecturalBottomDock,
   args: {
-    onFormat: () => {},
-    onCreateNode: () => {},
-    insertDocActions: DEFAULT_DOC_INSERT_ACTIONS,
-    formatActions: DEFAULT_FORMAT_ACTIONS,
     createActions: DEFAULT_CREATE_ACTIONS,
+    formatActions: DEFAULT_FORMAT_ACTIONS,
+    insertDocActions: DEFAULT_DOC_INSERT_ACTIONS,
+    onCreateNode: () => {},
+    onFormat: () => {},
   },
   argTypes: {
-    onFormat: { control: false },
-    onCreateNode: { control: false },
-    insertDocActions: { control: "object" },
-    formatActions: { control: "object" },
     createActions: { control: "object" },
-    variant: { control: "select", options: ["canvas", "editor"] },
-    showFormatToolbar: { control: "boolean" },
+    formatActions: { control: "object" },
+    insertDocActions: { control: "object" },
+    onCreateNode: { control: false },
+    onFormat: { control: false },
     showDocInsertCluster: { control: "boolean" },
+    showFormatToolbar: { control: "boolean" },
+    variant: { control: "select", options: ["canvas", "editor"] },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalBottomDock,
   decorators: [
     (Story) => (
       <div className={styles.shell}>
@@ -45,6 +41,10 @@ const meta: Meta<typeof ArchitecturalBottomDock> = {
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Canvas/Bottom dock",
 };
 
 export default meta;
@@ -58,26 +58,26 @@ export const WithoutFormatToolbar: Story = {
 
 export const WithSelectionDelete: Story = {
   args: {
-    onUndo: () => {},
-    onRedo: () => {},
-    canUndo: true,
     canRedo: false,
-    selectionDelete: { selectedCount: 2, onDelete: () => {} },
+    canUndo: true,
+    onRedo: () => {},
+    onUndo: () => {},
+    selectionDelete: { onDelete: () => {}, selectedCount: 2 },
   },
 };
 
 export const WithSelectionStack: Story = {
   args: {
-    onUndo: () => {},
-    onRedo: () => {},
-    canUndo: true,
     canRedo: false,
-    selectionDelete: { selectedCount: 2, onDelete: () => {} },
+    canUndo: true,
+    onRedo: () => {},
+    onUndo: () => {},
+    selectionDelete: { onDelete: () => {}, selectedCount: 2 },
     selectionStack: {
       canMerge: true,
-      onMerge: () => {},
-      mergeTitle: "Create stack (Ctrl+S)",
       canUnstack: false,
+      mergeTitle: "Create stack (Ctrl+S)",
+      onMerge: () => {},
       onUnstack: () => {},
       unstackTitle: "Unstack",
     },
@@ -86,16 +86,16 @@ export const WithSelectionStack: Story = {
 
 export const WithSelectionStackMergeAndUnstack: Story = {
   args: {
-    onUndo: () => {},
-    onRedo: () => {},
-    canUndo: true,
     canRedo: false,
-    selectionDelete: { selectedCount: 4, onDelete: () => {} },
+    canUndo: true,
+    onRedo: () => {},
+    onUndo: () => {},
+    selectionDelete: { onDelete: () => {}, selectedCount: 4 },
     selectionStack: {
       canMerge: true,
-      onMerge: () => {},
-      mergeTitle: "Merge stacks (Ctrl+S)",
       canUnstack: true,
+      mergeTitle: "Merge stacks (Ctrl+S)",
+      onMerge: () => {},
       onUnstack: () => {},
       unstackTitle: "Unstack",
     },
@@ -125,7 +125,7 @@ function ConnectionToolbarDemo() {
   const [mode, setMode] = useState<ConnectionDockMode>("move");
   const [connectionKind, setConnectionKind] = useState<ConnectionKind>("pin");
   return (
-    <div style={{ position: "absolute", top: 24, right: 24 }}>
+    <div style={{ position: "absolute", right: 24, top: 24 }}>
       <div className={styles.rootDockPanel}>
         <ArchitecturalConnectionToolbar
           connectionKind={connectionKind}

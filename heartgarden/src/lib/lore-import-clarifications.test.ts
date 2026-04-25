@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -17,23 +18,23 @@ function minimalPlan(
 ): LoreImportPlan {
   const importBatchId = randomUUID();
   return {
-    importBatchId,
-    sourceCharCount: 0,
+    contradictions: [],
     folders: [],
-    notes: [
-      {
-        clientId: "n1",
-        title: "Note one",
-        canonicalEntityKind: "lore",
-        summary: "S",
-        bodyText: "Body",
-        folderClientId: null,
-        targetItemType: null,
-      },
-    ],
+    importBatchId,
     links: [],
     mergeProposals: [],
-    contradictions: [],
+    notes: [
+      {
+        bodyText: "Body",
+        canonicalEntityKind: "lore",
+        clientId: "n1",
+        folderClientId: null,
+        summary: "S",
+        targetItemType: null,
+        title: "Note one",
+      },
+    ],
+    sourceCharCount: 0,
     ...overrides,
   };
 }
@@ -44,15 +45,15 @@ describe("validateClarificationAnswersForApply", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: cid,
           category: "structure",
-          severity: "required",
-          title: "Pick folder",
-          questionKind: "single_select",
+          id: cid,
           options: [
             { id: "a", label: "Root", planPatchHint: { op: "no_op" } },
             { id: "b", label: "Other", planPatchHint: { op: "no_op" } },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Pick folder",
         },
       ],
     });
@@ -68,15 +69,15 @@ describe("validateClarificationAnswersForApply", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: cid,
           category: "structure",
-          severity: "required",
-          title: "Pick",
-          questionKind: "single_select",
+          id: cid,
           options: [
             { id: "a", label: "A", planPatchHint: { op: "no_op" } },
             { id: "b", label: "B", planPatchHint: { op: "no_op" } },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Pick",
         },
       ],
     });
@@ -97,20 +98,20 @@ describe("validateClarificationAnswersForApply", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: cid,
           category: "canon_weight",
-          severity: "required",
-          title: "Canon",
-          questionKind: "confirm_default",
+          id: cid,
           options: [
             {
               id: "def",
               label: "Default",
-              recommended: true,
               planPatchHint: { op: "no_op" },
+              recommended: true,
             },
             { id: "alt", label: "Alt", planPatchHint: { op: "no_op" } },
           ],
+          questionKind: "confirm_default",
+          severity: "required",
+          title: "Canon",
         },
       ],
     });
@@ -131,15 +132,15 @@ describe("validateClarificationAnswersForApply", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: cid,
           category: "structure",
-          severity: "required",
-          title: "Pick",
-          questionKind: "single_select",
+          id: cid,
           options: [
             { id: "a", label: "A", planPatchHint: { op: "no_op" } },
             { id: "b", label: "B", planPatchHint: { op: "no_op" } },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Pick",
         },
       ],
     });
@@ -164,23 +165,23 @@ describe("validateClarificationAnswersForApply", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: cid,
           category: "conflict",
-          severity: "required",
-          title: "Clarify",
-          questionKind: "single_select",
+          id: cid,
           options: [
             { id: "a", label: "A", planPatchHint: { op: "no_op" } },
             { id: "b", label: "B", planPatchHint: { op: "no_op" } },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Clarify",
         },
       ],
     });
     const answers: ClarificationAnswer[] = [
       {
         clarificationId: cid,
-        resolution: "other_text",
         otherText: "This assumption is wrong, use a separate NPC.",
+        resolution: "other_text",
       },
     ];
     expect(validateClarificationAnswersForApply(plan, answers)).toEqual({
@@ -192,26 +193,26 @@ describe("validateClarificationAnswersForApply", () => {
 describe("capClarificationList", () => {
   it("drops optional items first when over cap", () => {
     const twoOpt = {
-      id: randomUUID(),
       category: "structure" as const,
+      id: randomUUID(),
+      options: [
+        { id: "a", label: "A", planPatchHint: { op: "no_op" as const } },
+        { id: "b", label: "B", planPatchHint: { op: "no_op" as const } },
+      ],
+      questionKind: "single_select" as const,
       severity: "optional" as const,
       title: "O",
-      questionKind: "single_select" as const,
-      options: [
-        { id: "a", label: "A", planPatchHint: { op: "no_op" as const } },
-        { id: "b", label: "B", planPatchHint: { op: "no_op" as const } },
-      ],
     };
     const req = {
-      id: randomUUID(),
       category: "structure" as const,
-      severity: "required" as const,
-      title: "R",
-      questionKind: "single_select" as const,
+      id: randomUUID(),
       options: [
         { id: "a", label: "A", planPatchHint: { op: "no_op" as const } },
         { id: "b", label: "B", planPatchHint: { op: "no_op" as const } },
       ],
+      questionKind: "single_select" as const,
+      severity: "required" as const,
+      title: "R",
     };
     const list = Array.from({ length: 50 }, (_, i) =>
       i === 0 ? req : { ...twoOpt, id: randomUUID() }
@@ -226,36 +227,18 @@ describe("applyClarificationPatches", () => {
   it("applies set_note_folder", () => {
     const qid = randomUUID();
     const plan = minimalPlan({
-      folders: [
-        { clientId: "f1", title: "F1" },
-        { clientId: "f2", title: "F2" },
-      ],
-      notes: [
-        {
-          clientId: "n1",
-          title: "N",
-          canonicalEntityKind: "lore",
-          summary: "S",
-          bodyText: "B",
-          folderClientId: "f1",
-          targetItemType: null,
-        },
-      ],
       clarifications: [
         {
-          id: qid,
           category: "structure",
-          severity: "required",
-          title: "Folder",
-          questionKind: "single_select",
+          id: qid,
           options: [
             {
               id: "to_f2",
               label: "F2",
               planPatchHint: {
-                op: "set_note_folder",
-                noteClientId: "n1",
                 folderClientId: "f2",
+                noteClientId: "n1",
+                op: "set_note_folder",
               },
             },
             {
@@ -264,6 +247,24 @@ describe("applyClarificationPatches", () => {
               planPatchHint: { op: "no_op" },
             },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Folder",
+        },
+      ],
+      folders: [
+        { clientId: "f1", title: "F1" },
+        { clientId: "f2", title: "F2" },
+      ],
+      notes: [
+        {
+          bodyText: "B",
+          canonicalEntityKind: "lore",
+          clientId: "n1",
+          folderClientId: "f1",
+          summary: "S",
+          targetItemType: null,
+          title: "N",
         },
       ],
     });
@@ -281,34 +282,34 @@ describe("applyClarificationPatches", () => {
     const mid = randomUUID();
     const qid = randomUUID();
     const plan = minimalPlan({
-      mergeProposals: [
-        {
-          id: mid,
-          noteClientId: "n1",
-          targetItemId: randomUUID(),
-          targetTitle: "T",
-          strategy: "append_dated",
-          proposedText: "x",
-        },
-      ],
       clarifications: [
         {
-          id: qid,
           category: "conflict",
-          severity: "required",
-          title: "Merge?",
-          questionKind: "single_select",
+          id: qid,
           options: [
             {
               id: "drop",
               label: "Drop",
               planPatchHint: {
-                op: "discard_merge_proposal",
                 mergeProposalId: mid,
+                op: "discard_merge_proposal",
               },
             },
             { id: "keep", label: "Keep", planPatchHint: { op: "no_op" } },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Merge?",
+        },
+      ],
+      mergeProposals: [
+        {
+          id: mid,
+          noteClientId: "n1",
+          proposedText: "x",
+          strategy: "append_dated",
+          targetItemId: randomUUID(),
+          targetTitle: "T",
         },
       ],
     });
@@ -327,20 +328,20 @@ describe("applyClarificationPatches", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: qid,
           category: "canon_weight",
-          severity: "required",
-          title: "Canon",
-          questionKind: "single_select",
+          id: qid,
           options: [
             {
               id: "recommended",
               label: "Recommended",
-              recommended: true,
               planPatchHint: { op: "no_op" },
+              recommended: true,
             },
             { id: "other", label: "Other", planPatchHint: { op: "no_op" } },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Canon",
         },
       ],
     });
@@ -360,11 +361,8 @@ describe("resolveOtherClarificationAnswers", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: qid,
           category: "structure",
-          severity: "required",
-          title: "Pick link",
-          questionKind: "single_select",
+          id: qid,
           options: [
             {
               id: "conflict",
@@ -377,14 +375,17 @@ describe("resolveOtherClarificationAnswers", () => {
               planPatchHint: { op: "no_op" },
             },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Pick link",
         },
       ],
     });
     const result = resolveOtherClarificationAnswers(plan, [
       {
         clarificationId: qid,
-        resolution: "other_text",
         otherText: "Please downgrade to history; they only crossed paths.",
+        resolution: "other_text",
       },
     ]);
     expect(result.status).toBe("resolved");
@@ -399,11 +400,8 @@ describe("resolveOtherClarificationAnswers", () => {
     const plan = minimalPlan({
       clarifications: [
         {
-          id: qid,
           category: "structure",
-          severity: "required",
-          title: "Clarify target",
-          questionKind: "single_select",
+          id: qid,
           options: [
             {
               id: "maya",
@@ -416,14 +414,17 @@ describe("resolveOtherClarificationAnswers", () => {
               planPatchHint: { op: "no_op" },
             },
           ],
+          questionKind: "single_select",
+          severity: "required",
+          title: "Clarify target",
         },
       ],
     });
     const result = resolveOtherClarificationAnswers(plan, [
       {
         clarificationId: qid,
-        resolution: "other_text",
         otherText: "This is unclear and not enough context.",
+        resolution: "other_text",
       },
     ]);
     expect(result.status).toBe("needs_follow_up");

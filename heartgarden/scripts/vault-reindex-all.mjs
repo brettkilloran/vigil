@@ -19,6 +19,7 @@
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
 
@@ -76,14 +77,14 @@ for (let i = 0; i < rows.length; i++) {
     const res = await fetch(
       `${base}/api/items/${encodeURIComponent(id)}/index`,
       {
-        method: "POST",
+        body,
         headers: {
           "Content-Type": "application/json",
           ...(mcpServiceKey
             ? { Authorization: `Bearer ${mcpServiceKey}` }
             : {}),
         },
-        body,
+        method: "POST",
       }
     );
     const data = await res.json().catch(() => ({}));

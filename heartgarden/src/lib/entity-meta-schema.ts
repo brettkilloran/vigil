@@ -26,10 +26,10 @@ export const importProvenanceSchema = z
 
 export const crossFolderRefSchema = z
   .object({
+    linkIntent: loreImportLinkIntentSchema,
+    linkType: z.string().min(1).max(64),
     targetItemId: z.string().uuid().optional(),
     targetTitle: z.string().min(1).max(255),
-    linkType: z.string().min(1).max(64),
-    linkIntent: loreImportLinkIntentSchema,
   })
   .strip();
 
@@ -49,16 +49,16 @@ export const aiReviewStateSchema = z.enum([
  */
 export const importedEntityMetaSchema = z
   .object({
-    schemaVersion: z.number().int().optional(),
+    aiReview: aiReviewStateSchema.optional(),
+    campaignEpoch: z.number().int().optional(),
+    canonicalEntityKind: canonicalEntityKindSchema.optional(),
+    crossFolderRefs: z.array(crossFolderRefSchema).max(64).optional(),
     import: z.boolean().optional(),
     importBatchId: z.string().uuid().optional(),
-    canonicalEntityKind: canonicalEntityKindSchema.optional(),
-    ingestionSignals: ingestionSignalsSchema,
-    campaignEpoch: z.number().int().optional(),
-    loreHistorical: z.boolean().optional(),
-    aiReview: aiReviewStateSchema.optional(),
     importProvenance: importProvenanceSchema.optional(),
-    crossFolderRefs: z.array(crossFolderRefSchema).max(64).optional(),
+    ingestionSignals: ingestionSignalsSchema,
+    loreHistorical: z.boolean().optional(),
+    schemaVersion: z.number().int().optional(),
   })
   .passthrough();
 
@@ -198,7 +198,7 @@ export function withCrossFolderRef(
     ? existingRefs
     : [...existingRefs, ref].slice(0, 64);
   return buildImportedEntityMeta({
-    existing: base,
     crossFolderRefs: nextRefs,
+    existing: base,
   });
 }

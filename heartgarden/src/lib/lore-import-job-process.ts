@@ -105,11 +105,17 @@ function normalizeLoreImportJobEvent(
   event: LoreImportJobEvent
 ): LoreImportJobEvent {
   return {
-    ts: clipEventText(event.ts, 64) ?? new Date().toISOString(),
-    phase: clipEventText(event.phase, 64),
-    kind: event.kind,
     durationMs: coerceOptionalNumber(event.durationMs),
+    kind: event.kind,
     model: clipEventText(event.model, 128),
+    phase: clipEventText(event.phase, 64),
+    ref: clipEventText(event.ref, 128),
+    responseSnippet: clipEventText(
+      event.responseSnippet,
+      LORE_IMPORT_RESPONSE_SNIPPET_MAX
+    ),
+    stopReason: clipEventText(event.stopReason, 64) ?? null,
+    text: clipEventText(event.text, 280),
     tokensIn:
       typeof event.tokensIn === "number" && Number.isFinite(event.tokensIn)
         ? Math.max(0, Math.trunc(event.tokensIn))
@@ -118,13 +124,7 @@ function normalizeLoreImportJobEvent(
       typeof event.tokensOut === "number" && Number.isFinite(event.tokensOut)
         ? Math.max(0, Math.trunc(event.tokensOut))
         : null,
-    stopReason: clipEventText(event.stopReason, 64) ?? null,
-    responseSnippet: clipEventText(
-      event.responseSnippet,
-      LORE_IMPORT_RESPONSE_SNIPPET_MAX
-    ),
-    text: clipEventText(event.text, 280),
-    ref: clipEventText(event.ref, 128),
+    ts: clipEventText(event.ts, 64) ?? new Date().toISOString(),
   };
 }
 
@@ -185,13 +185,13 @@ async function updateLoreImportJobProgress(
     await db
       .update(loreImportJobs)
       .set({
+        lastProgressAt: now,
+        progressMessage: progress.message || null,
+        progressMeta: progress.meta ?? null,
         progressPhase: progress.phase || null,
         progressStep: typeof progress.step === "number" ? progress.step : null,
         progressTotal:
           typeof progress.total === "number" ? progress.total : null,
-        progressMessage: progress.message || null,
-        progressMeta: progress.meta ?? null,
-        lastProgressAt: now,
         updatedAt: now,
       })
       .where(eq(loreImportJobs.id, jobId));
@@ -218,15 +218,15 @@ async function updateLoreImportJobFailed(
     await db
       .update(loreImportJobs)
       .set({
-        status: "failed",
         error: args.error,
-        progressPhase: "failed",
+        lastProgressAt: now,
         progressMessage: args.error,
         progressMeta: {
           errorCode: args.errorCode,
           lastPhase: args.lastPhase,
         },
-        lastProgressAt: now,
+        progressPhase: "failed",
+        status: "failed",
         updatedAt: now,
       })
       .where(eq(loreImportJobs.id, jobId));
@@ -237,8 +237,8 @@ async function updateLoreImportJobFailed(
     await db
       .update(loreImportJobs)
       .set({
-        status: "failed",
         error: args.error,
+        status: "failed",
         updatedAt: now,
       })
       .where(eq(loreImportJobs.id, jobId));
@@ -289,11 +289,11 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
       )
     )
     .returning({
+      fileName: loreImportJobs.fileName,
       id: loreImportJobs.id,
-      spaceId: loreImportJobs.spaceId,
       importBatchId: loreImportJobs.importBatchId,
       sourceText: loreImportJobs.sourceText,
-      fileName: loreImportJobs.fileName,
+      spaceId: loreImportJobs.spaceId,
     });
 
   if (!job) {
@@ -348,27 +348,27 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     let flushError: unknown;
     try {
       plan = await buildLoreImportPlan({
-        db: db as VigilDb,
-        spaceId: job.spaceId,
         apiKey: key,
-        model,
+        db: db as VigilDb,
+        fileName: job.fileName ?? undefined,
         fullText: job.sourceText,
         importBatchId: job.importBatchId,
-        fileName: job.fileName ?? undefined,
-        userContext: parsedUserContext.success
-          ? parsedUserContext.data
-          : undefined,
-        onProgress: async (progress) => {
-          await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
-          lastPhase = progress.phase || lastPhase;
-          await updateLoreImportJobProgress(db as VigilDb, jobId, progress);
-        },
+        model,
         onEvent: async (event) => {
           eventBuffer.push(event);
           if (eventBuffer.length >= LORE_IMPORT_EVENT_FLUSH_BATCH) {
             await flushEventBuffer();
           }
         },
+        onProgress: async (progress) => {
+          await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
+          lastPhase = progress.phase || lastPhase;
+          await updateLoreImportJobProgress(db as VigilDb, jobId, progress);
+        },
+        spaceId: job.spaceId,
+        userContext: parsedUserContext.success
+          ? parsedUserContext.data
+          : undefined,
       });
     } catch (e) {
       buildError = e;
@@ -384,11 +384,11 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
         console.error(
           "[lore-import] event flush also failed after build error",
           {
-            jobId,
             flushError:
               flushError instanceof Error
                 ? flushError.message
                 : String(flushError),
+            jobId,
           }
         );
       }
@@ -413,7 +413,6 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     }
 
     await updateLoreImportJobProgress(db as VigilDb, jobId, {
-      phase: "persist_review",
       message: "Persisting review queue and final plan",
       meta: {
         pipelinePercent:
@@ -421,6 +420,7 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
             phaseFraction: 0.4,
           }) ?? 97,
       },
+      phase: "persist_review",
     });
     await assertLoreImportJobNotCancelled(db as VigilDb, jobId);
     await persistImportReviewQueueFromPlan(
@@ -432,9 +432,9 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     const [readyWrite] = await db
       .update(loreImportJobs)
       .set({
-        status: "ready",
-        plan: parsedPlan.data as unknown as Record<string, unknown>,
         error: null,
+        plan: parsedPlan.data as unknown as Record<string, unknown>,
+        status: "ready",
         updatedAt: new Date(),
       })
       .where(
@@ -462,9 +462,9 @@ export async function processLoreImportJob(jobId: string): Promise<void> {
     }
     const msg = e instanceof Error ? e.message : "Plan failed";
     console.error("[lore-import] job process failed", {
+      error: msg,
       jobId,
       lastPhase,
-      error: msg,
     });
     await updateLoreImportJobFailed(db as VigilDb, jobId, {
       error: "Import planning failed. Try again or split the document.",

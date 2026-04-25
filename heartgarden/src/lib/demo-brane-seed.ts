@@ -70,10 +70,10 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
       await tx
         .insert(spaces)
         .values({
+          braneId: demoBrane.id,
           id: space.id,
           name: space.name,
           parentSpaceId: space.parentSpaceId,
-          braneId: demoBrane.id,
         })
         .onConflictDoNothing();
     }
@@ -82,24 +82,24 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
       await tx
         .insert(items)
         .values({
+          contentJson: item.contentJson,
+          contentText: item.contentText,
+          entityType: item.entityType,
+          height: item.height,
           id: item.id,
-          spaceId: item.spaceId,
           itemType: item.itemType,
+          searchBlob: buildSearchBlob({
+            contentJson: item.contentJson,
+            contentText: item.contentText,
+            entityType: item.entityType,
+            title: item.title,
+          }),
+          spaceId: item.spaceId,
+          title: item.title,
+          width: item.width,
           x: item.x,
           y: item.y,
-          width: item.width,
-          height: item.height,
           zIndex: item.zIndex,
-          title: item.title,
-          contentText: item.contentText,
-          contentJson: item.contentJson,
-          searchBlob: buildSearchBlob({
-            title: item.title,
-            contentText: item.contentText,
-            contentJson: item.contentJson,
-            entityType: item.entityType,
-          }),
-          entityType: item.entityType,
         })
         .onConflictDoNothing();
     }
@@ -124,10 +124,10 @@ export async function ensureDemoBraneSeed(db: VigilDb): Promise<void> {
         .insert(itemLinks)
         .values({
           id: link.id,
-          sourceItemId: link.sourceItemId,
-          targetItemId: link.targetItemId,
           linkType: normalizeLinkTypeAlias(link.linkType),
+          sourceItemId: link.sourceItemId,
           sourcePin: null,
+          targetItemId: link.targetItemId,
           targetPin: null,
         })
         .onConflictDoNothing({

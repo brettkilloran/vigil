@@ -5,15 +5,14 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalStatusMetric } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusMetric> = {
-  title: "Heartgarden/Product UI/Canvas/Status metric",
-  component: ArchitecturalStatusMetric,
   args: {
     children: "100%",
   },
   argTypes: {
-    icon: { control: false },
     children: { control: "text" },
+    icon: { control: false },
   },
+  component: ArchitecturalStatusMetric,
   decorators: [
     (Story) => (
       <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
@@ -21,6 +20,7 @@ const meta: Meta<typeof ArchitecturalStatusMetric> = {
       </div>
     ),
   ],
+  title: "Heartgarden/Product UI/Canvas/Status metric",
 };
 
 export default meta;

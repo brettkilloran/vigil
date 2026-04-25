@@ -40,10 +40,10 @@ export function worldRectFromViewport(
 ): WorldRect {
   if (!Number.isFinite(scale) || scale === 0) {
     return {
-      left: Number.NEGATIVE_INFINITY,
-      top: Number.NEGATIVE_INFINITY,
-      right: Number.POSITIVE_INFINITY,
       bottom: Number.POSITIVE_INFINITY,
+      left: Number.NEGATIVE_INFINITY,
+      right: Number.POSITIVE_INFINITY,
+      top: Number.NEGATIVE_INFINITY,
     };
   }
   const inv = 1 / scale;
@@ -51,7 +51,7 @@ export function worldRectFromViewport(
   const top = -translateY * inv - marginWorld;
   const right = (viewportWidth - translateX) * inv + marginWorld;
   const bottom = (viewportHeight - translateY) * inv + marginWorld;
-  return { left, top, right, bottom };
+  return { bottom, left, right, top };
 }
 
 export function rectsIntersect(a: WorldRect, b: WorldRect): boolean {
@@ -69,10 +69,10 @@ export function entityWorldAabb(
 ): { left: number; top: number; right: number; bottom: number } {
   const g = entityGeometryOnSpace(entity, spaceId);
   return {
-    left: g.x,
-    top: g.y,
-    right: g.x + g.width,
     bottom: g.y + g.height,
+    left: g.x,
+    right: g.x + g.width,
+    top: g.y,
   };
 }
 
@@ -104,9 +104,9 @@ export function unionEntityWorldAabbs(
     bottom = Math.max(bottom, b.bottom);
   }
   if (!Number.isFinite(left)) {
-    return { left: 0, top: 0, right: 0, bottom: 0 };
+    return { bottom: 0, left: 0, right: 0, top: 0 };
   }
-  return { left, top, right, bottom };
+  return { bottom, left, right, top };
 }
 
 export function collapsedStackIntersectsWorldRect(

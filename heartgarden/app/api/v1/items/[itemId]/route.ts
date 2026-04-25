@@ -34,7 +34,7 @@ export async function GET(
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
   return Response.json({
-    version: 1,
     item: rowToCanvasItem(loaded.row),
+    version: 1,
   });
 }

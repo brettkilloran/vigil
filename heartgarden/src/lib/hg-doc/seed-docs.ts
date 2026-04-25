@@ -21,67 +21,67 @@ export function demoRootTaskDoc(): JSONContent {
   }
   const items: JSONContent[] = [
     {
-      type: "taskItem",
       attrs: { checked: false },
       content: [
         {
-          type: "paragraph",
           content: [
             {
-              type: "text",
               text: "Pan and zoom once so you see the welcome card, stack, checklist, image, and folder",
+              type: "text",
             },
           ],
+          type: "paragraph",
         },
       ],
+      type: "taskItem",
     },
     {
-      type: "taskItem",
       attrs: { checked: false },
       content: [
         {
-          type: "paragraph",
           content: [
             {
-              type: "text",
               text: "Select a card and skim the title bar (open focus if you want a larger editor)",
+              type: "text",
             },
           ],
+          type: "paragraph",
         },
       ],
+      type: "taskItem",
     },
     {
-      type: "taskItem",
       attrs: { checked: false },
       content: [
         {
-          type: "paragraph",
           content: [
             {
-              type: "text",
               text: "Open Demo subspace folder — a small space with specimen lore cards",
+              type: "text",
             },
           ],
+          type: "paragraph",
         },
       ],
+      type: "taskItem",
     },
     {
-      type: "taskItem",
       attrs: { checked: false },
       content: [
         {
-          type: "paragraph",
           content: [
             {
-              type: "text",
               text: "Use search from the status bar when you want to jump to text across many cards",
+              type: "text",
             },
           ],
+          type: "paragraph",
         },
       ],
+      type: "taskItem",
     },
   ];
-  return { type: "doc", content: [{ type: "taskList", content: items }] };
+  return { content: [{ content: items, type: "taskList" }], type: "doc" };
 }
 
 export const DEMO_RESEARCH_DOSSIER_DOC: JSONContent = generateJSON(

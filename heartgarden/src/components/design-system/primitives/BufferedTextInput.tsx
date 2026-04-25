@@ -29,10 +29,10 @@ export function BufferedTextInput({
 }: BufferedTextInputProps) {
   const { draft, beginEditing, commitNow, cancelEditing, onDraftChange } =
     useEditorSession({
-      value,
       debounceMs,
       normalizeOnCommit,
       onCommit,
+      value,
     });
 
   return (

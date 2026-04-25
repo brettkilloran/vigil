@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { SourceTextChunk } from "@/src/lib/lore-import-chunk";
 import {
   buildOutlineChunkListPayload,
@@ -10,11 +11,11 @@ function makeChunks(n: number): SourceTextChunk[] {
   const out: SourceTextChunk[] = [];
   for (let i = 0; i < n; i++) {
     out.push({
-      id: `chunk-${i}`,
-      heading: `Section ${i}`,
       body: `body-${i}-${"x".repeat(Math.max(0, 3990 - String(i).length))}`,
-      charStart: i * 4000,
       charEnd: (i + 1) * 4000,
+      charStart: i * 4000,
+      heading: `Section ${i}`,
+      id: `chunk-${i}`,
     });
   }
   return out;
@@ -40,10 +41,10 @@ describe("fillNoteBodiesFromChunks", () => {
     title: string;
   }
   const makeNote = (id: string, ids: string[]): TestNote => ({
-    clientId: id,
-    title: id,
-    sourceChunkIds: ids,
     bodyText: "",
+    clientId: id,
+    sourceChunkIds: ids,
+    title: id,
   });
 
   it("does NOT dump unassigned chunks onto the first note", () => {

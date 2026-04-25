@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import { AiPendingStyleDemo } from "./AiPendingStyleDemo";
 
 export const metadata: Metadata = {
-  title: "AI pending text — style preview",
   description: "Dev preview of unreviewed import / LLM body styling.",
-  robots: { index: false, follow: false },
+  robots: { follow: false, index: false },
+  title: "AI pending text — style preview",
 };
 
 export default function AiPendingStylePage() {

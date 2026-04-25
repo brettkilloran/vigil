@@ -17,11 +17,11 @@ import { loreQueryRateLimitExceeded } from "@/src/lib/lore-query-rate-limit";
 import { assertSpaceExists, type SearchFilters } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
-  question: z.string().min(1).max(4000),
-  spaceId: z.string().uuid().optional(),
   limit: z.number().int().min(1).max(24).optional(),
-  stream: z.boolean().optional(),
+  question: z.string().min(1).max(4000),
   responseMode: z.enum(["text", "grounded_json"]).optional(),
+  spaceId: z.string().uuid().optional(),
+  stream: z.boolean().optional(),
 });
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
@@ -66,10 +66,10 @@ export async function POST(req: Request) {
   if ((process.env.HEARTGARDEN_LORE_QUERY_DISABLED ?? "").trim() === "1") {
     return Response.json(
       {
-        ok: false,
+        answer: null,
         error:
           "Lore query is disabled on this deployment (HEARTGARDEN_LORE_QUERY_DISABLED).",
-        answer: null,
+        ok: false,
         sources: [],
       },
       { status: 503 }
@@ -79,9 +79,9 @@ export async function POST(req: Request) {
   if (loreQueryRateLimitExceeded(req)) {
     return Response.json(
       {
-        ok: false,
-        error: "Too many lore requests. Try again in a minute.",
         answer: null,
+        error: "Too many lore requests. Try again in a minute.",
+        ok: false,
         sources: [],
       },
       { status: 429 }
@@ -92,9 +92,9 @@ export async function POST(req: Request) {
   if (!apiKey) {
     return Response.json(
       {
-        ok: false,
-        error: "ANTHROPIC_API_KEY not set",
         answer: null,
+        error: "ANTHROPIC_API_KEY not set",
+        ok: false,
         sources: [],
       },
       { status: 503 }
@@ -105,9 +105,9 @@ export async function POST(req: Request) {
   if (!db) {
     return Response.json(
       {
-        ok: false,
-        error: "Database not configured",
         answer: null,
+        error: "Database not configured",
+        ok: false,
         sources: [],
       },
       { status: 503 }
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
     json = await req.json();
   } catch {
     return Response.json(
-      { ok: false, error: "Invalid JSON", answer: null, sources: [] },
+      { answer: null, error: "Invalid JSON", ok: false, sources: [] },
       { status: 400 }
     );
   }
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten(), answer: null, sources: [] },
+      { answer: null, error: parsed.error.flatten(), ok: false, sources: [] },
       { status: 400 }
     );
   }
@@ -138,18 +138,18 @@ export async function POST(req: Request) {
 
   let sources: Awaited<ReturnType<typeof retrieveLoreSources>>;
   try {
-    const baseFilters: SearchFilters = { spaceId, limit };
+    const baseFilters: SearchFilters = { limit, spaceId };
     if (spaceId) {
       if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, spaceId))) {
         return Response.json(
-          { ok: false, error: "Forbidden.", answer: null, sources: [] },
+          { answer: null, error: "Forbidden.", ok: false, sources: [] },
           { status: 403 }
         );
       }
       const space = await assertSpaceExists(db, spaceId);
       if (!space) {
         return Response.json(
-          { ok: false, error: "Space not found", answer: null, sources: [] },
+          { answer: null, error: "Space not found", ok: false, sources: [] },
           { status: 404 }
         );
       }
@@ -161,25 +161,25 @@ export async function POST(req: Request) {
     );
     if (!finalized) {
       return Response.json(
-        { ok: false, error: "Forbidden.", answer: null, sources: [] },
+        { answer: null, error: "Forbidden.", ok: false, sources: [] },
         { status: 403 }
       );
     }
     sources = await retrieveLoreSources(db, question, finalized);
     maybeLogLoreQueryMetric("retrieval", {
-      sourceCount: sources.length,
-      scoped: Boolean(spaceId),
       mode: responseMode,
+      scoped: Boolean(spaceId),
+      sourceCount: sources.length,
       stream,
     });
   } catch (err) {
     console.error("[lore/query] retrieval", err);
     return Response.json(
       {
-        ok: false,
+        answer: null,
         error:
           "Lore retrieval failed (check database and search configuration).",
-        answer: null,
+        ok: false,
         sources: [],
       },
       { status: 500 }
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
         start(controller) {
           const enc = new TextEncoder();
           controller.enqueue(
-            enc.encode(sseFrame("meta", { sources: [], model: null }))
+            enc.encode(sseFrame("meta", { model: null, sources: [] }))
           );
           controller.enqueue(
             enc.encode(sseFrame("delta", { text: noMatchAnswer }))
@@ -203,8 +203,8 @@ export async function POST(req: Request) {
             enc.encode(
               sseFrame("done", {
                 answer: noMatchAnswer,
-                sources: [],
                 model: null,
+                sources: [],
               })
             )
           );
@@ -213,17 +213,17 @@ export async function POST(req: Request) {
       });
       return new Response(body, {
         headers: {
-          "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache, no-transform",
           Connection: "keep-alive",
+          "Content-Type": "text/event-stream; charset=utf-8",
         },
       });
     }
     return Response.json({
-      ok: true,
       answer: noMatchAnswer,
-      sources: [],
       model: null,
+      ok: true,
+      sources: [],
     });
   }
 
@@ -235,8 +235,8 @@ export async function POST(req: Request) {
       if (responseMode === "grounded_json") {
         return Response.json(
           {
-            ok: false,
             error: "Streaming is only supported for responseMode=text.",
+            ok: false,
           },
           { status: 400 }
         );
@@ -245,7 +245,7 @@ export async function POST(req: Request) {
         async start(controller) {
           const enc = new TextEncoder();
           let full = "";
-          controller.enqueue(enc.encode(sseFrame("meta", { sources, model })));
+          controller.enqueue(enc.encode(sseFrame("meta", { model, sources })));
           try {
             for await (const chunk of synthesizeLoreAnswerStream(
               apiKey,
@@ -259,12 +259,12 @@ export async function POST(req: Request) {
               );
             }
             maybeLogLoreQueryMetric("stream_done", {
-              sourceCount: sources.length,
-              outputChars: full.length,
               model,
+              outputChars: full.length,
+              sourceCount: sources.length,
             });
             controller.enqueue(
-              enc.encode(sseFrame("done", { answer: full, sources, model }))
+              enc.encode(sseFrame("done", { answer: full, model, sources }))
             );
           } catch (err) {
             const msg =
@@ -279,9 +279,9 @@ export async function POST(req: Request) {
       });
       return new Response(streamBody, {
         headers: {
-          "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache, no-transform",
           Connection: "keep-alive",
+          "Content-Type": "text/event-stream; charset=utf-8",
         },
       });
     }
@@ -294,38 +294,38 @@ export async function POST(req: Request) {
         sources
       );
       maybeLogLoreQueryMetric("grounded_done", {
-        sourceCount: sources.length,
         citedCount: grounded.citedItemIds.length,
         insufficientEvidence: grounded.insufficientEvidence,
         model,
+        sourceCount: sources.length,
       });
       return Response.json({
-        ok: true,
         answer: grounded.answerText,
         grounded,
-        sources,
         model,
+        ok: true,
+        sources,
       });
     }
     const answer = await synthesizeLoreAnswer(apiKey, model, question, sources);
     maybeLogLoreQueryMetric("text_done", {
-      sourceCount: sources.length,
-      outputChars: answer.length,
       model,
+      outputChars: answer.length,
+      sourceCount: sources.length,
     });
     return Response.json({
-      ok: true,
       answer,
-      sources,
       model,
+      ok: true,
+      sources,
     });
   } catch {
     return Response.json(
       {
-        ok: false,
+        answer: null,
         error:
           "Lore synthesis failed (check ANTHROPIC_LORE_MODEL and API access)",
-        answer: null,
+        ok: false,
         sources,
       },
       { status: 502 }

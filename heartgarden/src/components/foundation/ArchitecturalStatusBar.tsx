@@ -260,18 +260,18 @@ function SaveAndVersionPopover({
         }`;
 
     return {
-      pulseToneClass,
-      statusLine,
-      statusSeverity,
-      showWarningIcon,
-      detailTitle,
+      absSaved: abs,
       detailBody,
       detailPasteText,
-      recommendedAction,
+      detailTitle,
       liveAnnouncement: live,
-      triggerAriaLabel: aria,
+      pulseToneClass,
+      recommendedAction,
       relSaved: rel,
-      absSaved: abs,
+      showWarningIcon,
+      statusLine,
+      statusSeverity,
+      triggerAriaLabel: aria,
     };
   }, [
     awaitingBootAuth,
@@ -300,9 +300,9 @@ function SaveAndVersionPopover({
     left: number;
     flip: boolean;
   }>({
-    top: 0,
-    left: 0,
     flip: false,
+    left: 0,
+    top: 0,
   });
 
   const reposition = useCallback(() => {
@@ -339,7 +339,7 @@ function SaveAndVersionPopover({
     if (left < 8) {
       left = 8;
     }
-    setPanelPos({ top, left, flip });
+    setPanelPos({ flip, left, top });
   }, [popoverAnchorRef]);
 
   useLayoutEffect(() => {
@@ -522,7 +522,7 @@ function SaveAndVersionPopover({
             onPointerDown={(e) => e.stopPropagation()}
             ref={panelRef}
             role="dialog"
-            style={{ top: panelPos.top, left: panelPos.left }}
+            style={{ left: panelPos.left, top: panelPos.top }}
           >
             <div className={styles.syncPopoverTitle} id={`${popoverId}-title`}>
               {detailTitle}

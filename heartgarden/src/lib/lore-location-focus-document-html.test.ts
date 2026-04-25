@@ -189,8 +189,8 @@ describe("shouldRenderLoreLocationCanvasNode", () => {
   it("returns true for loreCard location", () => {
     expect(
       shouldRenderLoreLocationCanvasNode({
-        kind: "content",
         bodyHtml: "<p>x</p>",
+        kind: "content",
         loreCard: { kind: "location", variant: "v2" },
       })
     ).toBe(true);
@@ -199,8 +199,8 @@ describe("shouldRenderLoreLocationCanvasNode", () => {
   it("returns false for character", () => {
     expect(
       shouldRenderLoreLocationCanvasNode({
-        kind: "content",
         bodyHtml: "",
+        kind: "content",
         loreCard: { kind: "character", variant: "v11" },
       })
     ).toBe(false);
@@ -264,8 +264,8 @@ describe("location top field caps", () => {
       "N".repeat(LOCATION_TOP_FIELD_CHAR_CAPS.name)
     );
     const insert = new InputEvent("beforeinput", {
-      inputType: "insertText",
       data: "X",
+      inputType: "insertText",
     });
     expect(shouldBlockLocationTopFieldBeforeInput("name", capped, insert)).toBe(
       true
@@ -282,8 +282,8 @@ describe("location top field caps", () => {
     const legacy = makeEditableHost("D".repeat(120));
     setTextSelection(legacy, 0, 50);
     const insert = new InputEvent("beforeinput", {
-      inputType: "insertText",
       data: "short",
+      inputType: "insertText",
     });
     expect(
       shouldBlockLocationTopFieldBeforeInput("detail", legacy, insert)

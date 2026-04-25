@@ -63,14 +63,14 @@ export function readLoreImportJobInsertError(
       ? (error as Record<string, unknown>)
       : {};
   return {
+    code: clipped(source.code, 24),
+    column: clipped(source.column, 128),
+    detail: clipped(source.detail),
     message:
       clipped(source.message) ||
       (error instanceof Error
         ? clipped(error.message)
         : clipped(String(error))),
-    code: clipped(source.code, 24),
-    column: clipped(source.column, 128),
-    detail: clipped(source.detail),
   };
 }
 
@@ -85,12 +85,12 @@ export function readLoreImportJobInsertDiagnostic(
   const code = base.code;
   return {
     ...base,
+    constraint: clipped(source.constraint, 128),
     hint: clipped(source.hint),
+    retryable: Boolean(code && LORE_IMPORT_JOB_RETRYABLE_PG_CODES.has(code)),
+    routine: clipped(source.routine, 128),
     severity: clipped(source.severity, 64),
     table: clipped(source.table, 128),
-    constraint: clipped(source.constraint, 128),
-    routine: clipped(source.routine, 128),
-    retryable: Boolean(code && LORE_IMPORT_JOB_RETRYABLE_PG_CODES.has(code)),
   };
 }
 

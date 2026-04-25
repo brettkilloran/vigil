@@ -3,13 +3,44 @@
 import { CheckCircle, CursorClick, Trash } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { expect, userEvent, within } from "storybook/test";
+
 import gutterStyles from "@/src/components/editing/HgAiPendingEditorGutter.module.css";
 import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { Button } from "@/src/components/ui/Button";
 import { Tag } from "@/src/components/ui/Tag";
 
 const meta: Meta<typeof Button> = {
-  title: "Heartgarden/Design System/Primitives/Button",
+  args: {
+    children: "Button",
+    disabled: false,
+    forceState: "default",
+    isActive: false,
+    isLoading: false,
+    onClick: () => {},
+    size: "md",
+    tone: "glass",
+    variant: "default",
+  },
+  argTypes: {
+    asChild: { control: false },
+    forceState: { control: "radio", options: ["default", "hover", "active"] },
+    iconOnly: { control: "boolean" },
+    leadingIcon: { control: false },
+    onClick: { control: false },
+    size: {
+      control: "radio",
+      options: ["xs", "sm", "md", "lg", "icon", "pill"],
+    },
+    tone: {
+      control: "radio",
+      options: ["glass", "solid", "menu", "focus-light", "focus-dark"],
+    },
+    trailingIcon: { control: false },
+    variant: {
+      control: "radio",
+      options: ["default", "primary", "danger", "ghost", "subtle"],
+    },
+  },
   component: Button,
   parameters: {
     docs: {
@@ -19,37 +50,7 @@ const meta: Meta<typeof Button> = {
       },
     },
   },
-  args: {
-    variant: "default",
-    size: "md",
-    tone: "glass",
-    isActive: false,
-    isLoading: false,
-    forceState: "default",
-    disabled: false,
-    children: "Button",
-    onClick: () => {},
-  },
-  argTypes: {
-    variant: {
-      control: "radio",
-      options: ["default", "primary", "danger", "ghost", "subtle"],
-    },
-    size: {
-      control: "radio",
-      options: ["xs", "sm", "md", "lg", "icon", "pill"],
-    },
-    tone: {
-      control: "radio",
-      options: ["glass", "solid", "menu", "focus-light", "focus-dark"],
-    },
-    forceState: { control: "radio", options: ["default", "hover", "active"] },
-    leadingIcon: { control: false },
-    trailingIcon: { control: false },
-    asChild: { control: false },
-    iconOnly: { control: "boolean" },
-    onClick: { control: false },
-  },
+  title: "Heartgarden/Design System/Primitives/Button",
 };
 
 export default meta;
@@ -74,29 +75,29 @@ export const VariantMatrix: Story = {
     return (
       <div
         style={{
+          background: "var(--sem-surface-base)",
           display: "grid",
           gap: 12,
           padding: 20,
-          background: "var(--sem-surface-base)",
         }}
       >
         {rows.map((row) => (
           <div
             key={row.id}
             style={{
-              display: "flex",
-              gap: 8,
               alignItems: "center",
+              display: "flex",
               flexWrap: "wrap",
+              gap: 8,
             }}
           >
             <div
               style={{
-                width: 200,
                 color: "var(--sys-color-neutral-400)",
                 fontFamily: "ui-monospace, monospace",
                 fontSize: 11,
                 lineHeight: 1.3,
+                width: 200,
               }}
             >
               <div>{row.label}</div>
@@ -120,11 +121,11 @@ export const StateMatrix: Story = {
   render: () => (
     <div
       style={{
+        background: "var(--sem-surface-base)",
         display: "flex",
+        flexWrap: "wrap",
         gap: 10,
         padding: 20,
-        background: "var(--sem-surface-base)",
-        flexWrap: "wrap",
       }}
     >
       <Button>Default</Button>
@@ -151,7 +152,7 @@ export const AsChildLink: Story = {
 
 export const IconOnly: Story = {
   render: () => (
-    <div style={{ padding: 20, background: "var(--sem-surface-base)" }}>
+    <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
       <Button aria-label="Complete action" iconOnly size="icon">
         <CheckCircle size={16} />
       </Button>
@@ -160,11 +161,6 @@ export const IconOnly: Story = {
 };
 
 export const KeyboardFocusVisible: Story = {
-  render: () => (
-    <div style={{ padding: 20, background: "var(--sem-surface-base)" }}>
-      <Button>Focusable</Button>
-    </div>
-  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.tab();
@@ -172,12 +168,17 @@ export const KeyboardFocusVisible: Story = {
       canvas.getByRole("button", { name: "Focusable" })
     ).toHaveFocus();
   },
+  render: () => (
+    <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
+      <Button>Focusable</Button>
+    </div>
+  ),
 };
 
 export const DisabledSuppressesClick: Story = {
   args: {
-    disabled: true,
     children: "Disabled Action",
+    disabled: true,
     onClick: () => {
       throw new Error("Disabled button should not be clickable");
     },
@@ -192,12 +193,12 @@ export const DisabledSuppressesClick: Story = {
 
 export const LoadingSuppressesClick: Story = {
   args: {
-    isLoading: true,
     children: "Loading Action",
-    trailingIcon: <Trash size={14} />,
+    isLoading: true,
     onClick: () => {
       throw new Error("Loading button should not be clickable");
     },
+    trailingIcon: <Trash size={14} />,
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -212,19 +213,19 @@ function BindButtonRow({ dark = false }: { dark?: boolean }) {
     <div
       className={dark ? "dark" : undefined}
       style={{
-        padding: 16,
-        borderRadius: 12,
         background: dark
           ? "var(--sys-color-neutral-920)"
           : "var(--sem-surface-base)",
+        borderRadius: 12,
+        padding: 16,
       }}
     >
       <div
         style={{
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
           alignItems: "center",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
         }}
       >
         <Button
@@ -285,9 +286,9 @@ export const AiBindFocusReviewBar: Story = {
     <div style={{ display: "grid", gap: 12 }}>
       <div
         style={{
-          padding: 16,
-          borderRadius: 12,
           background: "var(--sem-surface-base)",
+          borderRadius: 12,
+          padding: 16,
         }}
       >
         <div className={canvasStyles.focusAiReviewBar}>
@@ -311,9 +312,9 @@ export const AiBindFocusReviewBar: Story = {
       <div
         className={`${canvasStyles.focusEditorDark} dark`}
         style={{
-          padding: 16,
-          borderRadius: 12,
           background: "var(--sys-color-neutral-900)",
+          borderRadius: 12,
+          padding: 16,
         }}
       >
         <div className={canvasStyles.focusAiReviewBar}>

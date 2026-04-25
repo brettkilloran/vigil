@@ -48,8 +48,8 @@ async function computeItemLinksRevisionUncached(
   const [row] = await db
     .select({
       c: sql<number>`sum(s.c)::int`,
-      maxU: sql<Date | null>`max(s.max_u)`,
       maxId: sql<string | null>`max(s.max_id)`,
+      maxU: sql<Date | null>`max(s.max_u)`,
     })
     .from(
       sql`(
@@ -109,8 +109,8 @@ export async function computeItemLinksRevisionForSpace(
   }
   const value = await computeItemLinksRevisionUncached(db, spaceId);
   itemLinksRevisionCache.set(spaceId, {
-    value,
     expiresAt: now + ITEM_LINKS_REVISION_CACHE_TTL_MS,
+    value,
   });
   pruneItemLinksRevisionCacheIfOversized(now);
   return value;

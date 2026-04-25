@@ -31,37 +31,37 @@ describe("POST /api/item-links", () => {
     const db = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
+          leftJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [
+                { braneType: "gm", name: "Test Space" },
+              ]),
+            })),
+          })),
           where: vi.fn(() => ({
             limit: vi.fn(async () => [
               { spaceId: "00000000-0000-4000-8000-000000000099" },
             ]),
-          })),
-          leftJoin: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(async () => [
-                { name: "Test Space", braneType: "gm" },
-              ]),
-            })),
           })),
         })),
       })),
     };
     tryGetDbMock.mockReturnValue(db);
     validateLinkTargetsInBraneMock.mockResolvedValue({
+      error: "Cross-space links are not allowed",
       ok: false,
       status: 400,
-      error: "Cross-space links are not allowed",
     });
     const { POST } = await import("./route");
 
     const res = await POST(
       new Request("http://localhost/api/item-links", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceItemId: "00000000-0000-4000-8000-000000000001",
           targetItemId: "00000000-0000-4000-8000-000000000002",
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       })
     );
 

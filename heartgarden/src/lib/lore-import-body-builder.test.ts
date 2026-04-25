@@ -11,19 +11,19 @@ function makeItem(
   entityType: string | null = "lore"
 ) {
   return {
+    contentJson,
+    contentText: "Imported",
+    entityMeta: { aiReview: "pending" as const },
+    entityType,
+    height: 260,
     id: "11111111-1111-4111-8111-111111111111",
-    spaceId: "22222222-2222-4222-8222-222222222222",
     itemType: "note" as const,
+    spaceId: "22222222-2222-4222-8222-222222222222",
+    title: "Imported",
+    width: 320,
     x: 0,
     y: 0,
-    width: 320,
-    height: 260,
     zIndex: 1,
-    title: "Imported",
-    contentText: "Imported",
-    contentJson,
-    entityType,
-    entityMeta: { aiReview: "pending" as const },
   };
 }
 
@@ -31,7 +31,6 @@ describe("lore import body builders", () => {
   it("builds generic bodies as hgDoc and hydrates with text", () => {
     const contentJson = buildLoreStructuredBodyContentJson(
       {
-        kind: "generic",
         blocks: [
           { kind: "heading", level: 2, text: "Incident" },
           {
@@ -39,6 +38,7 @@ describe("lore import body builders", () => {
             text: "Recovered obsidian shard at trench site.",
           },
         ],
+        kind: "generic",
       },
       "",
       "Imported"
@@ -58,10 +58,10 @@ describe("lore import body builders", () => {
   it("builds location slab fields into ORDO v7 slots", () => {
     const contentJson = buildLoreStructuredBodyContentJson(
       {
-        kind: "location",
-        name: "Vanphimwell Trench",
         context: "Saguna",
         detail: "Abyssal Site",
+        kind: "location",
+        name: "Vanphimwell Trench",
         notesParagraphs: ["Residual resonance and unstable tides."],
       },
       "",
@@ -79,8 +79,8 @@ describe("lore import body builders", () => {
     const contentJson = buildLoreStructuredBodyContentJson(
       {
         kind: "faction",
-        namePrimary: "Obsidian Chorus",
         nameAccent: "Civic Cell",
+        namePrimary: "Obsidian Chorus",
         recordParagraphs: ["Maintains custody chain for recovered artifacts."],
       },
       "",

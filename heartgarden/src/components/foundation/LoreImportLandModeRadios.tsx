@@ -10,19 +10,19 @@ const LAND_MODE_OPTIONS: {
   description: string;
 }[] = [
   {
+    description: "Drop the whole document as one card. No AI planning.",
     id: "one_note",
     title: "One note",
-    description: "Drop the whole document as one card. No AI planning.",
   },
   {
+    description: "Extract entities and drop them on this canvas. No folders.",
     id: "many_loose",
     title: "Many loose",
-    description: "Extract entities and drop them on this canvas. No folders.",
   },
   {
+    description: "Extract entities and organize them into folders.",
     id: "many_folders",
     title: "Many in folders",
-    description: "Extract entities and organize them into folders.",
   },
 ];
 

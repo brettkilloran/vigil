@@ -16,7 +16,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", nodes: [], edges: [] },
+      { edges: [], error: "Database not configured", nodes: [], ok: false },
       { status: 503 }
     );
   }
@@ -36,10 +36,10 @@ export async function GET(
   if (limitRaw == null && offset > 0) {
     return Response.json(
       {
-        ok: false,
+        edges: [] as GraphEdge[],
         error: "offset requires limit",
         nodes: [] as GraphNode[],
-        edges: [] as GraphEdge[],
+        ok: false,
       },
       { status: 400 }
     );
@@ -58,10 +58,10 @@ export async function GET(
   if (limitRaw == null) {
     rows = await db
       .select({
-        id: items.id,
-        title: items.title,
-        itemType: items.itemType,
         entityType: items.entityType,
+        id: items.id,
+        itemType: items.itemType,
+        title: items.title,
       })
       .from(items)
       .where(eq(items.spaceId, spaceId))
@@ -73,10 +73,10 @@ export async function GET(
     );
     rows = await db
       .select({
-        id: items.id,
-        title: items.title,
-        itemType: items.itemType,
         entityType: items.entityType,
+        id: items.id,
+        itemType: items.itemType,
+        title: items.title,
       })
       .from(items)
       .where(eq(items.spaceId, spaceId))
@@ -88,11 +88,11 @@ export async function GET(
   const idList = rows.map((r) => r.id);
   if (idList.length === 0) {
     const emptyPayload: Record<string, unknown> = {
-      ok: true,
-      nodes: [] as GraphNode[],
       edges: [] as GraphEdge[],
-      total_nodes: totalNodes,
       itemLinksRevision,
+      nodes: [] as GraphNode[],
+      ok: true,
+      total_nodes: totalNodes,
     };
     if (limitRaw != null && pageLimit != null) {
       emptyPayload.limit = pageLimit;
@@ -105,14 +105,14 @@ export async function GET(
 
   const linkRowsRaw = await db
     .select({
-      id: itemLinks.id,
-      source: itemLinks.sourceItemId,
-      target: itemLinks.targetItemId,
       color: itemLinks.color,
-      sourcePin: itemLinks.sourcePin,
-      targetPin: itemLinks.targetPin,
+      id: itemLinks.id,
       linkType: itemLinks.linkType,
       meta: itemLinks.meta,
+      source: itemLinks.sourceItemId,
+      sourcePin: itemLinks.sourcePin,
+      target: itemLinks.targetItemId,
+      targetPin: itemLinks.targetPin,
       updatedAt: itemLinks.updatedAt,
     })
     .from(itemLinks)
@@ -127,23 +127,23 @@ export async function GET(
 
   const linkRows = dedupeLogicalItemLinkRows(
     linkRowsRaw.map((l) => ({
-      id: l.id,
-      source: l.source,
-      target: l.target,
-      linkType: l.linkType ?? null,
-      sourcePin: l.sourcePin ?? null,
-      targetPin: l.targetPin ?? null,
       color: l.color ?? null,
+      id: l.id,
+      linkType: l.linkType ?? null,
       meta: l.meta,
+      source: l.source,
+      sourcePin: l.sourcePin ?? null,
+      target: l.target,
+      targetPin: l.targetPin ?? null,
       updatedAtMs: l.updatedAt?.getTime() ?? 0,
     }))
   );
 
   const nodes: GraphNode[] = rows.map((r) => ({
-    id: r.id,
-    title: r.title || "Untitled",
-    itemType: r.itemType,
     entityType: r.entityType ?? null,
+    id: r.id,
+    itemType: r.itemType,
+    title: r.title || "Untitled",
   }));
   const nodeIds = new Set(nodes.map((n) => n.id));
   const ghostIds = new Set<string>();
@@ -158,43 +158,43 @@ export async function GET(
   if (ghostIds.size > 0) {
     const ghostRows = await db
       .select({
-        id: items.id,
-        title: items.title,
-        itemType: items.itemType,
         entityType: items.entityType,
         foreignSpaceId: items.spaceId,
+        id: items.id,
+        itemType: items.itemType,
+        title: items.title,
       })
       .from(items)
       .where(inArray(items.id, [...ghostIds]));
     for (const ghost of ghostRows) {
       nodes.push({
-        id: ghost.id,
-        title: ghost.title || "Untitled",
-        itemType: ghost.itemType,
         entityType: ghost.entityType ?? null,
         external: true,
         foreignSpaceId: ghost.foreignSpaceId,
+        id: ghost.id,
+        itemType: ghost.itemType,
+        title: ghost.title || "Untitled",
       });
     }
   }
 
   const edges: GraphEdge[] = linkRows.map((l) => ({
-    id: l.id,
-    source: l.source,
-    target: l.target,
     color: l.color ?? null,
-    sourcePin: l.sourcePin ?? null,
-    targetPin: l.targetPin ?? null,
+    id: l.id,
     linkType: l.linkType ?? null,
     slackMultiplier: parseSlackMultiplierFromLinkMeta(l.meta),
+    source: l.source,
+    sourcePin: l.sourcePin ?? null,
+    target: l.target,
+    targetPin: l.targetPin ?? null,
   }));
 
   const payload: Record<string, unknown> = {
-    ok: true,
-    nodes,
     edges,
-    total_nodes: totalNodes,
     itemLinksRevision,
+    nodes,
+    ok: true,
+    total_nodes: totalNodes,
   };
   if (limitRaw != null && pageLimit != null) {
     payload.limit = pageLimit;

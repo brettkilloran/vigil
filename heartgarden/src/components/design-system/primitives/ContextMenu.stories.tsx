@@ -4,6 +4,7 @@ import { Copy, Trash } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { useState } from "react";
 import { fn } from "storybook/test";
+
 import { Button } from "@/src/components/ui/Button";
 import {
   ContextMenu,
@@ -11,17 +12,17 @@ import {
 } from "@/src/components/ui/ContextMenu";
 
 const meta = {
-  title: "Heartgarden/Design System/Primitives/Context menu",
   component: ContextMenu,
   parameters: {
-    layout: "fullscreen",
     docs: {
       description: {
         component:
           "Fixed-position menu used on the canvas; closes on outside pointer or Escape.",
       },
     },
+    layout: "fullscreen",
   },
+  title: "Heartgarden/Design System/Primitives/Context menu",
 } satisfies Meta<typeof ContextMenu>;
 
 export default meta;
@@ -29,9 +30,9 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    position: { x: 48, y: 48 },
-    onClose: fn(),
     items: [],
+    onClose: fn(),
+    position: { x: 48, y: 48 },
   },
   render: () => {
     const [position, setPosition] = useState<ContextMenuPosition>({
@@ -55,16 +56,16 @@ export const Default: Story = {
         <ContextMenu
           items={[
             {
-              label: "Copy link",
               icon: <Copy className="size-[18px]" weight="bold" />,
+              label: "Copy link",
               onSelect: fn(),
             },
             {
-              label: "Remove",
               icon: <Trash className="size-[18px]" weight="bold" />,
+              label: "Remove",
               onSelect: fn(),
             },
-            { label: "Disabled row", onSelect: fn(), disabled: true },
+            { disabled: true, label: "Disabled row", onSelect: fn() },
           ]}
           onClose={() => setPosition(null)}
           position={position}

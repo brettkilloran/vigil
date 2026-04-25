@@ -23,10 +23,10 @@ function Harness({
   onReady: (session: SessionApi) => void;
 }) {
   const session = useEditorSession({
-    value,
     debounceMs,
     normalizeOnCommit,
     onCommit,
+    value,
   });
   onReady(session);
   return null;
@@ -60,7 +60,7 @@ describe("useEditorSession", () => {
         <Harness
           debounceMs={100}
           normalizeOnCommit={(value) => value.trim()}
-          onCommit={(value, reason) => commits.push({ value, reason })}
+          onCommit={(value, reason) => commits.push({ reason, value })}
           onReady={(next) => {
             session = next;
           }}
@@ -81,7 +81,7 @@ describe("useEditorSession", () => {
       vi.advanceTimersByTime(1);
     });
 
-    expect(commits).toEqual([{ value: "Beta", reason: "debounce" }]);
+    expect(commits).toEqual([{ reason: "debounce", value: "Beta" }]);
   });
 
   it("cancels draft and resets to last committed value", () => {
@@ -92,7 +92,7 @@ describe("useEditorSession", () => {
       root.render(
         <Harness
           debounceMs={100}
-          onCommit={(value, reason) => commits.push({ value, reason })}
+          onCommit={(value, reason) => commits.push({ reason, value })}
           onReady={(next) => {
             session = next;
           }}

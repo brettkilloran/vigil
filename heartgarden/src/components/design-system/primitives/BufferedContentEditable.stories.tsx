@@ -7,17 +7,17 @@ import { fn } from "storybook/test";
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 
 const meta = {
-  title: "Heartgarden/Design System/Primitives/Buffered content editable",
   component: BufferedContentEditable,
   parameters: {
-    layout: "centered",
     docs: {
       description: {
         component:
           "Rich inline body editing with the same commit/cancel semantics as `BufferedTextInput`, used inside canvas nodes.",
       },
     },
+    layout: "centered",
   },
+  title: "Heartgarden/Design System/Primitives/Buffered content editable",
 } satisfies Meta<typeof BufferedContentEditable>;
 
 export default meta;
@@ -27,9 +27,9 @@ const logBodyCommit = fn();
 
 export const PlainText: Story = {
   args: {
-    value: "Edit this line. Blur commits; Escape cancels.",
-    plainText: true,
     onCommit: fn(),
+    plainText: true,
+    value: "Edit this line. Blur commits; Escape cancels.",
   },
   render: () => {
     const [value, setValue] = useState(

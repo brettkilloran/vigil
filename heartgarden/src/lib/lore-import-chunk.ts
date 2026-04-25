@@ -40,10 +40,10 @@ export function chunkSourceText(fullText: string): SourceTextChunk[] {
     const body = buf.join("\n");
     if (body.trim().length > 0) {
       sections.push({
-        heading: currentHeading,
-        start: currentStart,
         end: currentEnd,
+        heading: currentHeading,
         lines: [...buf],
+        start: currentStart,
       });
     }
     buf = [];
@@ -106,7 +106,7 @@ function splitParagraphSlices(text: string): ParagraphSlice[] {
     }
     const body = buf.join("\n");
     if (body.trim().length > 0) {
-      slices.push({ text: body, start: paraStart, end });
+      slices.push({ end, start: paraStart, text: body });
     }
     buf = [];
   };
@@ -192,11 +192,11 @@ function subdivideChunk(
   if (body.length <= MAX_BODY_CHARS) {
     return [
       {
-        id: randomUUID(),
-        heading,
         body,
-        charStart,
         charEnd,
+        charStart,
+        heading,
+        id: randomUUID(),
       },
     ];
   }
@@ -207,11 +207,11 @@ function subdivideChunk(
     const slice = body.slice(pos, pos + MAX_BODY_CHARS);
     const localEnd = pos + slice.length;
     parts.push({
-      id: randomUUID(),
-      heading: part === 0 ? heading : `${heading} (part ${part + 1})`,
       body: slice,
-      charStart: charStart + pos,
       charEnd: charStart + localEnd,
+      charStart: charStart + pos,
+      heading: part === 0 ? heading : `${heading} (part ${part + 1})`,
+      id: randomUUID(),
     });
     pos = localEnd;
     part += 1;

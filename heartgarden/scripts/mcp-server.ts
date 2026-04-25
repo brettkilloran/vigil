@@ -17,14 +17,14 @@ const serviceKey = (process.env.HEARTGARDEN_MCP_SERVICE_KEY ?? "").trim();
 const server = createHeartgardenMcpServer({
   baseUrl,
   defaultSpaceId: (process.env.HEARTGARDEN_DEFAULT_SPACE_ID ?? "").trim(),
-  writeKey: (process.env.HEARTGARDEN_MCP_WRITE_KEY ?? "").trim(),
-  serviceKey,
+  gmBreakGlass:
+    (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE ?? "").trim() === "1",
   playerSpaceExcluded: (process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "")
     .trim()
     .toLowerCase(),
-  gmBreakGlass:
-    (process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE ?? "").trim() === "1",
   readOnly: (process.env.HEARTGARDEN_MCP_READ_ONLY ?? "").trim() === "1",
+  serviceKey,
+  writeKey: (process.env.HEARTGARDEN_MCP_WRITE_KEY ?? "").trim(),
 });
 
 const transport = new StdioServerTransport();

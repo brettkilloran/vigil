@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {
     return Response.json(
-      { ok: false, error: "ANTHROPIC_API_KEY is not configured" },
+      { error: "ANTHROPIC_API_KEY is not configured", ok: false },
       { status: 503 }
     );
   }
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -44,13 +44,13 @@ export async function POST(req: Request) {
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = loreImportPlanPostBodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
     return Response.json(
-      { ok: false, error: "Space not found" },
+      { error: "Space not found", ok: false },
       { status: 404 }
     );
   }
@@ -72,13 +72,13 @@ export async function POST(req: Request) {
 
   try {
     const plan = await buildLoreImportPlan({
-      db,
-      spaceId: parsed.data.spaceId,
       apiKey: key,
-      model,
+      db,
+      fileName: parsed.data.fileName,
       fullText: parsed.data.text,
       importBatchId,
-      fileName: parsed.data.fileName,
+      model,
+      spaceId: parsed.data.spaceId,
       userContext: parsed.data.userContext,
     });
 
@@ -88,30 +88,30 @@ export async function POST(req: Request) {
         const txDb = tx as unknown as VigilDb;
         await insertLoreImportJobForCompletedSyncPlan({
           db: txDb,
-          spaceId: parsed.data.spaceId,
-          importBatchId: plan.importBatchId,
-          sourceText: parsed.data.text,
           fileName: parsed.data.fileName,
-          userContext: parsed.data.userContext,
+          importBatchId: plan.importBatchId,
           plan,
+          sourceText: parsed.data.text,
+          spaceId: parsed.data.spaceId,
+          userContext: parsed.data.userContext,
         });
         await replaceImportReviewQueueForPlan(txDb, parsed.data.spaceId, plan);
       });
     } else {
       await insertLoreImportJobForCompletedSyncPlan({
         db: db as VigilDb,
-        spaceId: parsed.data.spaceId,
-        importBatchId: plan.importBatchId,
-        sourceText: parsed.data.text,
         fileName: parsed.data.fileName,
-        userContext: parsed.data.userContext,
+        importBatchId: plan.importBatchId,
         plan,
+        sourceText: parsed.data.text,
+        spaceId: parsed.data.spaceId,
+        userContext: parsed.data.userContext,
       });
     }
 
     return Response.json({ ok: true, plan });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Plan failed";
-    return Response.json({ ok: false, error: msg }, { status: 500 });
+    return Response.json({ error: msg, ok: false }, { status: 500 });
   }
 }

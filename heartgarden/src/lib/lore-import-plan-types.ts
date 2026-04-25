@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { hgStructuredBlockSchema } from "@/src/lib/hg-doc/structured-body";
 import { CANONICAL_ENTITY_KINDS } from "@/src/lib/lore-import-canonical-kinds";
 import { LOCATION_TOP_FIELD_CHAR_CAPS } from "@/src/lib/lore-location-focus-document-html";
@@ -6,6 +7,7 @@ import { HEARTGARDEN_NATIONS } from "@/src/lib/lore-nations";
 
 export const ingestionSignalsSchema = z
   .object({
+    importance: z.number().min(0).max(1).optional(),
     salienceRole: z
       .enum(["crunch", "flavor", "plot_hook", "table_advice", "mixed"])
       .optional(),
@@ -18,7 +20,6 @@ export const ingestionSignalsSchema = z
         "unknown",
       ])
       .optional(),
-    importance: z.number().min(0).max(1).optional(),
   })
   .optional();
 
@@ -33,8 +34,8 @@ export const loreImportLinkIntentSchema = z
 
 export const loreImportPlanFolderSchema = z.object({
   clientId: z.string().min(1).max(64),
-  title: z.string().min(1).max(255),
   parentClientId: z.string().min(1).max(64).nullable().optional(),
+  title: z.string().min(1).max(255),
 });
 
 /**
@@ -46,10 +47,10 @@ export const loreImportPlanFolderSchema = z.object({
  * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.2 and plan §5.
  */
 export const loreImportCrossFolderMentionSchema = z.object({
-  toClientId: z.string().min(1).max(64),
-  targetTitle: z.string().min(1).max(255),
-  linkType: z.string().min(1).max(64),
   linkIntent: loreImportLinkIntentSchema,
+  linkType: z.string().min(1).max(64),
+  targetTitle: z.string().min(1).max(255),
+  toClientId: z.string().min(1).max(64),
 });
 
 export type LoreImportCrossFolderMention = z.infer<
@@ -62,32 +63,32 @@ export const loreImportSourcePassageSchema = z.object({
 });
 
 const loreImportGenericBodySchema = z.object({
-  kind: z.literal("generic"),
   blocks: z.array(hgStructuredBlockSchema).max(400),
+  kind: z.literal("generic"),
 });
 
 const loreImportCharacterBodySchema = z.object({
-  kind: z.literal("character"),
-  name: z.string().max(255),
-  role: z.string().max(255).optional(),
   affiliation: z.string().max(255).optional(),
   affiliationFactionClientId: z.string().min(1).max(64).optional(),
+  kind: z.literal("character"),
+  name: z.string().max(255),
   nationality: z.enum(HEARTGARDEN_NATIONS).or(z.literal("")).optional(),
   notesParagraphs: z.array(z.string().max(8000)).max(400),
+  role: z.string().max(255).optional(),
 });
 
 const loreImportLocationBodySchema = z.object({
-  kind: z.literal("location"),
-  name: z.string().max(LOCATION_TOP_FIELD_CHAR_CAPS.name),
   context: z.string().max(LOCATION_TOP_FIELD_CHAR_CAPS.context).optional(),
   detail: z.string().max(LOCATION_TOP_FIELD_CHAR_CAPS.detail).optional(),
+  kind: z.literal("location"),
+  name: z.string().max(LOCATION_TOP_FIELD_CHAR_CAPS.name),
   notesParagraphs: z.array(z.string().max(8000)).max(400),
 });
 
 const loreImportFactionBodySchema = z.object({
   kind: z.literal("faction"),
-  namePrimary: z.string().max(255),
   nameAccent: z.string().max(255).optional(),
+  namePrimary: z.string().max(255),
   recordParagraphs: z.array(z.string().max(8000)).max(400),
 });
 
@@ -103,79 +104,80 @@ export type LoreImportStructuredBody = z.infer<
 >;
 
 export const loreImportPlanNoteSchema = z.object({
-  clientId: z.string().min(1).max(64),
-  title: z.string().min(1).max(255),
+  body: loreImportStructuredBodySchema.optional(),
+  bodyText: z.string().max(120_000),
+  campaignEpoch: z.number().int().optional(),
   canonicalEntityKind: z.enum(
     CANONICAL_ENTITY_KINDS as unknown as [string, ...string[]]
   ),
-  summary: z.string().max(4000),
-  bodyText: z.string().max(120_000),
-  body: loreImportStructuredBodySchema.optional(),
-  sourcePassages: z.array(loreImportSourcePassageSchema).max(400).optional(),
-  folderClientId: z.string().min(1).max(64).nullable().optional(),
-  targetItemType: z.string().max(64).nullable().optional(),
-  ingestionSignals: ingestionSignalsSchema,
-  campaignEpoch: z.number().int().optional(),
-  loreHistorical: z.boolean().optional(),
-  sourceChunkIds: z.array(z.string().uuid()).optional(),
+  clientId: z.string().min(1).max(64),
   crossFolderMentions: z
     .array(loreImportCrossFolderMentionSchema)
     .max(32)
     .optional(),
-  targetSpaceId: z.string().uuid().nullable().optional(),
-  targetSpaceConfidence: z.number().min(0).max(1).optional(),
-  targetSpaceReason: z.string().max(400).optional(),
+  folderClientId: z.string().min(1).max(64).nullable().optional(),
+  ingestionSignals: ingestionSignalsSchema,
+  loreHistorical: z.boolean().optional(),
   relatedItems: z
     .array(
       z.object({
         itemId: z.string().uuid(),
-        spaceId: z.string().uuid(),
-        title: z.string().max(255),
         score: z.number().min(0).max(1).optional(),
         snippet: z.string().max(1200).optional(),
+        spaceId: z.string().uuid(),
+        title: z.string().max(255),
       })
     )
     .max(40)
     .optional(),
+  sourceChunkIds: z.array(z.string().uuid()).optional(),
+  sourcePassages: z.array(loreImportSourcePassageSchema).max(400).optional(),
+  summary: z.string().max(4000),
+  targetItemType: z.string().max(64).nullable().optional(),
+  targetSpaceConfidence: z.number().min(0).max(1).optional(),
+  targetSpaceId: z.string().uuid().nullable().optional(),
+  targetSpaceReason: z.string().max(400).optional(),
+  title: z.string().min(1).max(255),
 });
 
 export const loreImportSpaceSuggestionSchema = z.object({
+  path: z.string().max(1000).optional(),
+  reason: z.string().max(400).optional(),
+  score: z.number().min(0).max(1).optional(),
   spaceId: z.string().uuid(),
   spaceTitle: z.string().max(255),
-  path: z.string().max(1000).optional(),
-  score: z.number().min(0).max(1).optional(),
-  reason: z.string().max(400).optional(),
 });
 
 export const loreImportPlanLinkSchema = z.object({
   fromClientId: z.string().min(1).max(64),
-  toClientId: z.string().min(1).max(64),
-  linkType: linkTypeSchema,
   linkIntent: loreImportLinkIntentSchema,
+  linkType: linkTypeSchema,
+  toClientId: z.string().min(1).max(64),
 });
 
 export const mergeProposalSchema = z.object({
   id: z.string().uuid(),
   noteClientId: z.string().min(1).max(64),
-  targetItemId: z.string().uuid(),
-  targetTitle: z.string().max(255),
-  targetSpaceName: z.string().max(255).optional(),
-  targetItemType: z.string().max(64).nullable().optional(),
-  targetEntityType: z.string().max(64).nullable().optional(),
-  strategy: z.enum(["append_dated", "append_section"]),
   proposedText: z.string().max(120_000),
   rationale: z.string().max(2000).optional(),
+  strategy: z.enum(["append_dated", "append_section"]),
+  targetEntityType: z.string().max(64).nullable().optional(),
+  targetItemId: z.string().uuid(),
+  targetItemType: z.string().max(64).nullable().optional(),
+  targetSpaceName: z.string().max(255).optional(),
+  targetTitle: z.string().max(255),
 });
 
 export const contradictionSchema = z.object({
+  details: z.string().max(8000).optional(),
   id: z.string().uuid(),
   noteClientId: z.string().min(1).max(64).optional(),
   summary: z.string().max(2000),
-  details: z.string().max(8000).optional(),
 });
 
 const ingestionSignalsPatchSchema = z
   .object({
+    importance: z.number().min(0).max(1).optional(),
     salienceRole: z
       .enum(["crunch", "flavor", "plot_hook", "table_advice", "mixed"])
       .optional(),
@@ -188,7 +190,6 @@ const ingestionSignalsPatchSchema = z
         "unknown",
       ])
       .optional(),
-    importance: z.number().min(0).max(1).optional(),
   })
   .strict();
 
@@ -196,45 +197,45 @@ const ingestionSignalsPatchSchema = z
 export const planPatchHintSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("no_op") }),
   z.object({
-    op: z.literal("set_note_folder"),
-    noteClientId: z.string().min(1).max(64),
     folderClientId: z.string().min(1).max(64).nullable(),
-  }),
-  z.object({
-    op: z.literal("set_link_type"),
-    fromClientId: z.string().min(1).max(64),
-    toClientId: z.string().min(1).max(64),
-    linkType: z.string().min(1).max(64),
-  }),
-  z.object({
-    op: z.literal("remove_link"),
-    fromClientId: z.string().min(1).max(64),
-    toClientId: z.string().min(1).max(64),
-  }),
-  z.object({
-    op: z.literal("set_ingestion_signals"),
     noteClientId: z.string().min(1).max(64),
+    op: z.literal("set_note_folder"),
+  }),
+  z.object({
+    fromClientId: z.string().min(1).max(64),
+    linkType: z.string().min(1).max(64),
+    op: z.literal("set_link_type"),
+    toClientId: z.string().min(1).max(64),
+  }),
+  z.object({
+    fromClientId: z.string().min(1).max(64),
+    op: z.literal("remove_link"),
+    toClientId: z.string().min(1).max(64),
+  }),
+  z.object({
+    noteClientId: z.string().min(1).max(64),
+    op: z.literal("set_ingestion_signals"),
     patch: ingestionSignalsPatchSchema,
   }),
   z.object({
-    op: z.literal("set_lore_historical"),
-    noteClientId: z.string().min(1).max(64),
     loreHistorical: z.boolean(),
+    noteClientId: z.string().min(1).max(64),
+    op: z.literal("set_lore_historical"),
   }),
   z.object({
-    op: z.literal("discard_merge_proposal"),
     mergeProposalId: z.string().uuid(),
+    op: z.literal("discard_merge_proposal"),
   }),
   z.object({
-    op: z.literal("assign_chunk_to_note"),
     chunkId: z.string().uuid(),
     noteClientId: z.string().min(1).max(64),
+    op: z.literal("assign_chunk_to_note"),
   }),
   z.object({
-    op: z.literal("unassign_chunk"),
     chunkId: z.string().uuid(),
     /** When set, only drops the chunk from this note; otherwise drops from every note. */
     noteClientId: z.string().min(1).max(64).optional(),
+    op: z.literal("unassign_chunk"),
   }),
 ]);
 
@@ -243,28 +244,28 @@ export type PlanPatchHint = z.infer<typeof planPatchHintSchema>;
 export const loreImportClarificationOptionSchema = z.object({
   id: z.string().min(1).max(64),
   label: z.string().min(1).max(500),
-  recommended: z.boolean().optional(),
   planPatchHint: planPatchHintSchema,
+  recommended: z.boolean().optional(),
 });
 
 export const loreImportClarificationItemSchema = z.object({
-  id: z.string().uuid(),
   category: z.enum(["structure", "link_semantics", "canon_weight", "conflict"]),
-  severity: z.enum(["required", "optional"]),
   /** 0..1 confidence from planner; lower values should be asked earlier. */
   confidenceScore: z.number().min(0).max(1).optional(),
-  title: z.string().min(1).max(300),
   context: z.string().max(4000).optional(),
-  questionKind: z.enum(["single_select", "multi_select", "confirm_default"]),
+  id: z.string().uuid(),
   options: z.array(loreImportClarificationOptionSchema).min(2).max(12),
-  relatedNoteClientIds: z.array(z.string().min(1).max(64)).max(20).optional(),
-  relatedMergeProposalId: z.string().uuid().optional(),
+  questionKind: z.enum(["single_select", "multi_select", "confirm_default"]),
   relatedLink: z
     .object({
       fromClientId: z.string().min(1).max(64),
       toClientId: z.string().min(1).max(64),
     })
     .optional(),
+  relatedMergeProposalId: z.string().uuid().optional(),
+  relatedNoteClientIds: z.array(z.string().min(1).max(64)).max(20).optional(),
+  severity: z.enum(["required", "optional"]),
+  title: z.string().min(1).max(300),
 });
 
 export type LoreImportClarificationItem = z.infer<
@@ -273,6 +274,7 @@ export type LoreImportClarificationItem = z.infer<
 
 export const clarificationAnswerSchema = z.object({
   clarificationId: z.string().uuid(),
+  otherText: z.string().max(2000).optional(),
   resolution: z.enum([
     "answered",
     "skipped_default",
@@ -281,63 +283,62 @@ export const clarificationAnswerSchema = z.object({
   ]),
   selectedOptionIds: z.array(z.string().min(1).max(64)).max(12).optional(),
   skipDefaultOptionId: z.string().min(1).max(64).optional(),
-  otherText: z.string().max(2000).optional(),
 });
 
 export type ClarificationAnswer = z.infer<typeof clarificationAnswerSchema>;
 
 export const loreImportUserContextSchema = z.object({
+  docSourceKind: z.enum(["pdf", "docx", "markdown", "text"]).optional(),
+  freeformContext: z.string().max(4000).optional(),
   granularity: z.enum(["one_note", "many"]),
-  orgMode: z.enum(["folders", "nearby"]),
   importScope: z
     .enum(["current_subtree", "gm_workspace"])
     .optional()
     .default("current_subtree"),
-  freeformContext: z.string().max(4000).optional(),
-  docSourceKind: z.enum(["pdf", "docx", "markdown", "text"]).optional(),
+  orgMode: z.enum(["folders", "nearby"]),
 });
 
 export type LoreImportUserContext = z.infer<typeof loreImportUserContextSchema>;
 
 export const loreImportOneNoteSourceSchema = z.object({
-  title: z.string().max(255).optional(),
   text: z.string().max(500_000),
+  title: z.string().max(255).optional(),
 });
 
 export const loreImportPlanSchema = z.object({
-  importBatchId: z.string().uuid(),
-  fileName: z.string().max(512).optional(),
-  sourceCharCount: z.number().int().nonnegative(),
   chunks: z
     .array(
       z.object({
-        id: z.string().uuid(),
-        heading: z.string(),
-        charStart: z.number().int(),
-        charEnd: z.number().int(),
         /** Full chunk body (kept on the plan so patches can rebuild note bodies at apply). */
         body: z.string().max(32_000).optional(),
+        charEnd: z.number().int(),
+        charStart: z.number().int(),
+        heading: z.string(),
+        id: z.string().uuid(),
       })
     )
-    .optional(),
-  folders: z.array(loreImportPlanFolderSchema),
-  notes: z.array(loreImportPlanNoteSchema),
-  links: z.array(loreImportPlanLinkSchema),
-  mergeProposals: z.array(mergeProposalSchema),
-  contradictions: z.array(contradictionSchema),
-  spaceSuggestions: z
-    .array(loreImportSpaceSuggestionSchema)
-    .max(128)
     .optional(),
   /** LLM + validation: open questions; required items block apply until answered. */
   clarifications: z
     .array(loreImportClarificationItemSchema)
     .optional()
     .default([]),
+  contradictions: z.array(contradictionSchema),
+  fileName: z.string().max(512).optional(),
+  folders: z.array(loreImportPlanFolderSchema),
+  importBatchId: z.string().uuid(),
   /** Server-generated: cross-space link drops, etc. (round-tripped through apply). */
   importPlanWarnings: z.array(z.string().max(600)).max(48).optional(),
-  userContext: loreImportUserContextSchema.optional(),
+  links: z.array(loreImportPlanLinkSchema),
+  mergeProposals: z.array(mergeProposalSchema),
+  notes: z.array(loreImportPlanNoteSchema),
   oneNoteSource: loreImportOneNoteSourceSchema.optional(),
+  sourceCharCount: z.number().int().nonnegative(),
+  spaceSuggestions: z
+    .array(loreImportSpaceSuggestionSchema)
+    .max(128)
+    .optional(),
+  userContext: loreImportUserContextSchema.optional(),
 });
 
 export type LoreImportPlan = z.infer<typeof loreImportPlanSchema>;
@@ -348,12 +349,12 @@ export function buildDefaultEntityMeta(
   note: LoreImportPlanNote
 ): Record<string, unknown> {
   return {
-    schemaVersion: 1,
-    import: true,
-    canonicalEntityKind: note.canonicalEntityKind,
-    campaignEpoch: note.campaignEpoch ?? undefined,
-    loreHistorical: note.loreHistorical ?? false,
-    ingestionSignals: note.ingestionSignals ?? {},
     aiReview: "pending" as const,
+    campaignEpoch: note.campaignEpoch ?? undefined,
+    canonicalEntityKind: note.canonicalEntityKind,
+    import: true,
+    ingestionSignals: note.ingestionSignals ?? {},
+    loreHistorical: note.loreHistorical ?? false,
+    schemaVersion: 1,
   };
 }

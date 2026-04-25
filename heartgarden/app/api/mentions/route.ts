@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -31,13 +31,13 @@ export async function GET(req: Request) {
   const braneId = parseSpaceIdParam(url.searchParams.get("braneId"));
   if (!term || term.length < 2) {
     return Response.json(
-      { ok: false, error: "term is required (min 2 chars)" },
+      { error: "term is required (min 2 chars)", ok: false },
       { status: 400 }
     );
   }
   if (!braneId) {
     return Response.json(
-      { ok: false, error: "Valid braneId is required" },
+      { error: "Valid braneId is required", ok: false },
       { status: 400 }
     );
   }
@@ -49,11 +49,11 @@ export async function GET(req: Request) {
     .select({
       id: entityMentions.id,
       itemId: entityMentions.sourceItemId,
-      title: items.title,
       matchedTerm: entityMentions.matchedTerm,
       mentionCount: entityMentions.mentionCount,
       snippet: entityMentions.snippet,
       sourceSpaceId: entityMentions.sourceSpaceId,
+      title: items.title,
     })
     .from(entityMentions)
     .innerJoin(items, eq(items.id, entityMentions.sourceItemId))
@@ -67,5 +67,5 @@ export async function GET(req: Request) {
     .orderBy(desc(entityMentions.mentionCount), desc(entityMentions.updatedAt))
     .limit(200);
 
-  return Response.json({ ok: true, items: rows });
+  return Response.json({ items: rows, ok: true });
 }

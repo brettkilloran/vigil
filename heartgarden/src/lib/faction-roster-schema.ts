@@ -13,12 +13,12 @@ const uuidLike = z.string().uuid();
  */
 export const factionRosterEntrySchema = z.discriminatedUnion("kind", [
   z.object({
-    id: uuidLike,
-    kind: z.literal("character"),
     /** Target canvas / DB item id for the character lore card. */
     characterItemId: uuidLike,
     /** Optional roster-only title when the linked card title should not be shown verbatim. */
     displayNameOverride: z.string().max(400).optional(),
+    id: uuidLike,
+    kind: z.literal("character"),
     roleOverride: z.string().max(400).optional(),
   }),
   z.object({

@@ -7,17 +7,17 @@ import { fn } from "storybook/test";
 import { BufferedTextInput } from "@/src/components/editing/BufferedTextInput";
 
 const meta = {
-  title: "Heartgarden/Design System/Primitives/Buffered text input",
   component: BufferedTextInput,
   parameters: {
-    layout: "centered",
     docs: {
       description: {
         component:
           "Title-style input: local draft while editing; commits on blur or Enter; Escape cancels to last committed value (`useEditorSession`).",
       },
     },
+    layout: "centered",
   },
+  title: "Heartgarden/Design System/Primitives/Buffered text input",
 } satisfies Meta<typeof BufferedTextInput>;
 
 export default meta;
@@ -27,8 +27,8 @@ const logTextCommit = fn();
 
 export const Default: Story = {
   args: {
-    value: "Double-click to rename",
     onCommit: fn(),
+    value: "Double-click to rename",
   },
   render: () => {
     const [value, setValue] = useState("Double-click to rename");

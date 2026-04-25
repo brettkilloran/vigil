@@ -180,13 +180,13 @@ export function markdownToStructuredBody(
     }
     const bullet = parseListItems(lines, i, /^[-*]\s+(.+)$/);
     if (bullet.items.length > 0) {
-      blocks.push({ kind: "bullet_list", items: bullet.items });
+      blocks.push({ items: bullet.items, kind: "bullet_list" });
       i = bullet.nextIndex;
       continue;
     }
     const ordered = parseListItems(lines, i, /^\d+\.\s+(.+)$/);
     if (ordered.items.length > 0) {
-      blocks.push({ kind: "ordered_list", items: ordered.items });
+      blocks.push({ items: ordered.items, kind: "ordered_list" });
       i = ordered.nextIndex;
       continue;
     }
@@ -247,17 +247,17 @@ export function structuredBodyToHgDoc(
       plainText: "",
       structureReport: {
         autoPrependedH1: false,
-        demotedOrphanH3Count: 0,
-        promotedH3ToH2Count: 0,
-        flaggedFlatLongBody: false,
         collapsedDuplicateTitleParagraph: false,
+        demotedOrphanH3Count: 0,
         finalHeadingCount: { h1: 0, h2: 0, h3: 0 },
+        flaggedFlatLongBody: false,
+        promotedH3ToH2Count: 0,
       },
     };
   }
   const linted = lintAndRepairStructuredBody(base, {
-    title: options.title,
     requireH1: options.requireH1,
+    title: options.title,
   });
   const html = linted.body.blocks
     .map((b) => blockToHtml(b, options.aiPending))

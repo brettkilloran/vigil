@@ -30,9 +30,9 @@ export function linkCharacterToFactionRosterRow(
   const idx = roster.findIndex((r) => r.id === rosterEntryId);
   if (idx === -1) {
     return {
-      ok: false,
       code: "entry_not_found",
       message: "That roster row no longer exists on this faction card.",
+      ok: false,
     };
   }
 
@@ -43,9 +43,9 @@ export function linkCharacterToFactionRosterRow(
     const labelTrim = row.label.trim();
     const roleTrim = row.role?.trim() ?? "";
     nextRow = {
+      characterItemId,
       id: row.id,
       kind: "character",
-      characterItemId,
       ...(labelTrim ? { displayNameOverride: labelTrim } : {}),
       ...(roleTrim ? { roleOverride: roleTrim } : {}),
     };
@@ -55,18 +55,18 @@ export function linkCharacterToFactionRosterRow(
     }
     if (!allowReplace) {
       return {
-        ok: false,
         code: "replace_blocked",
         message:
           "This roster row is already linked to another character. Unlink it in the roster or pick a different row.",
+        ok: false,
       };
     }
     nextRow = { ...row, characterItemId };
   } else {
     return {
-      ok: false,
       code: "invalid_roster",
       message: "Unsupported roster entry shape.",
+      ok: false,
     };
   }
 
@@ -75,9 +75,9 @@ export function linkCharacterToFactionRosterRow(
   const parsed = factionRosterSchema.safeParse(next);
   if (!parsed.success) {
     return {
-      ok: false,
       code: "invalid_roster",
       message: "Roster would be invalid after linking.",
+      ok: false,
     };
   }
   return { ok: true, roster: parsed.data };

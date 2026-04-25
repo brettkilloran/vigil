@@ -34,7 +34,7 @@ function parseOklch(swatch: string): { L: number; C: number } | null {
   if (!m) {
     return null;
   }
-  return { L: Number(m[1]), C: Number(m[2]) };
+  return { C: Number(m[2]), L: Number(m[1]) };
 }
 
 /**
@@ -66,102 +66,102 @@ export function contrastingFolderInk(swatch: string): string {
  */
 export const FOLDER_COLOR_SCHEMES: FolderColorSchemeMeta[] = [
   {
+    border: "oklch(0.76 0 0)",
     id: "gray",
     label: "Neutral gray",
-    usageHint: "Low-emphasis ties and background links",
     swatch: "oklch(0.54 0 0)",
-    border: "oklch(0.76 0 0)",
+    usageHint: "Low-emphasis ties and background links",
   },
   {
+    border: "oklch(0.72 0.18 250)",
     id: "white",
     label: "Pearl",
-    usageHint: "Clean contrast; archival or administrative paths",
     swatch: "oklch(0.99 0.03 230)",
-    border: "oklch(0.72 0.18 250)",
+    usageHint: "Clean contrast; archival or administrative paths",
   },
   {
+    border: "oklch(0.72 0.36 25)",
     id: "wine",
     label: "Wine",
-    usageHint: "Duty, institutions, bloodlines",
     swatch: "oklch(0.52 0.34 25)",
-    border: "oklch(0.72 0.36 25)",
+    usageHint: "Duty, institutions, bloodlines",
   },
   {
+    border: "oklch(0.86 0.30 48)",
     id: "coral",
     label: "Coral",
-    usageHint: "Warm social bonds and favors",
     swatch: "oklch(0.68 0.32 48)",
-    border: "oklch(0.86 0.30 48)",
+    usageHint: "Warm social bonds and favors",
   },
   {
+    border: "oklch(0.62 0.28 102)",
     id: "amber",
     label: "Honey",
-    usageHint: "Warnings, deadlines, slow burns",
     swatch: "oklch(0.91 0.21 102)",
-    border: "oklch(0.62 0.28 102)",
+    usageHint: "Warnings, deadlines, slow burns",
   },
   {
+    border: "oklch(0.78 0.30 150)",
     id: "forest",
     label: "Forest",
-    usageHint: "Territories, wildlife, green paths",
     swatch: "oklch(0.55 0.32 150)",
-    border: "oklch(0.78 0.30 150)",
+    usageHint: "Territories, wildlife, green paths",
   },
   {
+    border: "oklch(0.62 0.28 128)",
     id: "lime",
     label: "Chartreuse",
-    usageHint: "Odd, experimental, or comedic threads",
     swatch: "oklch(0.84 0.30 128)",
-    border: "oklch(0.62 0.28 128)",
+    usageHint: "Odd, experimental, or comedic threads",
   },
   {
+    border: "oklch(0.90 0.18 198)",
     id: "cyan",
     label: "Aqua",
-    usageHint: "Comms, data flow, blueprints",
     swatch: "oklch(0.74 0.22 198)",
-    border: "oklch(0.90 0.18 198)",
+    usageHint: "Comms, data flow, blueprints",
   },
   {
+    border: "oklch(0.72 0.32 262)",
     id: "ocean",
     label: "Cobalt",
-    usageHint: "Main spine — travel, trade, big plot",
     swatch: "oklch(0.52 0.30 262)",
-    border: "oklch(0.72 0.32 262)",
+    usageHint: "Main spine — travel, trade, big plot",
   },
   {
+    border: "oklch(0.64 0.34 278)",
     id: "midnight",
     label: "Midnight",
-    usageHint: "Secrets, noir, after-hours links",
     swatch: "oklch(0.42 0.32 278)",
-    border: "oklch(0.64 0.34 278)",
+    usageHint: "Secrets, noir, after-hours links",
   },
   {
+    border: "oklch(0.76 0.34 305)",
     id: "violet",
     label: "Violet",
-    usageHint: "Arcane, weird, metaphysical ties",
     swatch: "oklch(0.52 0.34 305)",
-    border: "oklch(0.76 0.34 305)",
+    usageHint: "Arcane, weird, metaphysical ties",
   },
   {
+    border: "oklch(0.78 0.34 328)",
     id: "magenta",
     label: "Magenta",
-    usageHint: "Romance, obsession, glam",
     swatch: "oklch(0.58 0.35 328)",
-    border: "oklch(0.78 0.34 328)",
+    usageHint: "Romance, obsession, glam",
   },
   {
+    border: "oklch(0.82 0.28 2)",
     id: "rose",
     label: "Rose",
-    usageHint: "Care, intimacy, gentle obligations",
     swatch: "oklch(0.62 0.32 2)",
-    border: "oklch(0.82 0.28 2)",
+    usageHint: "Care, intimacy, gentle obligations",
   },
   {
+    border: "oklch(0.62 0.26 45)",
     id: "parchment",
     label: "Peach",
-    usageHint: "History, lore, older story roads",
     swatch: "oklch(0.80 0.20 55)",
-    border: "oklch(0.62 0.26 45)",
+    usageHint: "History, lore, older story roads",
   },
 ];
 
@@ -188,7 +188,7 @@ export function folderNodeStyleForScheme(
   return {
     "--folder-bg": s.swatch,
     "--folder-border": s.border,
-    "--folder-tab": s.swatch,
     "--folder-fg": contrastingFolderInk(s.swatch),
+    "--folder-tab": s.swatch,
   } as CSSProperties;
 }

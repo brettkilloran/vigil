@@ -10,14 +10,14 @@ const SCOPE_MODE_OPTIONS: {
   description: string;
 }[] = [
   {
+    description: "Keep import targets inside this space branch only.",
     id: "current_subtree",
     title: "This space & its folders",
-    description: "Keep import targets inside this space branch only.",
   },
   {
+    description: "Allow matching and placement across all GM-visible spaces.",
     id: "gm_workspace",
     title: "Entire GM workspace",
-    description: "Allow matching and placement across all GM-visible spaces.",
   },
 ];
 

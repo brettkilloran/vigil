@@ -39,10 +39,10 @@ export function subscribeNeonSync(onChange: () => void): () => void {
 /** Stable reference for SSR / prerender — must not change identity between calls. */
 const NEON_SYNC_SERVER_SNAPSHOT: NeonSyncSnapshot = Object.freeze({
   cloudEnabled: false,
-  pending: 0,
   inFlight: 0,
   lastError: null,
   lastSavedAt: null,
+  pending: 0,
 });
 
 let neonSyncSnapshotCache: NeonSyncSnapshot | null = null;
@@ -64,10 +64,10 @@ function snapshotsEqual(a: NeonSyncSnapshot, b: NeonSyncSnapshot): boolean {
 export function getNeonSyncSnapshot(): NeonSyncSnapshot {
   const next: NeonSyncSnapshot = {
     cloudEnabled,
-    pending,
     inFlight,
     lastError,
     lastSavedAt,
+    pending,
   };
   if (neonSyncSnapshotCache && snapshotsEqual(neonSyncSnapshotCache, next)) {
     return neonSyncSnapshotCache;
@@ -121,13 +121,13 @@ export function neonSyncEndRequest(ok: boolean, detail?: NeonSyncFailureInput) {
     lastSavedAt = Date.now();
   } else if (!detail) {
     lastError = formatSyncFailureReport(
-      { operation: "(unknown)", message: "Save failed", cause: "client" },
+      { cause: "client", message: "Save failed", operation: "(unknown)" },
       { cloudEnabled }
     );
   } else if (typeof detail === "string") {
     const m = detail.trim() || "Save failed";
     lastError = formatSyncFailureReport(
-      { operation: "(unspecified API call)", message: m, cause: "client" },
+      { cause: "client", message: m, operation: "(unspecified API call)" },
       { cloudEnabled }
     );
   } else {
@@ -144,9 +144,9 @@ export function neonSyncReportAuxiliaryFailure(detail: NeonSyncFailureInput) {
   if (typeof detail === "string") {
     lastError = formatSyncFailureReport(
       {
-        operation: "(client sync)",
-        message: detail.trim() || "Sync error",
         cause: "client",
+        message: detail.trim() || "Sync error",
+        operation: "(client sync)",
       },
       { cloudEnabled }
     );

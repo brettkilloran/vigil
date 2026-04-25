@@ -23,7 +23,7 @@ export async function POST(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -34,23 +34,23 @@ export async function POST(
     .where(eq(items.id, itemId))
     .limit(1);
   if (!row) {
-    return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+    return Response.json({ error: "Not found", ok: false }, { status: 404 });
   }
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
-    return Response.json({ ok: false, error: "Forbidden." }, { status: 403 });
+    return Response.json({ error: "Forbidden.", ok: false }, { status: 403 });
   }
 
   try {
     await refreshItemEmbedding(db, row);
   } catch {
     return Response.json(
-      { ok: false, error: "Failed to clear embedding row" },
+      { error: "Failed to clear embedding row", ok: false },
       { status: 500 }
     );
   }
 
   return Response.json({
-    ok: true,
     note: "Stale embedding rows cleared. POST /api/items/:id/index re-chunks when an embedding provider is configured.",
+    ok: true,
   });
 }

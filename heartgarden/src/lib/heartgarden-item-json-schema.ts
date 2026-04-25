@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { isPersistedEntityType } from "@/src/lib/lore-object-registry";
 
 const MAX_JSON_BYTES = 1_500_000;
@@ -6,8 +7,8 @@ const MAX_JSON_BYTES = 1_500_000;
 const jsonRecordSchema = z.record(z.string(), z.unknown());
 const loreEntityMetaBaseSchema = z
   .object({
-    canonicalKind: z.string().optional(),
     campaignEpoch: z.number().int().optional(),
+    canonicalKind: z.string().optional(),
     loreHistorical: z.boolean().optional(),
     loreReviewTags: z.array(z.string()).optional(),
   })
@@ -45,44 +46,44 @@ export function validateItemWriteJsonPayload(input: {
 
   if (contentJson !== undefined && contentJson !== null) {
     if (!isObjectRecord(contentJson)) {
-      return { ok: false, error: "contentJson must be an object or null" };
+      return { error: "contentJson must be an object or null", ok: false };
     }
     if (!jsonRecordSchema.safeParse(contentJson).success) {
-      return { ok: false, error: "contentJson has invalid structure" };
+      return { error: "contentJson has invalid structure", ok: false };
     }
     if (jsonSizeBytes(contentJson) > MAX_JSON_BYTES) {
-      return { ok: false, error: "contentJson exceeds size limit (1.5MB)" };
+      return { error: "contentJson exceeds size limit (1.5MB)", ok: false };
     }
   }
 
   if (imageMeta !== undefined && imageMeta !== null) {
     if (!isObjectRecord(imageMeta)) {
-      return { ok: false, error: "imageMeta must be an object or null" };
+      return { error: "imageMeta must be an object or null", ok: false };
     }
     if (jsonSizeBytes(imageMeta) > MAX_JSON_BYTES) {
-      return { ok: false, error: "imageMeta exceeds size limit (1.5MB)" };
+      return { error: "imageMeta exceeds size limit (1.5MB)", ok: false };
     }
   }
 
   if (entityMeta !== undefined && entityMeta !== null) {
     if (!isObjectRecord(entityMeta)) {
-      return { ok: false, error: "entityMeta must be an object or null" };
+      return { error: "entityMeta must be an object or null", ok: false };
     }
     if (jsonSizeBytes(entityMeta) > MAX_JSON_BYTES) {
-      return { ok: false, error: "entityMeta exceeds size limit (1.5MB)" };
+      return { error: "entityMeta exceeds size limit (1.5MB)", ok: false };
     }
     const normalizedType = (entityType ?? "").trim().toLowerCase();
     if (normalizedType.length > 0 && !isPersistedEntityType(normalizedType)) {
       return {
-        ok: false,
         error: `entityType '${normalizedType}' is not allowed`,
+        ok: false,
       };
     }
     const schema = entityMetaSchemaByType[normalizedType];
     if (schema && !schema.safeParse(entityMeta).success) {
       return {
-        ok: false,
         error: `entityMeta is invalid for entityType '${normalizedType}'`,
+        ok: false,
       };
     }
   }
@@ -90,8 +91,8 @@ export function validateItemWriteJsonPayload(input: {
   const normalizedType = (entityType ?? "").trim().toLowerCase();
   if (normalizedType.length > 0 && !isPersistedEntityType(normalizedType)) {
     return {
-      ok: false,
       error: `entityType '${normalizedType}' is not allowed`,
+      ok: false,
     };
   }
 

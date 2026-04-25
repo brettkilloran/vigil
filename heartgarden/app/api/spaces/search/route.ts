@@ -13,17 +13,17 @@ import {
 } from "@/src/lib/lore-import-space-scope";
 
 const querySchema = z.object({
-  q: z.string().max(200).optional(),
-  scope: z.enum(["current_subtree", "gm_workspace"]).optional(),
-  rootSpaceId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+  q: z.string().max(200).optional(),
+  rootSpaceId: z.string().uuid().optional(),
+  scope: z.enum(["current_subtree", "gm_workspace"]).optional(),
 });
 
 export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", spaces: [] },
+      { error: "Database not configured", ok: false, spaces: [] },
       { status: 503 }
     );
   }
@@ -33,14 +33,14 @@ export async function GET(req: Request) {
   }
   const url = new URL(req.url);
   const parsed = querySchema.safeParse({
-    q: url.searchParams.get("q") ?? undefined,
-    scope: url.searchParams.get("scope") ?? undefined,
-    rootSpaceId: url.searchParams.get("rootSpaceId") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
+    q: url.searchParams.get("q") ?? undefined,
+    rootSpaceId: url.searchParams.get("rootSpaceId") ?? undefined,
+    scope: url.searchParams.get("scope") ?? undefined,
   });
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten(), spaces: [] },
+      { error: parsed.error.flatten(), ok: false, spaces: [] },
       { status: 400 }
     );
   }
@@ -48,18 +48,18 @@ export async function GET(req: Request) {
   if (scope === "current_subtree" && !parsed.data.rootSpaceId) {
     return Response.json(
       {
-        ok: false,
         error: "rootSpaceId is required for current_subtree scope",
+        ok: false,
         spaces: [],
       },
       { status: 400 }
     );
   }
   const allowed = await resolveLoreImportAllowedSpaceIds({
+    bootCtx,
     db,
     rootSpaceId: parsed.data.rootSpaceId,
     scope,
-    bootCtx,
   }).catch(() => null);
   if (!allowed) {
     return heartgardenApiForbiddenJsonResponse();
@@ -79,15 +79,15 @@ export async function GET(req: Request) {
   );
   const q = (parsed.data.q ?? "").trim().toLowerCase();
   if (q.length > 0 && q.length < 2) {
-    return Response.json({ ok: true, spaces: [], scope });
+    return Response.json({ ok: true, scope, spaces: [] });
   }
   const limit = parsed.data.limit ?? 30;
   const spaceList = rows
     .filter((row) => allowed.has(row.id))
     .map((row) => ({
+      path: buildSpacePath(row.id, byId),
       spaceId: row.id,
       title: row.name,
-      path: buildSpacePath(row.id, byId),
     }))
     .filter((row) => {
       if (!q) {
@@ -100,5 +100,5 @@ export async function GET(req: Request) {
     })
     .sort((a, b) => a.path.localeCompare(b.path))
     .slice(0, limit);
-  return Response.json({ ok: true, spaces: spaceList, scope });
+  return Response.json({ ok: true, scope, spaces: spaceList });
 }

@@ -1,5 +1,6 @@
 import { and, eq, gt, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
+
 import { tryGetDb } from "@/src/db/index";
 import { canvasPresence } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
@@ -62,7 +63,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -96,11 +97,11 @@ export async function GET(
   const cutoff = new Date(Date.now() - HEARTGARDEN_PRESENCE_TTL_MS);
   const rows = await db
     .select({
-      clientId: canvasPresence.clientId,
       activeSpaceId: canvasPresence.activeSpaceId,
       camera: canvasPresence.camera,
-      pointer: canvasPresence.pointer,
+      clientId: canvasPresence.clientId,
       displayName: canvasPresence.displayName,
+      pointer: canvasPresence.pointer,
       sigil: canvasPresence.sigil,
       updatedAt: canvasPresence.updatedAt,
     })
@@ -137,11 +138,11 @@ export async function GET(
     const name = normalizePresenceDisplayName(r.displayName);
     const sigil = safePresenceSigilFromUnknown(r.sigil);
     out.push({
-      clientId: r.clientId,
       activeSpaceId: r.activeSpaceId,
       camera: cam,
-      pointer: ptr,
+      clientId: r.clientId,
       displayName: name,
+      pointer: ptr,
       sigil,
       updatedAt: r.updatedAt.toISOString(),
     });
@@ -161,7 +162,7 @@ export async function POST(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -174,20 +175,20 @@ export async function POST(
   }
 
   if (!consumeHeartgardenPresencePostRateLimit(heartgardenBootClientIp(req))) {
-    return Response.json({ ok: false, error: "Rate limited" }, { status: 429 });
+    return Response.json({ error: "Rate limited", ok: false }, { status: 429 });
   }
 
   let json: unknown;
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = presencePostBodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -206,24 +207,24 @@ export async function POST(
   await db
     .insert(canvasPresence)
     .values({
-      clientId: parsed.data.clientId,
       activeSpaceId: spaceId,
       camera,
-      pointer,
+      clientId: parsed.data.clientId,
       displayName,
+      pointer,
       sigil,
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: canvasPresence.clientId,
       set: {
         activeSpaceId: spaceId,
         camera,
-        pointer,
         displayName,
+        pointer,
         sigil,
         updatedAt: now,
       },
+      target: canvasPresence.clientId,
     });
 
   if (shouldRunPresenceGc()) {
@@ -262,7 +263,7 @@ export async function DELETE(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -275,7 +276,7 @@ export async function DELETE(
   }
 
   if (!consumeHeartgardenPresencePostRateLimit(heartgardenBootClientIp(req))) {
-    return Response.json({ ok: false, error: "Rate limited" }, { status: 429 });
+    return Response.json({ error: "Rate limited", ok: false }, { status: 429 });
   }
 
   const url = new URL(req.url);
@@ -283,7 +284,7 @@ export async function DELETE(
   const parsed = z.string().uuid().safeParse(clientIdRaw);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: "Invalid clientId" },
+      { error: "Invalid clientId", ok: false },
       { status: 400 }
     );
   }

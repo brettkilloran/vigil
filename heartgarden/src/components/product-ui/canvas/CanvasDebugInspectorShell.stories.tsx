@@ -5,17 +5,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { CanvasDebugInspectorShell } from "@/src/components/ui/CanvasDebugInspectorShell";
 
 const meta = {
-  title: "Heartgarden/Product UI/Canvas/Debug inspector shell",
   component: CanvasDebugInspectorShell,
-  parameters: {
-    layout: "centered",
-    docs: {
-      description: {
-        component:
-          "Collapsible chrome aligned with the canvas tool rail — used by the links debug panel and similar inspectors.",
-      },
-    },
-  },
   decorators: [
     (Story) => (
       <div
@@ -26,6 +16,16 @@ const meta = {
       </div>
     ),
   ],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Collapsible chrome aligned with the canvas tool rail — used by the links debug panel and similar inspectors.",
+      },
+    },
+    layout: "centered",
+  },
+  title: "Heartgarden/Product UI/Canvas/Debug inspector shell",
 } satisfies Meta<typeof CanvasDebugInspectorShell>;
 
 export default meta;
@@ -33,22 +33,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Collapsed: Story = {
   args: {
-    storageKey: "sb-canvas-debug-shell-collapsed",
-    title: "DEBUG // Links",
-    defaultOpen: false,
     children: (
       <p className="text-[var(--vigil-muted)] text-sm">
         Expand the bug button to reveal this body.
       </p>
     ),
+    defaultOpen: false,
+    storageKey: "sb-canvas-debug-shell-collapsed",
+    title: "DEBUG // Links",
   },
 };
 
 export const Expanded: Story = {
   args: {
-    storageKey: "sb-canvas-debug-shell-expanded",
-    title: "DEBUG // Links",
-    defaultOpen: true,
     children: (
       <div className="space-y-2 text-[var(--sem-text-secondary)] text-sm">
         <p className="font-medium text-[var(--sem-text-primary)]">
@@ -59,5 +56,8 @@ export const Expanded: Story = {
         </p>
       </div>
     ),
+    defaultOpen: true,
+    storageKey: "sb-canvas-debug-shell-expanded",
+    title: "DEBUG // Links",
   },
 };

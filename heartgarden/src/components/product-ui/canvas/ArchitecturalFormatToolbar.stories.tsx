@@ -9,21 +9,20 @@ import {
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 
 const meta: Meta<typeof ArchitecturalFormatToolbar> = {
-  title: "Heartgarden/Product UI/Canvas/Format toolbar",
-  component: ArchitecturalFormatToolbar,
   args: {
-    insertDocActions: DEFAULT_DOC_INSERT_ACTIONS,
     formatActions: DEFAULT_FORMAT_ACTIONS,
-    showDocInsertCluster: true,
+    insertDocActions: DEFAULT_DOC_INSERT_ACTIONS,
     onFormat: () => {},
+    showDocInsertCluster: true,
   },
   argTypes: {
-    insertDocActions: { control: "object" },
-    formatActions: { control: "object" },
-    showDocInsertCluster: { control: "boolean" },
     actionTone: { control: "select", options: ["glass", "card-dark"] },
+    formatActions: { control: "object" },
+    insertDocActions: { control: "object" },
     onFormat: { control: false },
+    showDocInsertCluster: { control: "boolean" },
   },
+  component: ArchitecturalFormatToolbar,
   decorators: [
     (Story) => (
       <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
@@ -31,6 +30,7 @@ const meta: Meta<typeof ArchitecturalFormatToolbar> = {
       </div>
     ),
   ],
+  title: "Heartgarden/Product UI/Canvas/Format toolbar",
 };
 
 export default meta;
@@ -45,9 +45,9 @@ export const OnBlackDock: Story = {
       <div
         style={{
           background: "var(--sys-color-black)",
-          padding: "12px 16px",
           borderRadius: 8,
           display: "inline-block",
+          padding: "12px 16px",
         }}
       >
         <Story />

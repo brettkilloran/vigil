@@ -40,17 +40,17 @@ describe("parseSearchFiltersFromUrl", () => {
     );
     expect(stableFiltersSnapshot(parseSearchFiltersFromUrl(u, "full"))).toEqual(
       {
-        spaceId: "s1",
-        itemTypes: ["note", "sticky"],
-        entityTypes: ["character"],
         canonicalEntityKinds: [],
-        updatedAfter: "2024-01-15T00:00:00.000Z",
+        entityTypes: ["character"],
+        excludeLoreHistorical: true,
         hasLinks: true,
         inStack: false,
-        sort: "updated",
+        itemTypes: ["note", "sticky"],
         limit: 10,
         minCampaignEpoch: 3,
-        excludeLoreHistorical: true,
+        sort: "updated",
+        spaceId: "s1",
+        updatedAfter: "2024-01-15T00:00:00.000Z",
       }
     );
   });
@@ -76,21 +76,21 @@ describe("parseSearchFiltersFromUrl", () => {
       "http://localhost/api/search/suggest?spaceId=sp&types=folder&limit=5&hasLinks=false"
     );
     expect(parseSearchFiltersFromUrl(u, "suggest")).toEqual({
-      spaceId: "sp",
-      itemTypes: ["folder"],
-      entityTypes: [],
       canonicalEntityKinds: [],
+      entityTypes: [],
       hasLinks: false,
       inStack: undefined,
+      itemTypes: ["folder"],
       limit: 5,
+      spaceId: "sp",
     });
   });
 
   it('variant "chunks" matches legacy /api/search/chunks subset', () => {
     const u = new URL("http://localhost/api/search/chunks?spaceId=cx&limit=12");
     expect(parseSearchFiltersFromUrl(u, "chunks")).toEqual({
-      spaceId: "cx",
       limit: 12,
+      spaceId: "cx",
     });
   });
 });

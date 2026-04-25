@@ -36,7 +36,7 @@ function yMarginBand(dom: HTMLElement): { yTop: number; yBottom: number } {
   const cs = getComputedStyle(dom);
   const mt = Number.parseFloat(cs.marginTop) || 0;
   const mb = Number.parseFloat(cs.marginBottom) || 0;
-  return { yTop: br.top - mt, yBottom: br.bottom + mb };
+  return { yBottom: br.bottom + mb, yTop: br.top - mt };
 }
 
 function topLevelChildDom(
@@ -268,12 +268,12 @@ function hitFromClient(
     if (clientY >= yTop && clientY <= yBottom) {
       const gripAnchorY = gripAnchorYForBlock(view, i, dom);
       return {
-        index: i,
-        top: br.top,
-        left: br.left,
-        height: br.height,
-        gripAnchorY,
         blockEl: dom,
+        gripAnchorY,
+        height: br.height,
+        index: i,
+        left: br.left,
+        top: br.top,
       };
     }
   }
@@ -678,7 +678,7 @@ export function HgDocPointerBlockDrag({
       dragActiveRef.current = true;
       liftStartPointer.current = { x: ev.clientX, y: ev.clientY };
       dragFrom.current = index;
-      dragSessionRef.current = { index, blockEl: block };
+      dragSessionRef.current = { blockEl: block, index };
       setDragLiftKey((k) => k + 1);
 
       try {
@@ -768,13 +768,13 @@ export function HgDocPointerBlockDrag({
         ref={gripButtonRef}
         size="icon"
         style={{
-          position: "fixed",
-          zIndex: 2_147_483_000,
+          cursor: draggingUi ? "grabbing" : "grab",
           left: Math.max(8, hit.left - 8),
+          pointerEvents: "auto",
+          position: "fixed",
           top: hit.gripAnchorY,
           transform: "translate(-100%, -50%)",
-          cursor: draggingUi ? "grabbing" : "grab",
-          pointerEvents: "auto",
+          zIndex: 2_147_483_000,
         }}
         tone={hit.tone}
         type="button"

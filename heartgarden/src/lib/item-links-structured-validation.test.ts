@@ -7,8 +7,8 @@ describe("validateStructuredMirrorItemLink", () => {
   it("allows association meta", () => {
     const r = validateStructuredMirrorItemLink(
       { linkSemantics: "association" },
-      { id: "a", entityType: "character" },
-      { id: "b", entityType: "faction" }
+      { entityType: "character", id: "a" },
+      { entityType: "faction", id: "b" }
     );
     expect(r.ok).toBe(true);
   });
@@ -16,8 +16,8 @@ describe("validateStructuredMirrorItemLink", () => {
   it("requires bindingSlotId for structured_mirror", () => {
     const r = validateStructuredMirrorItemLink(
       { linkSemantics: LINK_SEMANTICS_STRUCTURED_MIRROR },
-      { id: "a", entityType: "character" },
-      { id: "b", entityType: "faction" }
+      { entityType: "character", id: "a" },
+      { entityType: "faction", id: "b" }
     );
     expect(r.ok).toBe(false);
     if (r.ok) {
@@ -29,11 +29,11 @@ describe("validateStructuredMirrorItemLink", () => {
   it("accepts faction roster slot for faction+character", () => {
     const r = validateStructuredMirrorItemLink(
       {
-        linkSemantics: LINK_SEMANTICS_STRUCTURED_MIRROR,
         bindingSlotId: "faction.factionRoster",
+        linkSemantics: LINK_SEMANTICS_STRUCTURED_MIRROR,
       },
-      { id: "f", entityType: "faction" },
-      { id: "c", entityType: "character" }
+      { entityType: "faction", id: "f" },
+      { entityType: "character", id: "c" }
     );
     expect(r.ok).toBe(true);
   });
@@ -41,11 +41,11 @@ describe("validateStructuredMirrorItemLink", () => {
   it("rejects wrong bound type for slot", () => {
     const r = validateStructuredMirrorItemLink(
       {
-        linkSemantics: LINK_SEMANTICS_STRUCTURED_MIRROR,
         bindingSlotId: "faction.factionRoster",
+        linkSemantics: LINK_SEMANTICS_STRUCTURED_MIRROR,
       },
-      { id: "f", entityType: "faction" },
-      { id: "x", entityType: "location" }
+      { entityType: "faction", id: "f" },
+      { entityType: "location", id: "x" }
     );
     expect(r.ok).toBe(false);
   });

@@ -66,11 +66,11 @@ export async function firePlayerLayerMisconfigAlertOnce(
   const t = setTimeout(() => ac.abort(), 8000);
   try {
     await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         text: "heartgarden: HEARTGARDEN_BOOT_PIN_PLAYERS (or HEARTGARDEN_BOOT_PIN_PLAYER) is set but HEARTGARDEN_PLAYER_SPACE_ID or HEARTGARDEN_DEFAULT_SPACE_ID is set to a non-empty value that is not a valid UUID.",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
       signal: ac.signal,
     });
   } catch {

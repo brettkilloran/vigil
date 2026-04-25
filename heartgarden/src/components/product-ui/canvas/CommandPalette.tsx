@@ -21,6 +21,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+
 import { Button } from "@/src/components/ui/Button";
 import type { RecentPaletteFolder } from "@/src/hooks/use-recent-folders";
 import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
@@ -201,12 +202,12 @@ export function CommandPalette({
     };
 
     window.addEventListener("wheel", onWheel, {
-      passive: false,
       capture: true,
+      passive: false,
     });
     window.addEventListener("touchmove", onTouchMove, {
-      passive: false,
       capture: true,
+      passive: false,
     });
     return () => {
       window.removeEventListener("wheel", onWheel, { capture: true });
@@ -230,7 +231,7 @@ export function CommandPalette({
 
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: query, mode: "hybrid" });
+        const params = new URLSearchParams({ mode: "hybrid", q: query });
         if (currentSpaceId) {
           params.set("spaceId", currentSpaceId);
         }
@@ -341,10 +342,10 @@ export function CommandPalette({
     (item: PaletteItem) => {
       onRecordRecentItem({
         id: item.id,
-        title: item.title,
         itemType: item.itemType,
         spaceId: item.spaceId,
         spaceName: item.spaceName,
+        title: item.title,
       });
       onSelectItem(item.id, true);
       onClose();
@@ -385,23 +386,23 @@ export function CommandPalette({
   const flatRows = useMemo((): PaletteRow[] => {
     const rows: PaletteRow[] = [];
     for (const item of recentFiltered) {
-      rows.push({ kind: "item", key: `recent-${item.id}`, item });
+      rows.push({ item, key: `recent-${item.id}`, kind: "item" });
     }
     for (const folder of recentFoldersFiltered) {
       rows.push({
-        kind: "recentFolder",
-        key: `recent-folder-${folder.id}`,
         folder,
+        key: `recent-folder-${folder.id}`,
+        kind: "recentFolder",
       });
     }
     for (const item of allItems) {
-      rows.push({ kind: "item", key: `item-${item.id}`, item });
+      rows.push({ item, key: `item-${item.id}`, kind: "item" });
     }
     for (const space of filteredSpaces) {
-      rows.push({ kind: "space", key: `space-${space.id}`, space });
+      rows.push({ key: `space-${space.id}`, kind: "space", space });
     }
     for (const action of filteredActions) {
-      rows.push({ kind: "action", key: `action-${action.id}`, action });
+      rows.push({ action, key: `action-${action.id}`, kind: "action" });
     }
     return rows;
   }, [
@@ -520,10 +521,10 @@ export function CommandPalette({
     <div
       data-hg-portal-root="cmdk"
       style={{
-        position: "fixed",
         inset: 0,
-        zIndex: 1200,
         pointerEvents: "none",
+        position: "fixed",
+        zIndex: 1200,
       }}
     >
       <div

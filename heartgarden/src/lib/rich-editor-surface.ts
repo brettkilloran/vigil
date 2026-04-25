@@ -12,25 +12,25 @@ export function resolveActiveRichEditorSurface(startEl: Element | null): {
   kind: RichEditorSurfaceKind;
 } {
   if (!(startEl && startEl instanceof HTMLElement)) {
-    return { root: null, kind: "unknown" };
+    return { kind: "unknown", root: null };
   }
   const root = startEl.closest<HTMLElement>(RICH_EDITOR_SURFACE_SELECTOR);
   if (!root) {
-    return { root: null, kind: "unknown" };
+    return { kind: "unknown", root: null };
   }
   if (root.matches("[data-node-body-editor]")) {
-    return { root, kind: "node-body" };
+    return { kind: "node-body", root };
   }
   if (root.matches("[data-focus-body-editor]")) {
-    return { root, kind: "focus-body" };
+    return { kind: "focus-body", root };
   }
   if (root.matches("[data-hg-doc-editor]")) {
-    return { root, kind: "focus-body" };
+    return { kind: "focus-body", root };
   }
   if (root.matches("[data-architectural-media-gallery-notes]")) {
-    return { root, kind: "media-gallery-notes" };
+    return { kind: "media-gallery-notes", root };
   }
-  return { root, kind: "unknown" };
+  return { kind: "unknown", root };
 }
 
 export function caretIsWithinRichDocInsertRegion(

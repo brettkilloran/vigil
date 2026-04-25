@@ -80,9 +80,9 @@ test.describe("connection pin anchoring", () => {
           point.y <= rect.bottom + pad;
 
         return {
+          pointCount: points.length,
           sourceAttached: points.some((point) => inRect(point, sourceRect)),
           targetAttached: points.some((point) => inRect(point, targetRect)),
-          pointCount: points.length,
         };
       },
       { sourceNodeId: sourceId!, targetNodeId: targetId! }

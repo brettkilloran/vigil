@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", chunks: [] },
+      { chunks: [], error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -55,21 +55,21 @@ export async function GET(req: Request) {
     const space = await assertSpaceExists(db as VigilDb, filters.spaceId);
     if (!space) {
       return Response.json(
-        { ok: false, error: "Space not found", chunks: [] },
+        { chunks: [], error: "Space not found", ok: false },
         { status: 404 }
       );
     }
   }
 
   if (q.length < 2) {
-    return Response.json({ ok: true, chunks: [], note: "Query too short" });
+    return Response.json({ chunks: [], note: "Query too short", ok: true });
   }
 
   if (!isEmbeddingApiConfigured()) {
     return Response.json({
-      ok: true,
       chunks: [],
       note: "Vector chunk search unavailable (no embedding provider configured).",
+      ok: true,
     });
   }
 
@@ -84,17 +84,17 @@ export async function GET(req: Request) {
       limit
     );
     return Response.json({
-      ok: true,
       chunks: hits.map((h) => ({
+        chunk: h.chunkText,
+        chunkIndex: h.chunkIndex,
+        distance: h.distance,
+        headingPath: h.headingPath,
         itemId: h.itemId,
-        title: h.item.title?.trim() || "Untitled",
         spaceId: h.space.id,
         spaceName: h.space.name,
-        chunkIndex: h.chunkIndex,
-        chunk: h.chunkText,
-        headingPath: h.headingPath,
-        distance: h.distance,
+        title: h.item.title?.trim() || "Untitled",
       })),
+      ok: true,
     });
   } catch (e) {
     console.error("[GET /api/search/chunks]", e);

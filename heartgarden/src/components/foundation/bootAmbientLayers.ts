@@ -17,14 +17,14 @@ export const VIGIL_BOOT_AMBIENT_MUSIC_GAIN = 0.32;
 
 export const VIGIL_BOOT_AMBIENT_LAYERS: readonly VigilBootAmbientLayer[] = [
   {
+    gain: VIGIL_BOOT_AMBIENT_NATURE_GAIN,
     id: "forest",
     src: "/audio/boot-forest-wind.aac",
-    gain: VIGIL_BOOT_AMBIENT_NATURE_GAIN,
   },
   {
+    gain: VIGIL_BOOT_AMBIENT_MUSIC_GAIN,
     id: "music",
     src: "/audio/boot-mourning-faraday-nv-theme.mp3",
-    gain: VIGIL_BOOT_AMBIENT_MUSIC_GAIN,
   },
 ];
 

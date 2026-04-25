@@ -59,7 +59,7 @@ export async function PATCH(
   const parsed = patchBody.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -69,8 +69,8 @@ export async function PATCH(
   ) {
     return Response.json(
       {
-        ok: false,
         error: "No supported fields provided (allowed: name, parentSpaceId)",
+        ok: false,
       },
       { status: 400 }
     );
@@ -84,7 +84,7 @@ export async function PATCH(
       !isHeartgardenImplicitPlayerRootSpaceName(fromName)
     ) {
       return Response.json(
-        { ok: false, error: "Invalid space name" },
+        { error: "Invalid space name", ok: false },
         { status: 400 }
       );
     }
@@ -93,7 +93,7 @@ export async function PATCH(
       !isHeartgardenImplicitPlayerRootSpaceName(toName)
     ) {
       return Response.json(
-        { ok: false, error: "Invalid space name" },
+        { error: "Invalid space name", ok: false },
         { status: 400 }
       );
     }
@@ -121,7 +121,7 @@ export async function PATCH(
         .limit(1);
       if (!parentRow) {
         return Response.json(
-          { ok: false, error: "Parent space not found" },
+          { error: "Parent space not found", ok: false },
           { status: 404 }
         );
       }
@@ -131,7 +131,7 @@ export async function PATCH(
         parentRow.braneId !== access.space.braneId
       ) {
         return Response.json(
-          { ok: false, error: "Cross-brane folder reparents are not allowed" },
+          { error: "Cross-brane folder reparents are not allowed", ok: false },
           { status: 400 }
         );
       }
@@ -140,18 +140,18 @@ export async function PATCH(
     if (!reparent.ok) {
       if (reparent.error === "parent_not_found") {
         return Response.json(
-          { ok: false, error: "Parent space not found" },
+          { error: "Parent space not found", ok: false },
           { status: 404 }
         );
       }
       if (reparent.error === "would_create_cycle") {
         return Response.json(
-          { ok: false, error: "Invalid parent (cycle)" },
+          { error: "Invalid parent (cycle)", ok: false },
           { status: 400 }
         );
       }
       return Response.json(
-        { ok: false, error: "Space not found" },
+        { error: "Space not found", ok: false },
         { status: 404 }
       );
     }
@@ -185,10 +185,10 @@ export async function PATCH(
     lookupSpaceIds.push(previousParentSpaceId);
   }
   await publishHeartgardenSpaceInvalidation(db, {
+    directSpaceIds: previousParentSpaceId ? [previousParentSpaceId] : undefined,
+    lookupSpaceIds,
     originSpaceId: spaceId,
     reason,
-    lookupSpaceIds,
-    directSpaceIds: previousParentSpaceId ? [previousParentSpaceId] : undefined,
   });
 
   return Response.json({ ok: true });
@@ -216,15 +216,15 @@ export async function DELETE(
   const result = await deleteSpaceSubtree(db, spaceId);
   if (!result.ok) {
     const status = result.error === "Space not found" ? 404 : 400;
-    return Response.json({ ok: false, error: result.error }, { status });
+    return Response.json({ error: result.error, ok: false }, { status });
   }
   await publishHeartgardenSpaceInvalidation(db, {
-    originSpaceId: spaceId,
-    reason: "space.deleted",
-    lookupSpaceIds: [spaceId],
     directSpaceIds: access.space.parentSpaceId
       ? [access.space.parentSpaceId]
       : undefined,
+    lookupSpaceIds: [spaceId],
+    originSpaceId: spaceId,
+    reason: "space.deleted",
   });
-  return Response.json({ ok: true, deletedSpaceIds: result.deletedIds });
+  return Response.json({ deletedSpaceIds: result.deletedIds, ok: true });
 }

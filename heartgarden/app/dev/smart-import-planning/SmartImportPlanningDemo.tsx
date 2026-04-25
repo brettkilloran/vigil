@@ -113,11 +113,11 @@ export function SmartImportPlanningDemo() {
   const report = useMemo(
     () =>
       mockFailureReport({
-        stage: failureStage,
+        attemptId: "demo-attempt-preview",
+        jobId: "3f8a7c21-…-preview",
         message: failureMessage,
         recommendedAction,
-        jobId: "3f8a7c21-…-preview",
-        attemptId: "demo-attempt-preview",
+        stage: failureStage,
       }),
     [failureStage, failureMessage, recommendedAction]
   );

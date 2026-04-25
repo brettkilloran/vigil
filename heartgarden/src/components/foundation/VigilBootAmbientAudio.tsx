@@ -18,7 +18,6 @@ import {
   ArchitecturalTooltip,
 } from "@/src/components/foundation/ArchitecturalTooltip";
 import { Button } from "@/src/components/ui/Button";
-
 import {
   readAppAudioMuted,
   subscribeAppAudioMuted,
@@ -29,7 +28,6 @@ import {
   VIGIL_BOOT_AMBIENT_LAYER_COUNT,
   VIGIL_BOOT_AMBIENT_LAYERS,
 } from "./bootAmbientLayers";
-
 import styles from "./VigilBootAmbientAudio.module.css";
 
 const FADE_IN_S = 4.2;

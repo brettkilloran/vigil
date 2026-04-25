@@ -9,26 +9,26 @@ import {
 describe("defaultItemDimensions", () => {
   it("uses lore shell size for character", () => {
     expect(defaultItemDimensions("note", "character")).toEqual({
-      width: 340,
       height: 280,
+      width: 340,
     });
   });
   it("uses note size without character entity", () => {
     expect(defaultItemDimensions("note", null)).toEqual({
-      width: 340,
       height: 270,
+      width: 340,
     });
   });
   it("uses checklist size", () => {
     expect(defaultItemDimensions("checklist", null)).toEqual({
-      width: 340,
       height: 188,
+      width: 340,
     });
   });
   it("falls back for other types", () => {
     expect(defaultItemDimensions("folder", null)).toEqual({
-      width: 280,
       height: 200,
+      width: 280,
     });
   });
 });
@@ -46,8 +46,8 @@ describe("jitterHgRotationDeg", () => {
 describe("synthesizeContentJsonForCreateItem", () => {
   it("returns hgDoc checklist seed for checklist", () => {
     const j = synthesizeContentJsonForCreateItem({
-      itemType: "checklist",
       contentText: "",
+      itemType: "checklist",
       theme: "default",
     });
     expect(j?.format).toBe("hgDoc");
@@ -55,8 +55,8 @@ describe("synthesizeContentJsonForCreateItem", () => {
   });
   it("returns html note body for note", () => {
     const j = synthesizeContentJsonForCreateItem({
-      itemType: "note",
       contentText: "Hello",
+      itemType: "note",
       theme: "code",
     });
     expect(j?.format).toBe("html");

@@ -21,7 +21,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", items: [] },
+      { error: "Database not configured", items: [], ok: false },
       { status: 503 }
     );
   }
@@ -38,7 +38,7 @@ export async function GET(
   if (!row) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 })
+      Response.json({ error: "Not found", ok: false }, { status: 404 })
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
@@ -73,22 +73,22 @@ export async function GET(
   const q = (title.length >= 3 ? title : blob).slice(0, 200).trim();
   if (q.length < 3) {
     return Response.json({
-      ok: true,
       items: [],
       note: "Query text too short for FTS.",
+      ok: true,
     });
   }
 
-  const rows = await searchItemsFTS(db, q, { spaceId, limit: limit + 2 });
+  const rows = await searchItemsFTS(db, q, { limit: limit + 2, spaceId });
   const out = rows
     .filter((r) => r.item.id !== itemId)
     .slice(0, limit)
     .map((r) => ({
       id: r.item.id,
-      title: r.item.title?.trim() || "Untitled",
       itemType: r.item.itemType,
       snippet: r.snippet ?? null,
+      title: r.item.title?.trim() || "Untitled",
     }));
 
-  return Response.json({ ok: true, items: out });
+  return Response.json({ items: out, ok: true });
 }

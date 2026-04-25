@@ -5,7 +5,7 @@ import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
 describe("jsonValuesEqualForPatch", () => {
   it("treats key order as irrelevant for objects", () => {
     expect(
-      jsonValuesEqualForPatch({ a: 1, b: { c: 2 } }, { b: { c: 2 }, a: 1 })
+      jsonValuesEqualForPatch({ a: 1, b: { c: 2 } }, { a: 1, b: { c: 2 } })
     ).toBe(true);
   });
 

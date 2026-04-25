@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import { EntityGraphClient } from "./EntityGraphClient";
 
 export const metadata: Metadata = {
-  title: "Entity graph — lab",
   description: "Standalone entity graph UX/UI sandbox with dummy content.",
-  robots: { index: false, follow: false },
+  robots: { follow: false, index: false },
+  title: "Entity graph — lab",
 };
 
 export default function EntityGraphPage() {

@@ -37,14 +37,14 @@ describe("GET /api/items/[itemId]/mentions auth", () => {
     const db = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            limit: vi.fn(async () => [{ id: ITEM_ID, spaceId: SPACE_ID }]),
-          })),
           innerJoin: vi.fn(() => ({
             where: vi.fn(async () => {
               mentionsQueryRan = true;
               return [];
             }),
+          })),
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [{ id: ITEM_ID, spaceId: SPACE_ID }]),
           })),
         })),
       })),

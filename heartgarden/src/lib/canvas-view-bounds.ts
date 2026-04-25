@@ -52,7 +52,7 @@ export function buildCollapsedStacksList(
     const sorted = [...entities].sort(
       (a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)
     );
-    out.push({ stackId, entities: sorted, top: sorted.at(-1)! });
+    out.push({ entities: sorted, stackId, top: sorted.at(-1)! });
   });
   return out;
 }
@@ -113,10 +113,10 @@ export function minimapLayoutSignature(
 
 function unionBounds(a: WorldBounds, b: WorldBounds): WorldBounds {
   return {
-    minX: Math.min(a.minX, b.minX),
-    minY: Math.min(a.minY, b.minY),
     maxX: Math.max(a.maxX, b.maxX),
     maxY: Math.max(a.maxY, b.maxY),
+    minX: Math.min(a.minX, b.minX),
+    minY: Math.min(a.minY, b.minY),
   };
 }
 
@@ -153,19 +153,19 @@ export function rotatedRectWorldBounds(
     maxX = Math.max(maxX, wx);
     maxY = Math.max(maxY, wy);
   }
-  return { minX, minY, maxX, maxY };
+  return { maxX, maxY, minX, minY };
 }
 
 function entityLocalSize(entity: CanvasEntity): { w: number; h: number } {
   if (entity.kind === "folder") {
     return {
-      w: entity.width ?? CANVAS_BOUNDS_FOLDER_WIDTH,
       h: entity.height ?? CANVAS_BOUNDS_FOLDER_HEIGHT,
+      w: entity.width ?? CANVAS_BOUNDS_FOLDER_WIDTH,
     };
   }
   return {
-    w: entity.width ?? CANVAS_BOUNDS_UNIFIED_NODE_WIDTH,
     h: entity.height ?? CANVAS_BOUNDS_CONTENT_HEIGHT,
+    w: entity.width ?? CANVAS_BOUNDS_UNIFIED_NODE_WIDTH,
   };
 }
 
@@ -203,7 +203,7 @@ function entitySizeForMinimap(
     measured.width >= 8 &&
     measured.height >= 8
   ) {
-    return { w: measured.width, h: measured.height };
+    return { h: measured.height, w: measured.width };
   }
   return entityLocalSize(entity);
 }
@@ -378,11 +378,11 @@ export function fitCameraToActiveSpaceContent(
   }
   return fitCameraToBounds({
     bounds,
-    viewportWidth,
-    viewportHeight,
-    paddingPx,
-    minZoom,
     maxZoom,
+    minZoom,
+    paddingPx,
+    viewportHeight,
+    viewportWidth,
   });
 }
 
@@ -408,11 +408,11 @@ export function fitCameraToSelection(
   }
   return fitCameraToBounds({
     bounds,
-    viewportWidth,
-    viewportHeight,
-    paddingPx,
-    minZoom,
     maxZoom,
+    minZoom,
+    paddingPx,
+    viewportHeight,
+    viewportWidth,
   });
 }
 
@@ -453,10 +453,10 @@ export function viewportWorldRect(
   viewportHeight: number
 ): WorldBounds {
   return {
-    minX: -translateX / scale,
-    minY: -translateY / scale,
     maxX: -translateX / scale + viewportWidth / scale,
     maxY: -translateY / scale + viewportHeight / scale,
+    minX: -translateX / scale,
+    minY: -translateY / scale,
   };
 }
 
@@ -530,14 +530,14 @@ export function listMinimapAtomRects(
       continue;
     }
     out.push({
-      key: `e:${id}`,
       bounds: b,
+      height: h,
+      key: `e:${id}`,
+      rotationDeg: entity.rotation ?? 0,
       selected: selectedNodeIds.has(id),
+      width: w,
       x: slot.x,
       y: slot.y,
-      width: w,
-      height: h,
-      rotationDeg: entity.rotation ?? 0,
     });
   }
 
@@ -561,14 +561,14 @@ export function listMinimapAtomRects(
     const ty = topIndex * STACK_SPREAD_PX;
     const fanDeg = (topIndex - (n - 1) / 2) * STACK_FAN_ROT_STEP_DEG;
     out.push({
-      key: `s:${cs.stackId}`,
       bounds: b,
+      height: bh,
+      key: `s:${cs.stackId}`,
+      rotationDeg: fanDeg,
       selected,
+      width: bw,
       x: slot.x + tx,
       y: slot.y + ty,
-      width: bw,
-      height: bh,
-      rotationDeg: fanDeg,
     });
   }
 

@@ -42,15 +42,15 @@ export function itemSearchableSourceFromRow(
   row: ItemSearchableRowPick
 ): ItemSearchableSource {
   return {
-    title: row.title,
-    contentText: row.contentText,
     contentJson: row.contentJson,
-    entityType: row.entityType,
+    contentText: row.contentText,
     entityMeta: row.entityMeta,
-    imageUrl: row.imageUrl,
+    entityType: row.entityType,
     imageMeta: row.imageMeta,
-    loreSummary: row.loreSummary,
+    imageUrl: row.imageUrl,
     loreAliases: row.loreAliases ?? undefined,
+    loreSummary: row.loreSummary,
+    title: row.title,
   };
 }
 

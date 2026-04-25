@@ -104,12 +104,12 @@ export async function severHeartgardenPlayerGmWorlds(
   const rootIdsPreserved = [...roots];
 
   const emptyReport = (): SeverPlayerGmWorldsReport => ({
-    playerRootIdsPreserved: rootIdsPreserved,
-    playerSpaceIds: playerSpaceList,
+    deletedChildSpaces: 0,
     deletedCrossWorldLinks: 0,
     deletedItems: 0,
-    deletedChildSpaces: 0,
     dryRun,
+    playerRootIdsPreserved: rootIdsPreserved,
+    playerSpaceIds: playerSpaceList,
   });
 
   if (playerSpaceList.length === 0) {
@@ -154,12 +154,12 @@ AND (
     const lc = firstCount(linkCount);
     const ic = firstCount(itemCount);
     return {
-      playerRootIdsPreserved: rootIdsPreserved,
-      playerSpaceIds: playerSpaceList,
+      deletedChildSpaces: deleteSpaceOrder.length,
       deletedCrossWorldLinks: lc,
       deletedItems: ic,
-      deletedChildSpaces: deleteSpaceOrder.length,
       dryRun: true,
+      playerRootIdsPreserved: rootIdsPreserved,
+      playerSpaceIds: playerSpaceList,
     };
   }
 
@@ -176,11 +176,11 @@ AND (
   }
 
   return {
-    playerRootIdsPreserved: rootIdsPreserved,
-    playerSpaceIds: playerSpaceList,
+    deletedChildSpaces,
     deletedCrossWorldLinks,
     deletedItems,
-    deletedChildSpaces,
     dryRun: false,
+    playerRootIdsPreserved: rootIdsPreserved,
+    playerSpaceIds: playerSpaceList,
   };
 }

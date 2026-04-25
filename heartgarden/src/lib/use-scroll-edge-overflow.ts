@@ -57,7 +57,7 @@ export function useScrollEdgeOverflowAttrs(ref: RefObject<HTMLElement | null>) {
       ro.observe(firstChild);
     }
     const mo = new MutationObserver(schedule);
-    mo.observe(el, { childList: true, subtree: true, characterData: true });
+    mo.observe(el, { characterData: true, childList: true, subtree: true });
 
     return () => {
       el.removeEventListener("scroll", schedule);

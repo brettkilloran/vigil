@@ -197,8 +197,8 @@ function parseTextLikeFile(buf: Buffer) {
   const chunks: string[] = [];
   const { charCount, truncated } = appendCappedText(chunks, decoded, 0);
   return {
-    text: chunks.join(""),
     charCount,
+    text: chunks.join(""),
     truncated,
   };
 }
@@ -213,8 +213,8 @@ async function parseDocxText(buf: Buffer) {
     0
   );
   return {
-    text: chunks.join(""),
     charCount,
+    text: chunks.join(""),
     truncated,
   };
 }
@@ -281,8 +281,8 @@ async function parsePdfText(
         failedPages += 1;
         console.warn("[lore-import] parse pdf page failed", {
           attemptId,
-          pageNum,
           detail: error instanceof Error ? error.message : String(error),
+          pageNum,
         });
         if (failedPages >= MAX_PDF_PAGE_FAILURES && parsedPages === 0) {
           throw new Error("PDF pages could not be parsed");
@@ -293,10 +293,10 @@ async function parsePdfText(
       throw new Error("PDF did not contain readable text");
     }
     return {
-      text: chunks.join(""),
+      failedPages,
       pageCount: doc.numPages,
       parsedPages,
-      failedPages,
+      text: chunks.join(""),
       truncated: charCount >= MAX_EXTRACTED_CHARS,
     };
   } finally {
@@ -315,7 +315,7 @@ export async function POST(req: Request) {
   const ct = req.headers.get("content-type") ?? "";
   if (!ct.includes("multipart/form-data")) {
     return Response.json(
-      { ok: false, error: 'Expected multipart/form-data with field "file"' },
+      { error: 'Expected multipart/form-data with field "file"', ok: false },
       { status: 400 }
     );
   }
@@ -330,9 +330,9 @@ export async function POST(req: Request) {
     if (Number.isFinite(declaredBytes) && declaredBytes > MAX_UPLOAD_BYTES) {
       return Response.json(
         {
-          ok: false,
-          error: "File too large",
           detail: `Max upload size is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.`,
+          error: "File too large",
+          ok: false,
         },
         { status: 413 }
       );
@@ -348,14 +348,14 @@ export async function POST(req: Request) {
       error: error instanceof Error ? error.message : String(error),
     });
     return Response.json(
-      { ok: false, error: "Invalid form data" },
+      { error: "Invalid form data", ok: false },
       { status: 400 }
     );
   }
 
   const file = form.get("file");
   if (!(file && file instanceof File)) {
-    return Response.json({ ok: false, error: "Missing file" }, { status: 400 });
+    return Response.json({ error: "Missing file", ok: false }, { status: 400 });
   }
   let parsedContext: LoreImportUserContext | undefined;
   let contextWarning: { code: string; message: string } | undefined;
@@ -388,18 +388,18 @@ export async function POST(req: Request) {
   if (buf.length > MAX_UPLOAD_BYTES) {
     return Response.json(
       {
-        ok: false,
-        error: "File too large",
         detail: `Max upload size is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.`,
+        error: "File too large",
+        ok: false,
       },
       { status: 413 }
     );
   }
   console.info("[lore-import] parse request", {
     attemptId,
-    fileName: name,
     contentType: file.type || null,
     fileBytes: buf.length,
+    fileName: name,
   });
 
   let text = "";
@@ -411,27 +411,27 @@ export async function POST(req: Request) {
       text = parsed.text;
       truncated = parsed.truncated;
       meta = {
+        failedPages: parsed.failedPages,
         pageCount: parsed.pageCount,
         parsedPages: parsed.parsedPages,
-        failedPages: parsed.failedPages,
       };
       console.info("[lore-import] parse pdf success", {
         attemptId,
+        failedPages: parsed.failedPages,
         fileName: name,
         pageCount: parsed.pageCount,
         parsedPages: parsed.parsedPages,
-        failedPages: parsed.failedPages,
         truncated: parsed.truncated,
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.error("[lore-import] parse pdf failed", {
         attemptId,
-        fileName: name,
         detail,
+        fileName: name,
       });
       return Response.json(
-        { ok: false, error: "Could not parse PDF", detail },
+        { detail, error: "Could not parse PDF", ok: false },
         { status: 400 }
       );
     }
@@ -448,7 +448,7 @@ export async function POST(req: Request) {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return Response.json(
-        { ok: false, error: "Could not parse DOCX file", detail },
+        { detail, error: "Could not parse DOCX file", ok: false },
         { status: 400 }
       );
     }
@@ -469,15 +469,15 @@ export async function POST(req: Request) {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return Response.json(
-        { ok: false, error: "Could not parse text file", detail },
+        { detail, error: "Could not parse text file", ok: false },
         { status: 400 }
       );
     }
   } else {
     return Response.json(
       {
-        ok: false,
         error: "Unsupported type. Use .pdf, .docx, .md, or .txt",
+        ok: false,
       },
       { status: 400 }
     );
@@ -487,12 +487,12 @@ export async function POST(req: Request) {
   const baseTitle = name.replace(/\.[^.]+$/, "").trim() || "Import";
 
   return Response.json({
-    ok: true,
     attemptId,
+    charCount: trimmed.length,
     fileName: name,
+    ok: true,
     suggestedTitle: baseTitle,
     text: trimmed,
-    charCount: trimmed.length,
     truncated,
     ...(parsedContext ? { context: parsedContext } : {}),
     ...(contextWarning ? { contextWarning } : {}),

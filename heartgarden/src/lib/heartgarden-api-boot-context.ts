@@ -27,8 +27,8 @@ type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
 /** Stable JSON for player / invalid-session denials (no hints). */
 export const HEARTGARDEN_API_FORBIDDEN = {
-  ok: false,
   error: "Forbidden.",
+  ok: false,
 } as const;
 
 export type HeartgardenApiBootContext =
@@ -97,8 +97,8 @@ export async function gmMayAccessSpaceIdAsync(
   }
   const [row] = await db
     .select({
-      name: spaces.name,
       braneType: branes.braneType,
+      name: spaces.name,
     })
     .from(spaces)
     .leftJoin(branes, eq(branes.id, spaces.braneId))
@@ -197,7 +197,7 @@ export function parseHeartgardenApiBootContext(
 
   const playerSpaceId = resolveHeartgardenPlayerSpaceIdFromEnv();
   if (playerSpaceId) {
-    return { role: "player", playerSpaceId };
+    return { playerSpaceId, role: "player" };
   }
   return { role: "player_resolve_from_db" };
 }
@@ -335,7 +335,7 @@ export async function getHeartgardenApiBootContext(): Promise<HeartgardenApiBoot
     return { role: "player_forbidden" };
   }
   const row = await resolveOrCreateImplicitPlayerRootSpace(db);
-  return { role: "player", playerSpaceId: row.id };
+  return { playerSpaceId: row.id, role: "player" };
 }
 
 /** Lore, vault index, upload, reindex, semantic search, etc. — no player-tier or demo access. */

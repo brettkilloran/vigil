@@ -73,9 +73,9 @@ export function useHeartgardenRealtimeSpaceSync(options: {
       }
       try {
         const tokenRes = await fetch("/api/realtime/room-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ spaceId: activeSpaceId }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
           signal: tokenAbort.signal,
         });
         if (closed) {

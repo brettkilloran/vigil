@@ -152,11 +152,11 @@ export function useEditorSession({
   }, [isEditing, editDraft, value]);
 
   return {
+    beginEditing,
+    cancelEditing,
+    commitNow,
     draft,
     isEditing,
     onDraftChange,
-    beginEditing,
-    commitNow,
-    cancelEditing,
   };
 }

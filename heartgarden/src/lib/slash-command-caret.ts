@@ -23,5 +23,5 @@ export function findOpenSlashTrigger(
     return null;
   }
   const slashStart = lineStart + m[1]?.length;
-  return { startPlainOffset: slashStart, query: m[2] ?? "" };
+  return { query: m[2] ?? "", startPlainOffset: slashStart };
 }

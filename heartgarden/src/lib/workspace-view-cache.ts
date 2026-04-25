@@ -88,11 +88,11 @@ export function readWorkspaceViewCache(
       return null;
     }
     return {
-      v: 2,
-      savedAt: parsed.savedAt,
-      maxZIndex: parsed.maxZIndex,
-      bootTier,
       bootstrap: boot,
+      bootTier,
+      maxZIndex: parsed.maxZIndex,
+      savedAt: parsed.savedAt,
+      v: 2,
     };
   } catch {
     return null;
@@ -113,11 +113,11 @@ export function writeWorkspaceViewCache(
   try {
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     const payload: WorkspaceViewCachePayload = {
-      v: 2,
-      savedAt: Date.now(),
-      maxZIndex,
-      bootTier,
       bootstrap,
+      bootTier,
+      maxZIndex,
+      savedAt: Date.now(),
+      v: 2,
     };
     window.localStorage.setItem(
       WORKSPACE_VIEW_CACHE_STORAGE_KEY,

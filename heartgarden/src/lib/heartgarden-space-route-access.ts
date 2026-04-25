@@ -40,7 +40,7 @@ export async function requireHeartgardenSpaceApiAccess(
       ok: false,
       response: heartgardenMaskNotFoundForPlayer(
         bootCtx,
-        Response.json({ ok: false, error: "Space not found" }, { status: 404 })
+        Response.json({ error: "Space not found", ok: false }, { status: 404 })
       ),
     };
   }

@@ -101,8 +101,8 @@ export async function buildEntityVocabularyForBrane(
   if (spaceIds.length === 0) {
     const empty: EntityVocabularyPayload = {
       etag: "v0",
-      terms: [],
       itemTitles: {},
+      terms: [],
     };
     vocabularyCache.set(braneId, {
       expiresAt: now + CACHE_TTL_MS,
@@ -114,8 +114,8 @@ export async function buildEntityVocabularyForBrane(
   const rows = await db
     .select({
       id: items.id,
-      title: items.title,
       loreAliases: items.loreAliases,
+      title: items.title,
     })
     .from(items)
     .where(inArray(items.spaceId, spaceIds));
@@ -149,24 +149,24 @@ export async function buildEntityVocabularyForBrane(
 
   const terms: EntityVocabularyEntry[] = [...byTerm.entries()]
     .map(([term, payload]) => ({
-      term,
       itemIds: [...payload.itemIds].sort(),
       originalTerm: payload.originalTerm,
+      term,
     }))
     .sort((a, b) => a.term.localeCompare(b.term));
 
   const digest = createHash("sha256")
     .update(
       JSON.stringify(
-        terms.map((entry) => ({ term: entry.term, ids: entry.itemIds }))
+        terms.map((entry) => ({ ids: entry.itemIds, term: entry.term }))
       )
     )
     .digest("hex")
     .slice(0, 24);
   const nextPayload: EntityVocabularyPayload = {
     etag: `v1-${digest}`,
-    terms,
     itemTitles,
+    terms,
   };
   vocabularyCache.set(braneId, {
     expiresAt: now + CACHE_TTL_MS,

@@ -30,34 +30,34 @@ export interface VaultReviewIssue {
 
 const PRESET_TAGS: { id: string; label: string; hint: string }[] = [
   {
+    hint: "No rules weight — mood / color only",
     id: "flavor_not_crunch",
     label: "Flavor, not crunch",
-    hint: "No rules weight — mood / color only",
   },
   {
+    hint: "Truth status unclear; label, do not move",
     id: "uncertain_canon",
     label: "Uncertain canon",
-    hint: "Truth status unclear; label, do not move",
   },
   {
+    hint: "Meta or facilitator text",
     id: "gm_note_layer",
     label: "GM / OOC layer",
-    hint: "Meta or facilitator text",
   },
   {
+    hint: "Past-tense lore, not current facts",
     id: "historical_in_setting",
     label: "Historical in-setting",
-    hint: "Past-tense lore, not current facts",
   },
   {
+    hint: "Consider a reference, not a folder move",
     id: "needs_crosslink",
     label: "Wants a link",
-    hint: "Consider a reference, not a folder move",
   },
   {
+    hint: "Fine where it is — metadata only",
     id: "no_structural_change",
     label: "No sort / move",
-    hint: "Fine where it is — metadata only",
   },
 ];
 

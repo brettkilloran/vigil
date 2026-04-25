@@ -68,11 +68,11 @@ export function collectFolderPopOutPlan(
       entityMoves.push({
         entityId: child.id,
         fromSpaceId: childSpace.id,
-        toSpaceId: parentSpaceId,
         newSlot: {
           x: Math.round(folderSlot.x + childSlot.x),
           y: Math.round(folderSlot.y + childSlot.y),
         },
+        toSpaceId: parentSpaceId,
       });
       movedEntityIds.add(child.id);
       if (child.kind !== "folder") {
@@ -80,8 +80,8 @@ export function collectFolderPopOutPlan(
       }
       if (!reparentSpaceIds.has(child.childSpaceId)) {
         spaceReparents.push({
-          spaceId: child.childSpaceId,
           newParentId: parentSpaceId,
+          spaceId: child.childSpaceId,
         });
         reparentSpaceIds.add(child.childSpaceId);
       }
@@ -89,10 +89,10 @@ export function collectFolderPopOutPlan(
   }
 
   return {
-    entityMoves,
-    spaceReparents,
-    folderEntityIds,
     emptiedSpaceIds: [...emptiedSpaceIds],
+    entityMoves,
+    folderEntityIds,
+    spaceReparents,
   };
 }
 
@@ -102,9 +102,9 @@ export function applyFolderPopOutPlan(
 ): CanvasGraph {
   const next: CanvasGraph = {
     ...graph,
-    spaces: { ...graph.spaces },
-    entities: { ...graph.entities },
     connections: { ...graph.connections },
+    entities: { ...graph.entities },
+    spaces: { ...graph.spaces },
   };
 
   for (const move of plan.entityMoves) {

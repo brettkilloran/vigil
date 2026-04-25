@@ -53,9 +53,9 @@ export async function GET() {
 
   return NextResponse.json({
     gateEnabled,
-    sessionValid,
-    sessionTier,
     playerLayerMisconfigured: gateEnabled ? playerLayerMisconfigured : false,
+    sessionTier,
+    sessionValid,
   });
 }
 
@@ -102,14 +102,14 @@ export async function POST(req: Request) {
 
   const maxAgeSec = bootSessionMaxAgeSec();
   const exp = Math.floor(Date.now() / 1000) + maxAgeSec;
-  const token = signBootSessionPayload(sessionSecret, { tier, exp });
+  const token = signBootSessionPayload(sessionSecret, { exp, tier });
 
   const o = bootSessionCookieOptions(token, maxAgeSec);
   const res = new NextResponse(null, { status: 204 });
   res.cookies.set(o.name, o.value, {
-    path: o.path,
-    maxAge: o.maxAge,
     httpOnly: o.httpOnly,
+    maxAge: o.maxAge,
+    path: o.path,
     sameSite: o.sameSite,
     secure: o.secure,
   });
@@ -120,9 +120,9 @@ export async function DELETE() {
   const c = clearBootSessionCookieOptions();
   const res = new NextResponse(null, { status: 204 });
   res.cookies.set(c.name, "", {
-    path: c.path,
-    maxAge: 0,
     httpOnly: c.httpOnly,
+    maxAge: 0,
+    path: c.path,
     sameSite: c.sameSite,
     secure: c.secure,
   });

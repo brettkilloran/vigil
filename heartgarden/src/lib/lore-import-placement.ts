@@ -80,10 +80,10 @@ function cellToRect(
   const stepX = IMPORT_CARD_WIDTH + IMPORT_CARD_GAP;
   const stepY = IMPORT_CARD_HEIGHT + IMPORT_CARD_GAP;
   return {
+    height,
+    width,
     x: origin.x + c.col * stepX,
     y: origin.y + c.row * stepY,
-    width,
-    height,
   };
 }
 
@@ -123,10 +123,10 @@ export function placeImportCards(
   let anchorCell: Cell = { col: 0, row: 0 };
   if (input.source) {
     sourceRect = {
+      height: input.source.height,
+      width: input.source.width,
       x: origin.x,
       y: origin.y,
-      width: input.source.width,
-      height: input.source.height,
     };
     // Reserve the source's footprint cells so entities don't land on top.
     const stepX = IMPORT_CARD_WIDTH + IMPORT_CARD_GAP;
@@ -200,8 +200,8 @@ export function placeImportCards(
   }
 
   return {
-    source: sourceRect,
     entities: placements,
+    source: sourceRect,
   };
 }
 
@@ -219,17 +219,17 @@ export function placeImportCardsCountOnly(
   entities: ImportPlacementRect[];
 } {
   const entities = Array.from({ length: entityCount }, (_, i) => ({
-    clientId: `__e${i}`,
     affinities: [],
+    clientId: `__e${i}`,
   }));
   const result = placeImportCards({
+    entities,
     originX,
     originY,
-    source: hasSource ? { width: 420, height: 360 } : undefined,
-    entities,
+    source: hasSource ? { height: 360, width: 420 } : undefined,
   });
   return {
-    source: result.source,
     entities: entities.map((e) => result.entities[e.clientId]!),
+    source: result.source,
   };
 }

@@ -5,19 +5,19 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { HeartgardenMediaPlaceholderImg } from "@/src/components/ui/HeartgardenMediaPlaceholderImg";
 
 const meta: Meta<typeof HeartgardenMediaPlaceholderImg> = {
-  title: "Heartgarden/Design System/Primitives/Media placeholder",
+  args: {
+    alt: "",
+    variant: "neutral",
+  },
   component: HeartgardenMediaPlaceholderImg,
   decorators: [
     (Story) => (
-      <div style={{ padding: 32, background: "var(--sem-surface-base)" }}>
+      <div style={{ background: "var(--sem-surface-base)", padding: 32 }}>
         <Story />
       </div>
     ),
   ],
-  args: {
-    variant: "neutral",
-    alt: "",
-  },
+  title: "Heartgarden/Design System/Primitives/Media placeholder",
 };
 
 export default meta;
@@ -25,21 +25,21 @@ type Story = StoryObj<typeof HeartgardenMediaPlaceholderImg>;
 
 export const NeutralDefault: Story = {
   args: {
+    style: { height: 160, width: 240 },
     variant: "neutral",
-    style: { width: 240, height: 160 },
   },
 };
 
 export const NeutralPortrait: Story = {
   args: {
+    style: { height: 168, width: 142 },
     variant: "neutral",
-    style: { width: 142, height: 168 },
   },
 };
 
 export const NeutralCompact: Story = {
   args: {
+    style: { height: 140, width: 200 },
     variant: "neutral",
-    style: { width: 200, height: 140 },
   },
 };

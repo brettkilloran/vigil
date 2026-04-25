@@ -8,10 +8,10 @@ const LoreEntityNodeLab = dynamic(
       (m) => m.LoreEntityNodeLab
     ),
   {
-    ssr: false,
     loading: () => (
       <div className="p-4 text-neutral-500 text-sm">Loading lab…</div>
     ),
+    ssr: false,
   }
 );
 

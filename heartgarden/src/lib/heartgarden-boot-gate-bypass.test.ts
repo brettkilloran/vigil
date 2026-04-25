@@ -4,10 +4,10 @@ import { isHeartgardenBootGateBypassed } from "@/src/lib/heartgarden-boot-gate-b
 
 describe("isHeartgardenBootGateBypassed", () => {
   const prev = {
-    PLAYWRIGHT_E2E: process.env.PLAYWRIGHT_E2E,
-    NODE_ENV: process.env.NODE_ENV,
     HEARTGARDEN_DEV_ENFORCE_BOOT_GATE:
       process.env.HEARTGARDEN_DEV_ENFORCE_BOOT_GATE,
+    NODE_ENV: process.env.NODE_ENV,
+    PLAYWRIGHT_E2E: process.env.PLAYWRIGHT_E2E,
   };
 
   afterEach(() => {

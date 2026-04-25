@@ -20,9 +20,9 @@ const DEFAULT_NOTES_HTML = "<p><br></p>";
 export const LORE_V11_PH_LOCATION_PLACEHOLDER = "PLACENAME";
 
 export const LOCATION_TOP_FIELD_CHAR_CAPS = {
-  name: 64,
   context: 72,
   detail: 96,
+  name: 64,
 } as const;
 
 export type LocationTopFieldKey = keyof typeof LOCATION_TOP_FIELD_CHAR_CAPS;
@@ -112,12 +112,12 @@ export function trimLocationTopFieldForImport(
   const normalized = normalizeLocationTopFieldPlain(field, raw);
   const cap = LOCATION_TOP_FIELD_CHAR_CAPS[field];
   if (normalized.length <= cap) {
-    return { value: normalized, wasTrimmed: false, cap };
+    return { cap, value: normalized, wasTrimmed: false };
   }
   return {
+    cap,
     value: normalized.slice(0, cap).trimEnd(),
     wasTrimmed: true,
-    cap,
   };
 }
 
@@ -680,7 +680,6 @@ export function parseLocationFocusDocumentHtml(
   );
   const hasRef = !!refField;
   return {
-    name: normalizedLocationFocusNameInnerFromRoot(root),
     context: takeInnerHtml(
       root,
       '[data-hg-lore-location-focus-field="context"]',
@@ -691,15 +690,16 @@ export function parseLocationFocusDocumentHtml(
       '[data-hg-lore-location-focus-field="detail"]',
       "<br>"
     ),
-    ref: refField
-      ? takeInnerHtml(root, '[data-hg-lore-location-focus-field="ref"]', "<br>")
-      : "",
     hasRef,
+    name: normalizedLocationFocusNameInnerFromRoot(root),
     notesHtml: takeInnerHtml(
       root,
       "[data-hg-lore-location-focus-notes]",
       DEFAULT_NOTES_HTML
     ),
+    ref: refField
+      ? takeInnerHtml(root, '[data-hg-lore-location-focus-field="ref"]', "<br>")
+      : "",
   };
 }
 
@@ -786,11 +786,6 @@ export function readLocationFocusPartsFromMetaHost(
   );
   const hasRef = !!refField;
   return {
-    name: normalizedLocationFocusNameInnerFromFieldEl(
-      root.querySelector<HTMLElement>(
-        '[data-hg-lore-location-focus-field="name"]'
-      )
-    ),
     context: takeInnerHtml(
       root,
       '[data-hg-lore-location-focus-field="context"]',
@@ -801,11 +796,16 @@ export function readLocationFocusPartsFromMetaHost(
       '[data-hg-lore-location-focus-field="detail"]',
       "<br>"
     ),
+    hasRef,
+    name: normalizedLocationFocusNameInnerFromFieldEl(
+      root.querySelector<HTMLElement>(
+        '[data-hg-lore-location-focus-field="name"]'
+      )
+    ),
+    notesHtml,
     ref: refField
       ? takeInnerHtml(root, '[data-hg-lore-location-focus-field="ref"]', "<br>")
       : "",
-    hasRef,
-    notesHtml,
   };
 }
 
@@ -829,7 +829,7 @@ export function parseLocationOrdoV7BodyPlainFields(bodyHtml: string): {
 } {
   const root = parseWrapped(bodyHtml);
   if (!root) {
-    return { name: "", context: "", detail: "", notesHtml: DEFAULT_NOTES_HTML };
+    return { context: "", detail: "", name: "", notesHtml: DEFAULT_NOTES_HTML };
   }
   const nameEl = root.querySelector<HTMLElement>(
     '[data-hg-lore-location-field="name"]'
@@ -848,5 +848,5 @@ export function parseLocationOrdoV7BodyPlainFields(bodyHtml: string): {
   );
   const detail = plainTextFromInlineHtmlFragment(detEl?.innerHTML || "");
   const notesHtml = extractNotesHtml(root);
-  return { name, context, detail, notesHtml };
+  return { context, detail, name, notesHtml };
 }

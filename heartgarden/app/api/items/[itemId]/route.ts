@@ -56,30 +56,30 @@ function mergeEntityMeta(
 }
 
 const patchBody = z.object({
-  /** Move item to another canvas space (e.g. into / out of a folder). */
-  spaceId: z.string().uuid().optional(),
-  x: z.number().optional(),
-  y: z.number().optional(),
-  width: z.number().positive().max(4000).optional(),
-  height: z.number().positive().max(4000).optional(),
-  zIndex: z.number().int().optional(),
-  title: z.string().max(255).optional(),
-  contentText: z.string().optional(),
-  contentJson: z.record(z.string(), z.any()).nullable().optional(),
+  /** ISO timestamp from last known server row; mismatch → 409 + current item. */
+  baseUpdatedAt: z.string().optional(),
   color: z.string().max(64).nullable().optional(),
-  itemType: z
-    .enum(["note", "sticky", "image", "checklist", "webclip", "folder"])
-    .optional(),
-  entityType: z.string().max(64).nullable().optional(),
+  contentJson: z.record(z.string(), z.any()).nullable().optional(),
+  contentText: z.string().optional(),
   entityMeta: z.record(z.string(), z.any()).nullable().optional(),
   /** Shallow merge into existing entity_meta; `loreReviewTags` arrays are unioned. */
   entityMetaMerge: z.record(z.string(), z.unknown()).optional(),
-  imageUrl: z.string().max(8192).nullable().optional(),
+  entityType: z.string().max(64).nullable().optional(),
+  height: z.number().positive().max(4000).optional(),
   imageMeta: z.record(z.string(), z.any()).nullable().optional(),
+  imageUrl: z.string().max(8192).nullable().optional(),
+  itemType: z
+    .enum(["note", "sticky", "image", "checklist", "webclip", "folder"])
+    .optional(),
+  /** Move item to another canvas space (e.g. into / out of a folder). */
+  spaceId: z.string().uuid().optional(),
   stackId: z.string().uuid().nullable().optional(),
   stackOrder: z.number().int().nullable().optional(),
-  /** ISO timestamp from last known server row; mismatch → 409 + current item. */
-  baseUpdatedAt: z.string().optional(),
+  title: z.string().max(255).optional(),
+  width: z.number().positive().max(4000).optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
+  zIndex: z.number().int().optional(),
 });
 
 function rowUpdatedAtMs(existing: { updatedAt: unknown }): number | null {
@@ -132,7 +132,7 @@ export async function PATCH(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -146,7 +146,7 @@ export async function PATCH(
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = patchBody.safeParse(json);
@@ -154,15 +154,15 @@ export async function PATCH(
     return jsonValidationError(parsed.error);
   }
   const jsonValidation = validateItemWriteJsonPayload({
-    entityType: parsed.data.entityType,
-    entityMeta: parsed.data.entityMeta,
     contentJson: parsed.data.contentJson,
+    entityMeta: parsed.data.entityMeta,
+    entityType: parsed.data.entityType,
     imageMeta: parsed.data.imageMeta,
     routeTag: "PATCH /api/items/[itemId]",
   });
   if (!jsonValidation.ok) {
     return Response.json(
-      { ok: false, error: jsonValidation.error },
+      { error: jsonValidation.error, ok: false },
       { status: 400 }
     );
   }
@@ -184,7 +184,7 @@ export async function PATCH(
   if (!existing) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 })
+      Response.json({ error: "Not found", ok: false }, { status: 404 })
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
@@ -204,7 +204,7 @@ export async function PATCH(
   const rowMs = rowUpdatedAtMs(existing);
   if (rowMs === null) {
     return Response.json(
-      { ok: false, error: "Item row has invalid updatedAt" },
+      { error: "Item row has invalid updatedAt", ok: false },
       { status: 500 }
     );
   }
@@ -213,9 +213,9 @@ export async function PATCH(
   if (needsOptimisticLock && !p.baseUpdatedAt?.trim()) {
     return Response.json(
       {
-        ok: false,
         error:
           "baseUpdatedAt is required when changing title, body, or entity fields",
+        ok: false,
       },
       { status: 400 }
     );
@@ -226,13 +226,13 @@ export async function PATCH(
     const baseMs = Date.parse(effectiveBase ?? "");
     if (!Number.isFinite(baseMs)) {
       return Response.json(
-        { ok: false, error: "Invalid baseUpdatedAt" },
+        { error: "Invalid baseUpdatedAt", ok: false },
         { status: 400 }
       );
     }
     if (rowMs !== baseMs) {
       return Response.json(
-        { ok: false, error: "conflict", item: rowToCanvasItem(existing) },
+        { error: "conflict", item: rowToCanvasItem(existing), ok: false },
         { status: 409 }
       );
     }
@@ -276,7 +276,7 @@ export async function PATCH(
     if (!space) {
       return heartgardenMaskNotFoundForPlayer(
         bootCtx,
-        Response.json({ ok: false, error: "Space not found" }, { status: 400 })
+        Response.json({ error: "Space not found", ok: false }, { status: 400 })
       );
     }
     if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, p.spaceId))) {
@@ -290,7 +290,7 @@ export async function PATCH(
     // cross-brane migration helper can be added later if needed.
     if (p.spaceId !== existing.spaceId) {
       const branePair = await db
-        .select({ id: spaces.id, braneId: spaces.braneId })
+        .select({ braneId: spaces.braneId, id: spaces.id })
         .from(spaces)
         .where(or(eq(spaces.id, existing.spaceId), eq(spaces.id, p.spaceId)));
       const fromBraneId =
@@ -300,8 +300,8 @@ export async function PATCH(
       if (fromBraneId && toBraneId && fromBraneId !== toBraneId) {
         return Response.json(
           {
-            ok: false,
             error: "Cross-brane item moves are not allowed",
+            ok: false,
           },
           { status: 400 }
         );
@@ -391,15 +391,15 @@ export async function PATCH(
       : updates.entityMeta;
 
   updates.searchBlob = buildSearchBlob({
-    title: p.title ?? existing.title,
-    contentText: p.contentText ?? existing.contentText,
     contentJson: p.contentJson ?? existing.contentJson,
-    entityType: p.entityType ?? existing.entityType,
+    contentText: p.contentText ?? existing.contentText,
     entityMeta: resolvedEntityMeta ?? undefined,
-    imageUrl: p.imageUrl ?? existing.imageUrl,
+    entityType: p.entityType ?? existing.entityType,
     imageMeta: p.imageMeta ?? existing.imageMeta,
-    loreSummary: existing.loreSummary,
+    imageUrl: p.imageUrl ?? existing.imageUrl,
     loreAliases: existing.loreAliases ?? undefined,
+    loreSummary: existing.loreSummary,
+    title: p.title ?? existing.title,
   });
 
   // REVIEW_2026-04-22-2 C2: atomic optimistic-lock. When the caller supplied a
@@ -430,11 +430,11 @@ export async function PATCH(
     if (!latest) {
       return heartgardenMaskNotFoundForPlayer(
         bootCtx,
-        Response.json({ ok: false, error: "Not found" }, { status: 404 })
+        Response.json({ error: "Not found", ok: false }, { status: 404 })
       );
     }
     return Response.json(
-      { ok: false, error: "conflict", item: rowToCanvasItem(latest) },
+      { error: "conflict", item: rowToCanvasItem(latest), ok: false },
       { status: 409 }
     );
   }
@@ -477,7 +477,7 @@ export async function PATCH(
   if (!row) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 })
+      Response.json({ error: "Not found", ok: false }, { status: 404 })
     );
   }
 
@@ -495,14 +495,14 @@ export async function PATCH(
       invalidateItemLinksRevisionForSpace(updates.spaceId as string);
     }
     await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: row.spaceId,
-      reason: moved ? "space.moved" : "item.updated",
       itemId: row.id,
       lookupSpaceIds: changedSpaceIds,
+      originSpaceId: row.spaceId,
+      reason: moved ? "space.moved" : "item.updated",
     });
   }
 
-  return Response.json({ ok: true, item: rowToCanvasItem(row) });
+  return Response.json({ item: rowToCanvasItem(row), ok: true });
 }
 
 export async function DELETE(
@@ -512,7 +512,7 @@ export async function DELETE(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -529,7 +529,7 @@ export async function DELETE(
   if (!existing) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 })
+      Response.json({ error: "Not found", ok: false }, { status: 404 })
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, existing.spaceId))) {
@@ -555,27 +555,27 @@ export async function DELETE(
   if (deleted.length === 0) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 })
+      Response.json({ error: "Not found", ok: false }, { status: 404 })
     );
   }
   const scrubbedIds = await scrubHgArchRefsAfterItemDelete(db, {
-    spaceId: existing.spaceId,
     deadItemId: itemId,
+    spaceId: existing.spaceId,
   });
   for (const sid of scrubbedIds) {
     scheduleVaultReindexAfterResponse(sid);
     await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: existing.spaceId,
-      reason: "item.updated",
       itemId: sid,
       lookupSpaceIds: [existing.spaceId],
+      originSpaceId: existing.spaceId,
+      reason: "item.updated",
     });
   }
   await publishHeartgardenSpaceInvalidation(db, {
-    originSpaceId: existing.spaceId,
-    reason: "item.deleted",
     itemId,
     lookupSpaceIds: [existing.spaceId],
+    originSpaceId: existing.spaceId,
+    reason: "item.deleted",
   });
   return Response.json({ ok: true });
 }

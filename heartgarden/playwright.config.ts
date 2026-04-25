@@ -11,27 +11,6 @@ import { defineConfig, devices } from "@playwright/test";
  *   baselines committed from Windows/macOS do not match Ubuntu, which caused recurring CI failures.
  */
 export default defineConfig({
-  testDir: "./e2e",
-  testIgnore: process.env.CI ? "visual/**" : undefined,
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ["list"],
-    ["html", { open: "never", outputFolder: "playwright-report" }],
-  ],
-  use: {
-    /** Dedicated port so `pnpm run dev` on :3000 can run alongside e2e. */
-    baseURL: "http://127.0.0.1:3001",
-    /** PWA `sw.js` can intercept `/api/*` in production builds. */
-    serviceWorkers: "block",
-    trace: "on-first-retry",
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
-    ...devices["Desktop Chrome"],
-    viewport: { width: 1280, height: 720 },
-  },
   expect: {
     toHaveScreenshot: {
       animations: "disabled",
@@ -39,16 +18,37 @@ export default defineConfig({
       maxDiffPixelRatio: 0.02,
     },
   },
+  forbidOnly: !!process.env.CI,
+  fullyParallel: true,
+  projects: [{ name: "chromium" }],
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+  ],
+  retries: process.env.CI ? 2 : 0,
+  testDir: "./e2e",
+  testIgnore: process.env.CI ? "visual/**" : undefined,
+  use: {
+    /** Dedicated port so `pnpm run dev` on :3000 can run alongside e2e. */
+    baseURL: "http://127.0.0.1:3001",
+    screenshot: "only-on-failure",
+    /** PWA `sw.js` can intercept `/api/*` in production builds. */
+    serviceWorkers: "block",
+    trace: "on-first-retry",
+    video: "retain-on-failure",
+    ...devices["Desktop Chrome"],
+    viewport: { height: 720, width: 1280 },
+  },
   webServer: {
     command:
       "pnpm run build && pnpm exec next start --hostname 127.0.0.1 --port 3001",
-    url: "http://127.0.0.1:3001",
-    reuseExistingServer: !process.env.CI,
-    timeout: 300_000,
     env: {
       ...process.env,
       PLAYWRIGHT_E2E: "1",
     },
+    reuseExistingServer: !process.env.CI,
+    timeout: 300_000,
+    url: "http://127.0.0.1:3001",
   },
-  projects: [{ name: "chromium" }],
+  workers: process.env.CI ? 1 : undefined,
 });

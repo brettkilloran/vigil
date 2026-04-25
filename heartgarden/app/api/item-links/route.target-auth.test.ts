@@ -28,8 +28,8 @@ vi.mock("@/src/lib/heartgarden-api-boot-context", async (importOriginal) => {
   return {
     ...mod,
     getHeartgardenApiBootContext: vi.fn(() => Promise.resolve({ role: "gm" })),
-    playerMayAccessItemSpaceAsync: playerMayAccessItemSpaceAsyncMock,
     gmMayAccessItemSpaceAsync: gmMayAccessItemSpaceAsyncMock,
+    playerMayAccessItemSpaceAsync: playerMayAccessItemSpaceAsyncMock,
   };
 });
 
@@ -102,8 +102,8 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
       return {
         from: () => ({
           where: async () => [
-            { id: SOURCE_ITEM_ID, spaceId: SOURCE_SPACE_ID, entityType: null },
-            { id: TARGET_ITEM_ID, spaceId: TARGET_SPACE_ID, entityType: null },
+            { entityType: null, id: SOURCE_ITEM_ID, spaceId: SOURCE_SPACE_ID },
+            { entityType: null, id: TARGET_ITEM_ID, spaceId: TARGET_SPACE_ID },
           ],
         }),
       } as unknown as Record<string, unknown>;
@@ -117,9 +117,9 @@ describe("PATCH /api/item-links target-space auth ordering", () => {
     const { PATCH } = await import("./route");
     const res = await PATCH(
       new Request("http://localhost/api/item-links", {
-        method: "PATCH",
+        body: JSON.stringify({ color: "red", id: LINK_ID }),
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: LINK_ID, color: "red" }),
+        method: "PATCH",
       })
     );
     expect(res.status).toBe(403);
@@ -189,9 +189,9 @@ describe("DELETE /api/item-links target-space auth ordering", () => {
     const { DELETE } = await import("./route");
     const res = await DELETE(
       new Request("http://localhost/api/item-links", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: LINK_ID }),
+        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
       })
     );
     expect(res.status).toBe(403);

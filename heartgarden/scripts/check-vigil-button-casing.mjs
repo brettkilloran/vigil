@@ -54,8 +54,8 @@ function findViolations(fileText) {
     const body = match[2] ?? "";
     if (/text-transform\s*:\s*uppercase\b/i.test(body)) {
       violations.push({
-        selector: selector.replace(/\s+/g, " ").trim(),
         index: match.index,
+        selector: selector.replace(/\s+/g, " ").trim(),
       });
     }
   }

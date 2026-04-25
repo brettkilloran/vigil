@@ -1,7 +1,9 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
+
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+
 import styles from "./VigilBootFlowerCatalog.module.css";
 import {
   BLOOM_SHAPES,
@@ -26,8 +28,8 @@ const CSS_H = TILE_ROWS * VIGIL_BOOT_FLOWER_CELL_PX;
 
 const tileGridStyle = {
   display: "grid" as const,
-  gridTemplateColumns: `repeat(${SPECIES.length}, ${CSS_W}px)`,
   gap: 8,
+  gridTemplateColumns: `repeat(${SPECIES.length}, ${CSS_W}px)`,
 };
 
 function BloomTile({

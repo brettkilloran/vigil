@@ -28,33 +28,33 @@ import { assertSpaceExists, type VigilDb } from "@/src/lib/spaces";
 export const runtime = "nodejs";
 
 const entitySchema = z.object({
-  name: z.string().min(1).max(255),
   kind: z.string().max(64).optional(),
+  name: z.string().min(1).max(255),
   summary: z.string().max(8000).optional(),
 });
 
 const linkSchema = z.object({
   fromName: z.string().min(1).max(255),
-  toName: z.string().min(1).max(255),
   linkType: z.string().max(64).optional(),
+  toName: z.string().min(1).max(255),
 });
 
 const bodySchema = z.object({
-  spaceId: z.string().uuid(),
-  sourceDocument: z
-    .object({
-      title: z.string().max(255).optional(),
-      text: z.string().max(500_000).optional(),
-    })
-    .optional(),
   entities: z.array(entitySchema).max(200),
-  suggestedLinks: z.array(linkSchema).max(500).optional(),
   layout: z
     .object({
       originX: z.number().finite(),
       originY: z.number().finite(),
     })
     .optional(),
+  sourceDocument: z
+    .object({
+      text: z.string().max(500_000).optional(),
+      title: z.string().max(255).optional(),
+    })
+    .optional(),
+  spaceId: z.string().uuid(),
+  suggestedLinks: z.array(linkSchema).max(500).optional(),
 });
 
 function dedupeEntities(
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -116,13 +116,13 @@ export async function POST(req: Request) {
   try {
     json = await req.json();
   } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
 
   if (!sourceText && deduped.length < 1) {
     return Response.json(
-      { ok: false, error: "Provide source text and/or at least one entity" },
+      { error: "Provide source text and/or at least one entity", ok: false },
       { status: 400 }
     );
   }
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
   const space = await assertSpaceExists(db, spaceId);
   if (!space) {
     return Response.json(
-      { ok: false, error: "Space not found" },
+      { error: "Space not found", ok: false },
       { status: 404 }
     );
   }
@@ -156,11 +156,7 @@ export async function POST(req: Request) {
     to: l.toName.trim().toLowerCase(),
   }));
   const layout = placeImportCards({
-    originX: ox,
-    originY: oy,
-    source: sourceText.length > 0 ? { width: 420, height: 360 } : undefined,
     entities: deduped.map((e) => ({
-      clientId: e.canonicalName.toLowerCase(),
       affinities: linkPairs
         .filter(
           (l) =>
@@ -168,7 +164,11 @@ export async function POST(req: Request) {
             l.to === e.canonicalName.toLowerCase()
         )
         .map((l) => (l.from === e.canonicalName.toLowerCase() ? l.to : l.from)),
+      clientId: e.canonicalName.toLowerCase(),
     })),
+    originX: ox,
+    originY: oy,
+    source: sourceText.length > 0 ? { height: 360, width: 420 } : undefined,
   });
 
   const embeddingRows: (typeof items.$inferSelect)[] = [];
@@ -198,33 +198,33 @@ export async function POST(req: Request) {
         entityMeta?: Record<string, unknown> | null;
       }) => {
         const searchBlob = buildSearchBlob({
-          title: args.title,
-          contentText: args.contentText,
           contentJson: args.contentJson,
-          entityType: args.entityType ?? null,
+          contentText: args.contentText,
           entityMeta: args.entityMeta ?? null,
-          imageUrl: null,
+          entityType: args.entityType ?? null,
           imageMeta: null,
-          loreSummary: null,
+          imageUrl: null,
           loreAliases: null,
+          loreSummary: null,
+          title: args.title,
         });
         const [row] = await tx
           .insert(items)
           .values({
-            spaceId,
+            color: DS_COLOR.itemDefaultNote,
+            contentJson: args.contentJson,
+            contentText: args.contentText,
+            entityMeta: args.entityMeta ?? null,
+            entityType: args.entityType ?? null,
+            height: args.height,
             itemType: "note",
+            searchBlob,
+            spaceId,
+            title: args.title,
+            width: args.width,
             x: args.x,
             y: args.y,
-            width: args.width,
-            height: args.height,
             zIndex: zNext++,
-            title: args.title,
-            contentText: args.contentText,
-            searchBlob,
-            contentJson: args.contentJson,
-            color: DS_COLOR.itemDefaultNote,
-            entityType: args.entityType ?? null,
-            entityMeta: args.entityMeta ?? null,
           })
           .returning();
         if (row) {
@@ -242,15 +242,15 @@ export async function POST(req: Request) {
           aiPending: true,
         });
         const id = await insertNote({
-          title,
-          contentText: sourceText.slice(0, 120_000),
           contentJson,
+          contentText: sourceText.slice(0, 120_000),
+          entityMeta: { aiReview: "pending", import: true },
+          entityType: "lore_source",
+          height: layout.source.height,
+          title,
+          width: layout.source.width,
           x: layout.source.x,
           y: layout.source.y,
-          width: layout.source.width,
-          height: layout.source.height,
-          entityType: "lore_source",
-          entityMeta: { import: true, aiReview: "pending" },
         });
         sourceItemId = id;
       }
@@ -258,10 +258,10 @@ export async function POST(req: Request) {
       for (let i = 0; i < deduped.length; i++) {
         const e = deduped[i]!;
         const pos = layout.entities[e.canonicalName.toLowerCase()] ?? {
+          height: 260,
+          width: 280,
           x: ox,
           y: oy,
-          width: 280,
-          height: 260,
         };
         const summary = e.summary ?? "";
         const contentJson = buildLoreNoteContentJson(summary || "—", {
@@ -270,20 +270,20 @@ export async function POST(req: Request) {
         const canonKind = normalizeCanonicalEntityKind(e.kind ?? "lore");
         const persistedEntityType = persistedEntityTypeFromCanonical(canonKind);
         const id = await insertNote({
-          title: e.canonicalName.slice(0, 255),
-          contentText: summary.slice(0, 120_000),
           contentJson,
-          x: pos.x,
-          y: pos.y,
-          width: pos.width,
-          height: pos.height,
-          entityType: persistedEntityType,
+          contentText: summary.slice(0, 120_000),
           entityMeta: {
+            aiReview: "pending",
+            canonicalEntityKind: canonKind,
             import: true,
             kind: e.kind ?? null,
-            canonicalEntityKind: canonKind,
-            aiReview: "pending",
           },
+          entityType: persistedEntityType,
+          height: pos.height,
+          title: e.canonicalName.slice(0, 255),
+          width: pos.width,
+          x: pos.x,
+          y: pos.y,
         });
         if (id) {
           nameToId.set(e.canonicalName.toLowerCase(), id);
@@ -321,14 +321,14 @@ export async function POST(req: Request) {
         const [row] = await tx
           .insert(itemLinks)
           .values({
-            sourceItemId: fromId,
-            targetItemId: toId,
-            linkType,
-            label: null,
-            sourcePin: null,
-            targetPin: null,
             color: null,
+            label: null,
+            linkType,
             meta: { import: true },
+            sourceItemId: fromId,
+            sourcePin: null,
+            targetItemId: toId,
+            targetPin: null,
           })
           .onConflictDoNothing({
             target: [
@@ -346,9 +346,9 @@ export async function POST(req: Request) {
 
       return {
         createdIds,
-        sourceItemId,
         linksCreated,
         linkWarnings: linkErrors.length ? linkErrors : undefined,
+        sourceItemId,
       };
     });
 
@@ -362,10 +362,10 @@ export async function POST(req: Request) {
   }
 
   return Response.json({
-    ok: true,
     createdItemIds: createdIds,
-    sourceItemId: sourceItemId ?? null,
     linksCreated,
     linkWarnings,
+    ok: true,
+    sourceItemId: sourceItemId ?? null,
   });
 }

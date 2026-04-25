@@ -8,8 +8,6 @@ import {
 } from "@/src/components/foundation/ArchitecturalBottomDock";
 
 const meta: Meta<typeof ArchitecturalCreateMenu> = {
-  title: "Heartgarden/Product UI/Canvas/Create menu",
-  component: ArchitecturalCreateMenu,
   args: {
     actions: DEFAULT_CREATE_ACTIONS,
     onCreateNode: () => {},
@@ -19,6 +17,7 @@ const meta: Meta<typeof ArchitecturalCreateMenu> = {
     actionTone: { control: "select", options: ["menu", "card-dark"] },
     onCreateNode: { control: false },
   },
+  component: ArchitecturalCreateMenu,
   decorators: [
     (Story) => (
       <div style={{ background: "var(--sem-surface-base)", padding: 20 }}>
@@ -26,6 +25,7 @@ const meta: Meta<typeof ArchitecturalCreateMenu> = {
       </div>
     ),
   ],
+  title: "Heartgarden/Product UI/Canvas/Create menu",
 };
 
 export default meta;
@@ -40,9 +40,9 @@ export const OnBlackDock: Story = {
       <div
         style={{
           background: "var(--sys-color-black)",
-          padding: "12px 16px",
           borderRadius: 8,
           display: "inline-block",
+          padding: "12px 16px",
         }}
       >
         <Story />

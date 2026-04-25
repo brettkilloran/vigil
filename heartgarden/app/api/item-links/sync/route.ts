@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json(
-        { ok: false, error: "Source item not found" },
+        { error: "Source item not found", ok: false },
         { status: 404 }
       )
     );
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
   );
   if (!validated.ok) {
     return Response.json(
-      { ok: false, error: validated.error },
+      { error: validated.error, ok: false },
       { status: validated.status }
     );
   }
@@ -135,10 +135,10 @@ export async function POST(req: Request) {
       .insert(itemLinks)
       .values(
         uniqueTargets.map((targetItemId) => ({
-          sourceItemId,
-          targetItemId,
           linkType: "pin",
+          sourceItemId,
           sourcePin: null,
+          targetItemId,
           targetPin: null,
         }))
       )
@@ -155,10 +155,10 @@ export async function POST(req: Request) {
     invalidateItemLinksRevisionForSpace(spaceId);
   }
   await publishHeartgardenSpaceInvalidation(db, {
-    originSpaceId: srcItem.spaceId,
-    reason: "item-links.changed",
     itemId: sourceItemId,
     lookupSpaceIds: [srcItem.spaceId, ...validated.targetSpaceIds],
+    originSpaceId: srcItem.spaceId,
+    reason: "item-links.changed",
   });
 
   return Response.json({ ok: true });

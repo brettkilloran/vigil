@@ -17,16 +17,16 @@ function char(
   overrides: Partial<CanvasContentEntity> = {}
 ): CanvasEntity {
   return {
-    id,
-    title: "C",
-    kind: "content",
-    theme: "default",
-    rotation: 0,
-    tapeRotation: 0,
     bodyHtml: "",
-    slots: { s1: { x: 0, y: 0 } },
+    id,
+    kind: "content",
     loreCard: { kind: "character", variant: "v11" },
     persistedItemId: id,
+    rotation: 0,
+    slots: { s1: { x: 0, y: 0 } },
+    tapeRotation: 0,
+    theme: "default",
+    title: "C",
     ...overrides,
   } as CanvasContentEntity;
 }
@@ -36,17 +36,17 @@ function fac(
   roster: CanvasContentEntity["factionRoster"]
 ): CanvasEntity {
   return {
-    id,
-    title: "F",
-    kind: "content",
-    theme: "default",
-    rotation: 0,
-    tapeRotation: 0,
     bodyHtml: "",
-    slots: { s1: { x: 0, y: 0 } },
+    factionRoster: roster,
+    id,
+    kind: "content",
     loreCard: { kind: "faction", variant: "v4" },
     persistedItemId: id,
-    factionRoster: roster,
+    rotation: 0,
+    slots: { s1: { x: 0, y: 0 } },
+    tapeRotation: 0,
+    theme: "default",
+    title: "F",
   } as CanvasContentEntity;
 }
 
@@ -55,16 +55,16 @@ function loc(
   overrides: Partial<CanvasContentEntity> = {}
 ): CanvasEntity {
   return {
-    id,
-    title: "L",
-    kind: "content",
-    theme: "default",
-    rotation: 0,
-    tapeRotation: 0,
     bodyHtml: "",
-    slots: { s1: { x: 0, y: 0 } },
+    id,
+    kind: "content",
     loreCard: { kind: "location", variant: "v7" },
     persistedItemId: id,
+    rotation: 0,
+    slots: { s1: { x: 0, y: 0 } },
+    tapeRotation: 0,
+    theme: "default",
+    title: "L",
     ...overrides,
   } as CanvasContentEntity;
 }

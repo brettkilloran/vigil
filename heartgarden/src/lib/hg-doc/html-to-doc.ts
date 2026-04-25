@@ -79,13 +79,13 @@ export function legacyCodeBodyHtmlToHgDocSeed(html: string): JSONContent {
   }
   const text = plain.length > 50_000 ? plain.slice(0, 50_000) : plain;
   return {
-    type: "doc",
     content: [
       {
-        type: "codeBlock",
         attrs: { language: "typescript" },
-        content: [{ type: "text", text }],
+        content: [{ text, type: "text" }],
+        type: "codeBlock",
       },
     ],
+    type: "doc",
   };
 }

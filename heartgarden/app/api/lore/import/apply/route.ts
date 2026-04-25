@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       attemptId,
       error: error instanceof Error ? error.message : String(error),
     });
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON", ok: false }, { status: 400 });
   }
 
   const parsed = loreImportApplyBodySchema.safeParse(json);
@@ -47,22 +47,22 @@ export async function POST(req: Request) {
     const firstIssue =
       parsed.error.issues[0]?.message ?? "Invalid request body";
     return Response.json(
-      { ok: false, error: parsed.error.flatten(), hint: firstIssue },
+      { error: parsed.error.flatten(), hint: firstIssue, ok: false },
       { status: 400 }
     );
   }
   console.info("[lore-import] apply request", {
-    attemptId,
-    spaceId: parsed.data.spaceId,
-    importBatchId: parsed.data.importBatchId,
     acceptedMergeCount: parsed.data.acceptedMergeProposalIds.length,
+    attemptId,
     clarificationCount: parsed.data.clarificationAnswers.length,
+    importBatchId: parsed.data.importBatchId,
+    spaceId: parsed.data.spaceId,
   });
 
   const space = await assertSpaceExists(db, parsed.data.spaceId);
   if (!space) {
     return Response.json(
-      { ok: false, error: "Space not found" },
+      { error: "Space not found", ok: false },
       { status: 404 }
     );
   }
@@ -74,19 +74,19 @@ export async function POST(req: Request) {
     const result = await applyLoreImportPlan(db, parsed.data);
     if (result.status === "needs_follow_up") {
       return Response.json({
-        ok: true,
         attemptId,
-        status: result.status,
-        resolvedClarificationAnswers: result.resolvedClarificationAnswers,
         followUp: result.followUp,
+        ok: true,
+        resolvedClarificationAnswers: result.resolvedClarificationAnswers,
+        status: result.status,
       });
     }
     if (result.linksCreated > 0) {
       invalidateItemLinksRevisionForSpace(parsed.data.spaceId);
     }
     return Response.json({
-      ok: true,
       attemptId,
+      ok: true,
       ...result,
       linkWarnings: result.linkWarnings.length
         ? result.linkWarnings
@@ -96,10 +96,10 @@ export async function POST(req: Request) {
     const msg = e instanceof Error ? e.message : "Apply failed";
     console.error("[lore-import] apply failed", {
       attemptId,
-      spaceId: parsed.data.spaceId,
-      importBatchId: parsed.data.importBatchId,
       error: msg,
+      importBatchId: parsed.data.importBatchId,
+      spaceId: parsed.data.spaceId,
     });
-    return Response.json({ ok: false, error: msg }, { status: 400 });
+    return Response.json({ error: msg, ok: false }, { status: 400 });
   }
 }

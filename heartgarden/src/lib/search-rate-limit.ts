@@ -31,7 +31,7 @@ export function searchRateLimitExceeded(req: Request): boolean {
   const now = Date.now();
   let bucket = buckets.get(key);
   if (!bucket || now - bucket.windowStart >= WINDOW_MS) {
-    bucket = { windowStart: now, count: 0 };
+    bucket = { count: 0, windowStart: now };
     buckets.set(key, bucket);
   }
   bucket.count += 1;

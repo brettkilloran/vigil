@@ -5,16 +5,16 @@ import { HEARTGARDEN_BRAND_MARK_EMOJI } from "@/src/lib/brand-mark";
 const meta = {
   /** Stable id so bookmarks / deep links keep working after `title` path changes. */
   id: "heartgarden-overview",
-  title: "Heartgarden/Design System/Overview",
   parameters: {
-    layout: "centered",
     docs: {
       description: {
         component:
           "Entry point for Storybook. heartgarden: app directory in git is `heartgarden/` (see docs/NAMING.md); component source is `src/components/`. Global tokens come from `app/globals.css`.",
       },
     },
+    layout: "centered",
   },
+  title: "Heartgarden/Design System/Overview",
 } satisfies Meta;
 
 export default meta;
@@ -24,11 +24,11 @@ export const AboutThisStorybook: Story = {
   render: () => (
     <div
       style={{
+        color: "var(--sem-text-primary)",
+        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+        lineHeight: 1.55,
         maxWidth: 520,
         textAlign: "left",
-        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-        color: "var(--sem-text-primary)",
-        lineHeight: 1.55,
       }}
     >
       <h1 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: 12 }}>
@@ -64,10 +64,10 @@ export const AboutThisStorybook: Story = {
       </p>
       <p
         style={{
-          marginTop: 16,
-          marginBottom: 0,
           color: "var(--sem-text-muted)",
           fontSize: "0.92rem",
+          marginBottom: 0,
+          marginTop: 16,
         }}
       >
         A few surfaces are API-heavy and are not duplicated here: for example

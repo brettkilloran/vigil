@@ -52,9 +52,9 @@ export const AltGraphCard = function AltGraphCard({
     const byId = new Map<string, MiniNode>();
     for (const row of mentions.slice(0, 6)) {
       byId.set(row.itemId, {
+        ghost: false,
         id: row.itemId,
         label: row.title || "Untitled",
-        ghost: false,
       });
     }
     for (const row of searchItems.slice(0, 8)) {
@@ -66,29 +66,29 @@ export const AltGraphCard = function AltGraphCard({
         continue;
       }
       byId.set(id, {
+        ghost: true,
         id,
         label: row.title?.trim() || "Untitled",
-        ghost: true,
       });
     }
     seed.push(...byId.values());
     const nodes = [
-      { id: "__term__", label: term || "term", ghost: false },
+      { ghost: false, id: "__term__", label: term || "term" },
       ...seed,
     ];
     const edges = seed.map((n) => ({ source: "__term__", target: n.id }));
     const layout = computeForceLayout(
       nodes.map((n) => ({
-        id: n.id,
-        title: n.label,
-        itemType: "note",
         entityType: null,
+        id: n.id,
+        itemType: "note",
+        title: n.label,
       })),
       edges,
       960,
       500
     );
-    return { nodes, edges, layout };
+    return { edges, layout, nodes };
   }, [mentions, searchItems, term]);
 
   if (!open) {

@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
+
 import type { InferSelectModel } from "drizzle-orm";
 import { and, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { z } from "zod";
+
 import { buildContentJsonForFolderEntity } from "@/src/components/foundation/architectural-db-bridge";
 import type { CanvasFolderEntity } from "@/src/components/foundation/architectural-types";
 import {
@@ -131,8 +133,8 @@ export function buildSourceCardDraftsFromPlan(
   if (!plan.chunks || plan.chunks.length === 0) {
     const parts = splitIntoSourceParts(fallbackSourceText);
     return parts.map((part, idx) => ({
-      title: parts.length > 1 ? `${baseTitle} • Part ${idx + 1}` : baseTitle,
       text: part,
+      title: parts.length > 1 ? `${baseTitle} • Part ${idx + 1}` : baseTitle,
     }));
   }
   const referencedChunkIds = new Set<string>();
@@ -165,44 +167,44 @@ export function buildSourceCardDraftsFromPlan(
     const parts = splitIntoSourceParts(merged);
     for (let i = 0; i < parts.length; i += 1) {
       drafts.push({
+        text: parts[i]!,
         title:
           parts.length > 1
             ? `${baseTitle} — ${heading} • Part ${i + 1}`
             : `${baseTitle} — ${heading}`,
-        text: parts[i]!,
       });
     }
   }
   return drafts.length > 0
     ? drafts
-    : [{ title: baseTitle, text: fallbackSourceText.trim() }];
+    : [{ text: fallbackSourceText.trim(), title: baseTitle }];
 }
 
 export const loreImportApplyBodySchema = z.object({
-  spaceId: z.string().uuid(),
+  acceptedMergeProposalIds: z.array(z.string().uuid()).default([]),
+  /** Answers for plan.clarifications; required items must all be present before apply. */
+  clarificationAnswers: z
+    .array(clarificationAnswerSchema)
+    .optional()
+    .default([]),
+  /** If set, only these note clientIds are created (excluding those fully handled by merges). */
+  createNoteClientIds: z.array(z.string().min(1).max(64)).optional(),
   importBatchId: z.string().uuid(),
-  plan: loreImportPlanSchema,
+  includeSourceCard: z.boolean().optional(),
   layout: z
     .object({
       originX: z.number().finite(),
       originY: z.number().finite(),
     })
     .optional(),
-  includeSourceCard: z.boolean().optional(),
+  plan: loreImportPlanSchema,
   sourceDocument: z
     .object({
-      title: z.string().max(255).optional(),
       text: z.string().max(500_000).optional(),
+      title: z.string().max(255).optional(),
     })
     .optional(),
-  acceptedMergeProposalIds: z.array(z.string().uuid()).default([]),
-  /** If set, only these note clientIds are created (excluding those fully handled by merges). */
-  createNoteClientIds: z.array(z.string().min(1).max(64)).optional(),
-  /** Answers for plan.clarifications; required items must all be present before apply. */
-  clarificationAnswers: z
-    .array(clarificationAnswerSchema)
-    .optional()
-    .default([]),
+  spaceId: z.string().uuid(),
 });
 
 export type LoreImportApplyBody = z.infer<typeof loreImportApplyBodySchema>;
@@ -387,9 +389,9 @@ export async function applyLoreImportPlan(
   );
   if (resolvedOther.status === "needs_follow_up") {
     return {
-      status: "needs_follow_up",
-      resolvedClarificationAnswers: resolvedOther.answers,
       followUp: resolvedOther.followUp,
+      resolvedClarificationAnswers: resolvedOther.answers,
+      status: "needs_follow_up",
     };
   }
   const normalizedAnswers = resolvedOther.answers;
@@ -420,9 +422,9 @@ export async function applyLoreImportPlan(
     }
     return {
       fromClientId: l.fromClientId,
-      toClientId: l.toClientId,
-      linkType: coerced.linkType,
       linkIntent: l.linkIntent,
+      linkType: coerced.linkType,
+      toClientId: l.toClientId,
     };
   });
 
@@ -452,15 +454,21 @@ export async function applyLoreImportPlan(
     }
     const list = newMentionsBySource.get(m.fromClientId) ?? [];
     list.push({
-      toClientId: m.toClientId,
-      targetTitle,
-      linkType: m.linkType ?? "history",
       linkIntent: m.linkIntent,
+      linkType: m.linkType ?? "history",
+      targetTitle,
+      toClientId: m.toClientId,
     });
     newMentionsBySource.set(m.fromClientId, list);
   }
   plan = {
     ...plan,
+    importPlanWarnings: [
+      ...(plan.importPlanWarnings ?? []),
+      ...applyCoercionWarnings,
+      ...linkRefilter.warnings,
+    ],
+    links: linkRefilter.links,
     notes: plan.notes.map((n) => {
       const fresh = newMentionsBySource.get(n.clientId) ?? [];
       const existing = n.crossFolderMentions ?? [];
@@ -476,12 +484,6 @@ export async function applyLoreImportPlan(
       }
       return { ...n, crossFolderMentions: merged };
     }),
-    links: linkRefilter.links,
-    importPlanWarnings: [
-      ...(plan.importPlanWarnings ?? []),
-      ...applyCoercionWarnings,
-      ...linkRefilter.warnings,
-    ],
   };
 
   const mergeIdSet = new Set(plan.mergeProposals.map((m) => m.id));
@@ -493,8 +495,8 @@ export async function applyLoreImportPlan(
   );
   const [jobRow] = await db
     .select({
-      userContext: loreImportJobs.userContext,
       spaceId: loreImportJobs.spaceId,
+      userContext: loreImportJobs.userContext,
     })
     .from(loreImportJobs)
     .where(eq(loreImportJobs.importBatchId, body.importBatchId))
@@ -608,42 +610,42 @@ export async function applyLoreImportPlan(
       );
       const entityMeta = buildImportedEntityMeta({
         base: {
-          schemaVersion: 1,
-          import: true,
-          canonicalEntityKind: "lore",
           aiReview: "pending",
+          canonicalEntityKind: "lore",
+          import: true,
+          schemaVersion: 1,
         },
-        importBatchId: plan.importBatchId,
         canonicalEntityKind: "lore",
+        importBatchId: plan.importBatchId,
       });
       const searchBlob = buildSearchBlob({
-        title,
-        contentText,
         contentJson,
-        entityType: persistedEntityTypeFromCanonical("lore"),
+        contentText,
         entityMeta,
-        imageUrl: null,
+        entityType: persistedEntityTypeFromCanonical("lore"),
         imageMeta: null,
-        loreSummary: null,
+        imageUrl: null,
         loreAliases: null,
+        loreSummary: null,
+        title,
       });
       const [row] = await dbx
         .insert(items)
         .values({
-          spaceId: body.spaceId,
+          color: DS_COLOR.itemDefaultNote,
+          contentJson,
+          contentText,
+          entityMeta,
+          entityType: persistedEntityTypeFromCanonical("lore"),
+          height: 280,
           itemType: "note",
+          searchBlob,
+          spaceId: body.spaceId,
+          title,
+          width: NODE_W,
           x: ox,
           y: oy,
-          width: NODE_W,
-          height: 280,
           zIndex: z,
-          title,
-          contentText,
-          searchBlob,
-          contentJson,
-          color: DS_COLOR.itemDefaultNote,
-          entityType: persistedEntityTypeFromCanonical("lore"),
-          entityMeta,
         })
         .returning();
       if (row) {
@@ -688,9 +690,9 @@ export async function applyLoreImportPlan(
       const [childSpace] = await dbx
         .insert(spaces)
         .values({
+          braneId: parentSpace.braneId,
           name: folder.title.slice(0, 255),
           parentSpaceId,
-          braneId: parentSpace.braneId,
         })
         .returning();
       if (!childSpace) {
@@ -703,17 +705,17 @@ export async function applyLoreImportPlan(
       const fy = oy + sortedFolders.indexOf(folder) * 36;
 
       const tempFolder: CanvasFolderEntity = {
-        id: "",
-        title: folder.title.slice(0, 255),
-        kind: "folder",
-        theme: "folder",
         childSpaceId: childSpace.id,
+        id: "",
+        kind: "folder",
         rotation: 0,
-        width: FOLDER_W,
-        tapeRotation: 0,
+        slots: {},
         stackId: null,
         stackOrder: null,
-        slots: {},
+        tapeRotation: 0,
+        theme: "folder",
+        title: folder.title.slice(0, 255),
+        width: FOLDER_W,
       };
 
       const folderEntityMeta = buildImportedEntityMeta({
@@ -721,34 +723,34 @@ export async function applyLoreImportPlan(
         importBatchId: plan.importBatchId,
       });
       const folderSearch = buildSearchBlob({
-        title: folder.title.slice(0, 255),
-        contentText: "",
         contentJson: null,
-        entityType: null,
+        contentText: "",
         entityMeta: folderEntityMeta,
-        imageUrl: null,
+        entityType: null,
         imageMeta: null,
-        loreSummary: null,
+        imageUrl: null,
         loreAliases: null,
+        loreSummary: null,
+        title: folder.title.slice(0, 255),
       });
 
       const [folderRow] = await dbx
         .insert(items)
         .values({
-          spaceId: parentSpaceId,
+          color: null,
+          contentJson: buildContentJsonForFolderEntity(tempFolder),
+          contentText: "",
+          entityMeta: folderEntityMeta,
+          entityType: null,
+          height: FOLDER_H,
           itemType: "folder",
+          searchBlob: folderSearch,
+          spaceId: parentSpaceId,
+          title: folder.title.slice(0, 255),
+          width: FOLDER_W,
           x: fx,
           y: fy,
-          width: FOLDER_W,
-          height: FOLDER_H,
           zIndex: folderZ,
-          title: folder.title.slice(0, 255),
-          contentText: "",
-          searchBlob: folderSearch,
-          contentJson: buildContentJsonForFolderEntity(tempFolder),
-          color: null,
-          entityType: null,
-          entityMeta: folderEntityMeta,
         })
         .returning();
 
@@ -778,19 +780,19 @@ export async function applyLoreImportPlan(
           ? (existing.entityMeta as Record<string, unknown>)
           : {};
       const mergedEntityMeta = buildImportedEntityMeta({
-        existing: prevMeta,
         aiReview: "pending",
+        existing: prevMeta,
       });
       const searchBlob = buildSearchBlob({
-        title: existing.title,
-        contentText: mergedText.slice(0, 120_000),
         contentJson,
-        entityType: existing.entityType,
+        contentText: mergedText.slice(0, 120_000),
         entityMeta: mergedEntityMeta,
-        imageUrl: existing.imageUrl,
+        entityType: existing.entityType,
         imageMeta: existing.imageMeta,
-        loreSummary: existing.loreSummary,
+        imageUrl: existing.imageUrl,
         loreAliases: existing.loreAliases ?? undefined,
+        loreSummary: existing.loreSummary,
+        title: existing.title,
       });
 
       const prevUpdatedAtIso = existing.updatedAt
@@ -799,10 +801,10 @@ export async function applyLoreImportPlan(
       const [updated] = await dbx
         .update(items)
         .set({
-          contentText: mergedText.slice(0, 120_000),
           contentJson,
-          searchBlob,
+          contentText: mergedText.slice(0, 120_000),
           entityMeta: mergedEntityMeta,
+          searchBlob,
           updatedAt: new Date(),
         })
         .where(
@@ -863,7 +865,6 @@ export async function applyLoreImportPlan(
       | undefined;
     for (const [spaceId, notes] of notesBySpace.entries()) {
       const entities = notes.map((n) => ({
-        clientId: n.clientId,
         affinities: plan.links
           .filter(
             (l) =>
@@ -879,15 +880,16 @@ export async function applyLoreImportPlan(
           .map((l) =>
             l.fromClientId === n.clientId ? l.toClientId : l.fromClientId
           ),
+        clientId: n.clientId,
       }));
       const layout = placeImportCards({
+        entities,
         originX: spaceId === body.spaceId ? ox : 0,
         originY: spaceId === body.spaceId ? oy : 0,
         source:
           spaceId === body.spaceId && hasSource
-            ? { width: 420, height: 360 }
+            ? { height: 360, width: 420 }
             : undefined,
-        entities,
       });
       if (spaceId === body.spaceId && layout.source) {
         rootSourceRect = layout.source;
@@ -913,40 +915,40 @@ export async function applyLoreImportPlan(
           draft.text.slice(0, 120_000)
         );
         const sourceEntityMeta = buildImportedEntityMeta({
+          aiReview: "pending",
           base: {
             sourceSectionIndex: i,
             sourceSectionTotal: sourceCardDrafts.length,
           },
           import: true,
           importBatchId: plan.importBatchId,
-          aiReview: "pending",
         });
         const searchBlob = buildSearchBlob({
-          title: draft.title.slice(0, 255),
-          contentText: draft.text.slice(0, 120_000),
           contentJson: sourceContentJson,
-          entityType: persistedEntityTypeForLoreSource(),
+          contentText: draft.text.slice(0, 120_000),
           entityMeta: sourceEntityMeta,
-          imageUrl: null,
+          entityType: persistedEntityTypeForLoreSource(),
           imageMeta: null,
-          loreSummary: null,
+          imageUrl: null,
           loreAliases: null,
+          loreSummary: null,
+          title: draft.title.slice(0, 255),
         });
         return {
-          spaceId: body.spaceId,
+          color: DS_COLOR.itemDefaultNote,
+          contentJson: sourceContentJson,
+          contentText: draft.text.slice(0, 120_000),
+          entityMeta: sourceEntityMeta,
+          entityType: persistedEntityTypeForLoreSource(),
+          height: layoutSource.height,
           itemType: "note" as const,
+          searchBlob,
+          spaceId: body.spaceId,
+          title: draft.title.slice(0, 255),
+          width: layoutSource.width,
           x: layoutSource.x + i * 28,
           y: layoutSource.y + i * 26,
-          width: layoutSource.width,
-          height: layoutSource.height,
           zIndex: zRoot + i,
-          title: draft.title.slice(0, 255),
-          contentText: draft.text.slice(0, 120_000),
-          searchBlob,
-          contentJson: sourceContentJson,
-          color: DS_COLOR.itemDefaultNote,
-          entityType: persistedEntityTypeForLoreSource(),
-          entityMeta: sourceEntityMeta,
         };
       });
       if (sourceValues.length > 0) {
@@ -973,10 +975,10 @@ export async function applyLoreImportPlan(
             : body.spaceId;
 
       const pos = placementByNoteClient.get(note.clientId) ?? {
+        height: 260,
+        width: NODE_W,
         x: 0,
         y: 0,
-        width: NODE_W,
-        height: 260,
       };
       const z = takeNextZIndex(zIndexCursor, targetSpaceId);
 
@@ -988,42 +990,42 @@ export async function applyLoreImportPlan(
       );
       const entityMeta = buildImportedEntityMeta({
         base: buildDefaultEntityMeta(note),
-        importBatchId: plan.importBatchId,
         canonicalEntityKind: note.canonicalEntityKind as CanonicalEntityKind,
+        importBatchId: plan.importBatchId,
       });
 
       const persistedEntityType = persistedEntityTypeFromCanonical(
         note.canonicalEntityKind as CanonicalEntityKind
       );
       const searchBlob = buildSearchBlob({
-        title: note.title.slice(0, 255),
-        contentText: bodyText,
         contentJson,
-        entityType: persistedEntityType,
+        contentText: bodyText,
         entityMeta,
-        imageUrl: null,
+        entityType: persistedEntityType,
         imageMeta: null,
-        loreSummary: null,
+        imageUrl: null,
         loreAliases: null,
+        loreSummary: null,
+        title: note.title.slice(0, 255),
       });
 
       return {
         clientId: note.clientId,
         values: {
-          spaceId: targetSpaceId,
+          color: DS_COLOR.itemDefaultNote,
+          contentJson,
+          contentText: bodyText,
+          entityMeta,
+          entityType: persistedEntityType,
+          height: pos.height,
           itemType: "note" as const,
+          searchBlob,
+          spaceId: targetSpaceId,
+          title: note.title.slice(0, 255),
+          width: pos.width,
           x: pos.x,
           y: pos.y,
-          width: pos.width,
-          height: pos.height,
           zIndex: z,
-          title: note.title.slice(0, 255),
-          contentText: bodyText,
-          searchBlob,
-          contentJson,
-          color: DS_COLOR.itemDefaultNote,
-          entityType: persistedEntityType,
-          entityMeta,
         },
       };
     });
@@ -1134,9 +1136,9 @@ export async function applyLoreImportPlan(
           continue;
         }
         additions.push({
+          characterItemId,
           id: randomUUID(),
           kind: "character",
-          characterItemId,
         });
       }
       if (additions.length === 0) {
@@ -1154,8 +1156,8 @@ export async function applyLoreImportPlan(
           ? (factionRow.entityMeta as Record<string, unknown>)
           : {};
       const nextEntityMeta = buildImportedEntityMeta({
-        existing: prevMeta,
         aiReview: "pending",
+        existing: prevMeta,
       });
       const [updated] = await dbx
         .update(items)
@@ -1199,10 +1201,10 @@ export async function applyLoreImportPlan(
           continue;
         }
         resolvedRefs.push({
+          linkIntent: m.linkIntent,
+          linkType: m.linkType,
           targetItemId,
           targetTitle: m.targetTitle,
-          linkType: m.linkType,
-          linkIntent: m.linkIntent,
         });
       }
       if (resolvedRefs.length === 0) {
@@ -1213,26 +1215,26 @@ export async function applyLoreImportPlan(
           ? (sourceRow.entityMeta as Record<string, unknown>)
           : {};
       const nextEntityMeta = buildImportedEntityMeta({
-        existing: prevMeta,
         crossFolderRefs: resolvedRefs,
+        existing: prevMeta,
       });
       const nextSearchBlob = buildSearchBlob({
-        title: sourceRow.title,
-        contentText: sourceRow.contentText,
         contentJson: sourceRow.contentJson as Record<string, unknown> | null,
-        entityType: sourceRow.entityType,
+        contentText: sourceRow.contentText,
         entityMeta: nextEntityMeta,
-        imageUrl: sourceRow.imageUrl ?? null,
+        entityType: sourceRow.entityType,
         imageMeta: sourceRow.imageMeta ?? null,
-        loreSummary: sourceRow.loreSummary ?? null,
+        imageUrl: sourceRow.imageUrl ?? null,
         loreAliases: sourceRow.loreAliases ?? null,
+        loreSummary: sourceRow.loreSummary ?? null,
+        title: sourceRow.title,
       });
 
       const [updated] = await dbx
         .update(items)
         .set({
-          searchBlob: nextSearchBlob,
           entityMeta: nextEntityMeta,
+          searchBlob: nextSearchBlob,
           updatedAt: new Date(),
         })
         .where(eq(items.id, sourceItemId))
@@ -1269,14 +1271,9 @@ export async function applyLoreImportPlan(
       const [lr] = await dbx
         .insert(itemLinks)
         .values({
-          sourceItemId: fromId,
-          targetItemId: toId,
-          linkType,
-          label: null,
-          /** Null: canvas hydration supplies default pin anchors (`mergeHydratedDbConnections`). */
-          sourcePin: null,
-          targetPin: null,
           color: null,
+          label: null,
+          linkType,
           meta: {
             import: true,
             importBatchId: plan.importBatchId,
@@ -1289,6 +1286,11 @@ export async function applyLoreImportPlan(
               : {}),
             ...(link.linkIntent ? { linkIntent: link.linkIntent } : {}),
           },
+          sourceItemId: fromId,
+          /** Null: canvas hydration supplies default pin anchors (`mergeHydratedDbConnections`). */
+          sourcePin: null,
+          targetItemId: toId,
+          targetPin: null,
         })
         .onConflictDoNothing({
           target: [
@@ -1319,8 +1321,8 @@ export async function applyLoreImportPlan(
       }
       const patch = buildBindingPatchForImport({
         sourceKind: kindByClientIdForApply.get(link.fromClientId),
-        targetKind: kindByClientIdForApply.get(link.toClientId),
         targetItemId: toId,
+        targetKind: kindByClientIdForApply.get(link.toClientId),
         targetTitle: titleByClientId.get(link.toClientId),
       });
       if (!patch) {
@@ -1365,8 +1367,8 @@ export async function applyLoreImportPlan(
         new Set([...prevBindings, ...touchedSlots])
       );
       const nextEntityMeta = buildImportedEntityMeta({
-        existing: { ...prevMeta, pendingBindingSlots },
         aiReview: "pending",
+        existing: { ...prevMeta, pendingBindingSlots },
       });
       const [updated] = await dbx
         .update(items)
@@ -1406,11 +1408,11 @@ export async function applyLoreImportPlan(
   }
 
   return {
-    status: "applied",
     createdItemIds,
     folderItemIds,
     linksCreated,
-    mergesApplied,
     linkWarnings,
+    mergesApplied,
+    status: "applied",
   };
 }

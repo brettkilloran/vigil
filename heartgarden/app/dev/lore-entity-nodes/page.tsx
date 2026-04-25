@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 import { LoreEntityNodesClient } from "./LoreEntityNodesClient";
 
 export const metadata: Metadata = {
-  title: "Lore entity nodes — lab",
   description:
     "Design previews for character, organization, and location canvas nodes.",
-  robots: { index: false, follow: false },
+  robots: { follow: false, index: false },
+  title: "Lore entity nodes — lab",
 };
 
 export default function LoreEntityNodesPage() {

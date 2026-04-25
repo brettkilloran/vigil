@@ -12,7 +12,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -50,15 +50,15 @@ export async function GET(
   }
 
   return Response.json({
+    counts: {
+      itemLinksInSpace: linkCount,
+      items: itemRow?.c ?? 0,
+    },
     ok: true,
     space: {
       id: space.id,
       name: space.name,
       parentSpaceId: space.parentSpaceId,
-    },
-    counts: {
-      items: itemRow?.c ?? 0,
-      itemLinksInSpace: linkCount,
     },
   });
 }

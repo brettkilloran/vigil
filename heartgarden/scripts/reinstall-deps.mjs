@@ -20,9 +20,9 @@ if (existsSync(nm)) {
   console.error("Removing node_modules…");
   try {
     rmSync(nm, {
-      recursive: true,
       force: true,
       maxRetries: 5,
+      recursive: true,
       retryDelay: 200,
     });
   } catch (err) {
@@ -34,8 +34,8 @@ if (existsSync(nm)) {
 }
 
 const r = spawnSync("pnpm", ["install", "--frozen-lockfile"], {
-  stdio: "inherit",
-  shell: true,
   cwd: root,
+  shell: true,
+  stdio: "inherit",
 });
 process.exit(r.status ?? 1);

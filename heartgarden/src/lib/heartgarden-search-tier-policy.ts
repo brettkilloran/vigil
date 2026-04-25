@@ -31,10 +31,10 @@ export function applySearchTierPolicy(
     if (m === "hybrid" || m === "semantic") {
       m = "fts";
     }
-    return { ok: true, filters: nextFilters, mode: m };
+    return { filters: nextFilters, mode: m, ok: true };
   }
 
-  return { ok: true, filters: { ...filters }, mode };
+  return { filters: { ...filters }, mode, ok: true };
 }
 
 /** `/api/search/suggest` — same space rules as search (no mode). */
@@ -43,10 +43,10 @@ export function applySuggestTierPolicy(
   filters: SearchFilters
 ): SearchTierPolicyResult {
   if (ctx.role === "player") {
-    return { ok: true, filters: { ...filters }, mode: "" };
+    return { filters: { ...filters }, mode: "", ok: true };
   }
 
-  return { ok: true, filters: { ...filters }, mode: "" };
+  return { filters: { ...filters }, mode: "", ok: true };
 }
 
 /**

@@ -69,19 +69,19 @@ function withLinkSemanticMeta(
 }
 
 const bodySchema = z.object({
-  sourceItemId: z.string().uuid(),
-  targetItemId: z.string().uuid(),
-  linkType: z.string().max(64).optional(),
-  label: z.string().max(500).optional(),
-  sourcePin: z.string().max(64).optional(),
-  targetPin: z.string().max(64).optional(),
   color: z.string().max(128).optional(),
+  label: z.string().max(500).optional(),
+  linkType: z.string().max(64).optional(),
   meta: z.record(z.string(), z.unknown()).optional(),
+  sourceItemId: z.string().uuid(),
+  sourcePin: z.string().max(64).optional(),
+  targetItemId: z.string().uuid(),
+  targetPin: z.string().max(64).optional(),
 });
 
 const patchBodySchema = z.object({
-  id: z.string().uuid(),
   color: z.string().max(128).optional(),
+  id: z.string().uuid(),
   label: z.string().max(500).nullable().optional(),
   linkType: z.string().max(64).optional(),
   meta: z.record(z.string(), z.unknown()).nullable().optional(),
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
   } = parsed.data;
   if (sourceItemId === targetItemId) {
     return Response.json(
-      { ok: false, error: "Self-link not allowed" },
+      { error: "Self-link not allowed", ok: false },
       { status: 400 }
     );
   }
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json(
-        { ok: false, error: "Source item not found" },
+        { error: "Source item not found", ok: false },
         { status: 404 }
       )
     );
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
   ]);
   if (!validated.ok) {
     return Response.json(
-      { ok: false, error: validated.error },
+      { error: validated.error, ok: false },
       { status: validated.status }
     );
   }
@@ -172,8 +172,8 @@ export async function POST(req: Request) {
   );
   const entRows = await db
     .select({
-      id: items.id,
       entityType: items.entityType,
+      id: items.id,
       spaceId: items.spaceId,
     })
     .from(items)
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
   const tgtRow = entRows.find((r) => r.id === targetItemId);
   if (!(srcRow && tgtRow)) {
     return Response.json(
-      { ok: false, error: "Source or target item not found" },
+      { error: "Source or target item not found", ok: false },
       { status: 404 }
     );
   }
@@ -193,21 +193,21 @@ export async function POST(req: Request) {
   );
   if (!mirrorCheck.ok) {
     return Response.json(
-      { ok: false, error: mirrorCheck.error },
+      { error: mirrorCheck.error, ok: false },
       { status: mirrorCheck.status }
     );
   }
   const [row] = await db
     .insert(itemLinks)
     .values({
-      sourceItemId,
-      targetItemId,
-      linkType: canonicalLinkType,
-      label: label ?? null,
-      sourcePin: sourcePin ?? null,
-      targetPin: targetPin ?? null,
       color: color ?? null,
+      label: label ?? null,
+      linkType: canonicalLinkType,
       meta: Object.keys(metaForRow).length > 0 ? metaForRow : null,
+      sourceItemId,
+      sourcePin: sourcePin ?? null,
+      targetItemId,
+      targetPin: targetPin ?? null,
     })
     .onConflictDoNothing({
       target: [
@@ -239,26 +239,26 @@ export async function POST(req: Request) {
       )
       .limit(1);
     await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: srcItem.spaceId,
-      reason: "item-links.changed",
       itemId: sourceItemId,
       lookupSpaceIds: [srcItem.spaceId, ...validated.targetSpaceIds],
+      originSpaceId: srcItem.spaceId,
+      reason: "item-links.changed",
     });
     invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
     return Response.json({
-      ok: true,
       deduped: true,
+      ok: true,
       ...(existing ? { link: existing } : {}),
     });
   }
   await publishHeartgardenSpaceInvalidation(db, {
-    originSpaceId: srcItem.spaceId,
-    reason: "item-links.changed",
     itemId: sourceItemId,
     lookupSpaceIds: [srcItem.spaceId, ...validated.targetSpaceIds],
+    originSpaceId: srcItem.spaceId,
+    reason: "item-links.changed",
   });
   invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
-  return Response.json({ ok: true, link: row });
+  return Response.json({ link: row, ok: true });
 }
 
 export async function PATCH(req: Request) {
@@ -279,7 +279,7 @@ export async function PATCH(req: Request) {
   const parsed = patchBodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -296,7 +296,7 @@ export async function PATCH(req: Request) {
   if (!linkMeta) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Link not found" }, { status: 404 })
+      Response.json({ error: "Link not found", ok: false }, { status: 404 })
     );
   }
 
@@ -305,9 +305,9 @@ export async function PATCH(req: Request) {
   // space was returned only after the row had already been updated.
   const endpointRows = await db
     .select({
+      entityType: items.entityType,
       id: items.id,
       spaceId: items.spaceId,
-      entityType: items.entityType,
     })
     .from(items)
     .where(inArray(items.id, [linkMeta.sourceItemId, linkMeta.targetItemId]));
@@ -317,7 +317,7 @@ export async function PATCH(req: Request) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json(
-        { ok: false, error: "Link endpoint missing" },
+        { error: "Link endpoint missing", ok: false },
         { status: 404 }
       )
     );
@@ -334,14 +334,14 @@ export async function PATCH(req: Request) {
   }
 
   const [existing] = await db
-    .select({ meta: itemLinks.meta, linkType: itemLinks.linkType })
+    .select({ linkType: itemLinks.linkType, meta: itemLinks.meta })
     .from(itemLinks)
     .where(eq(itemLinks.id, id))
     .limit(1);
   if (!existing) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Link not found" }, { status: 404 })
+      Response.json({ error: "Link not found", ok: false }, { status: 404 })
     );
   }
 
@@ -389,7 +389,7 @@ export async function PATCH(req: Request) {
   }
   if (Object.keys(updates).length < 1) {
     return Response.json(
-      { ok: false, error: "No updates provided" },
+      { error: "No updates provided", ok: false },
       { status: 400 }
     );
   }
@@ -401,7 +401,7 @@ export async function PATCH(req: Request) {
     );
     if (!mirrorCheck.ok) {
       return Response.json(
-        { ok: false, error: mirrorCheck.error },
+        { error: mirrorCheck.error, ok: false },
         { status: mirrorCheck.status }
       );
     }
@@ -419,17 +419,17 @@ export async function PATCH(req: Request) {
   if (!updated) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Link not found" }, { status: 404 })
+      Response.json({ error: "Link not found", ok: false }, { status: 404 })
     );
   }
   await publishHeartgardenSpaceInvalidation(db, {
-    originSpaceId: srcRow.spaceId,
-    reason: "item-links.changed",
     itemId: linkMeta.sourceItemId,
     lookupSpaceIds: [srcRow.spaceId, tgtRow.spaceId],
+    originSpaceId: srcRow.spaceId,
+    reason: "item-links.changed",
   });
   invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
-  return Response.json({ ok: true, link: updated });
+  return Response.json({ link: updated, ok: true });
 }
 
 export async function DELETE(req: Request) {
@@ -450,7 +450,7 @@ export async function DELETE(req: Request) {
   const parsed = deleteBodySchema.safeParse(bodyRead.json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -466,7 +466,7 @@ export async function DELETE(req: Request) {
   if (!linkMeta) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Link not found" }, { status: 404 })
+      Response.json({ error: "Link not found", ok: false }, { status: 404 })
     );
   }
 
@@ -483,7 +483,7 @@ export async function DELETE(req: Request) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
       Response.json(
-        { ok: false, error: "Link endpoint missing" },
+        { error: "Link endpoint missing", ok: false },
         { status: 404 }
       )
     );
@@ -509,14 +509,14 @@ export async function DELETE(req: Request) {
   if (deletedCount < 1) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Link not found" }, { status: 404 })
+      Response.json({ error: "Link not found", ok: false }, { status: 404 })
     );
   }
   await publishHeartgardenSpaceInvalidation(db, {
-    originSpaceId: srcRow.spaceId,
-    reason: "item-links.changed",
     itemId: linkMeta.sourceItemId,
     lookupSpaceIds: [srcRow.spaceId, tgtRow.spaceId],
+    originSpaceId: srcRow.spaceId,
+    reason: "item-links.changed",
   });
   invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
   return Response.json({ ok: true });

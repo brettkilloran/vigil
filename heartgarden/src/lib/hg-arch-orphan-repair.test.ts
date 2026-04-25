@@ -12,9 +12,9 @@ describe("stripHgArchReferencesToItem", () => {
       hgArch: {
         [FACTION_ROSTER_HG_ARCH_KEY]: [
           {
+            characterItemId: dead,
             id: "11111111-1111-4111-8111-111111111111",
             kind: "character",
-            characterItemId: dead,
           },
         ],
       },
@@ -33,8 +33,8 @@ describe("stripHgArchReferencesToItem", () => {
     const cj = {
       hgArch: {
         loreThreadAnchors: {
-          primaryLocationItemId: dead,
           primaryFactionItemId: other,
+          primaryLocationItemId: dead,
         },
       },
     };

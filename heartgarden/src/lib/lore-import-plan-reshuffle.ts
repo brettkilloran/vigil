@@ -9,12 +9,12 @@ function withUserContext(
   patch: Partial<LoreImportUserContext>
 ): LoreImportUserContext {
   return {
+    docSourceKind: patch.docSourceKind ?? plan.userContext?.docSourceKind,
+    freeformContext: patch.freeformContext ?? plan.userContext?.freeformContext,
     granularity: patch.granularity ?? plan.userContext?.granularity ?? "many",
-    orgMode: patch.orgMode ?? plan.userContext?.orgMode ?? "folders",
     importScope:
       patch.importScope ?? plan.userContext?.importScope ?? "current_subtree",
-    freeformContext: patch.freeformContext ?? plan.userContext?.freeformContext,
-    docSourceKind: patch.docSourceKind ?? plan.userContext?.docSourceKind,
+    orgMode: patch.orgMode ?? plan.userContext?.orgMode ?? "folders",
   };
 }
 
@@ -70,7 +70,7 @@ export function flipOrgMode(
 ): LoreImportPlan {
   return filterAutoResolvedClarifications({
     ...plan,
-    userContext: withUserContext(plan, { orgMode, granularity: "many" }),
+    userContext: withUserContext(plan, { granularity: "many", orgMode }),
   });
 }
 
@@ -80,11 +80,11 @@ export function collapseToOneNote(
 ): LoreImportPlan {
   const next: LoreImportPlan = {
     ...plan,
+    contradictions: [],
     folders: [],
-    notes: [],
     links: [],
     mergeProposals: [],
-    contradictions: [],
+    notes: [],
     oneNoteSource: {
       text: oneNoteSource.text.slice(0, 500_000),
       ...(oneNoteSource.title

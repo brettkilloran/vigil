@@ -13,9 +13,9 @@ describe("fetchSpaceChanges", () => {
   it("returns parse failure when includeItemIds is true but itemIds is missing", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, items: [] }), {
-        status: 200,
+      new Response(JSON.stringify({ items: [], ok: true }), {
         headers: { "Content-Type": "application/json" },
+        status: 200,
       })
     );
     const { fetchSpaceChanges } = await import("./architectural-neon-api");
@@ -23,10 +23,10 @@ describe("fetchSpaceChanges", () => {
       includeItemIds: true,
     });
     expect(out).toEqual({
-      ok: false,
       cause: "parse",
       error: "Space changes payload missing required fields",
       httpStatus: 200,
+      ok: false,
     });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/api/spaces/space-1/changes?"),
@@ -41,12 +41,12 @@ describe("fetchSpaceChanges", () => {
     fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
-          ok: true,
-          items: [],
-          itemIds: ["a", "b"],
           cursor: "2024-02-01T00:00:00.000Z",
+          itemIds: ["a", "b"],
+          items: [],
+          ok: true,
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" }, status: 200 }
       )
     );
     const { fetchSpaceChanges } = await import("./architectural-neon-api");
@@ -54,17 +54,17 @@ describe("fetchSpaceChanges", () => {
       includeItemIds: true,
     });
     expect(out).toEqual({
-      ok: true,
-      items: [],
-      itemIds: ["a", "b"],
       cursor: "2024-02-01T00:00:00.000Z",
+      itemIds: ["a", "b"],
+      items: [],
+      ok: true,
     });
   });
 
   it("returns structured failure on HTTP error", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(
-        JSON.stringify({ ok: false, error: "Database not configured" }),
+        JSON.stringify({ error: "Database not configured", ok: false }),
         { status: 503 }
       )
     );
@@ -73,10 +73,10 @@ describe("fetchSpaceChanges", () => {
       includeItemIds: true,
     });
     expect(out).toEqual({
-      ok: false,
       cause: "http",
       error: "Database not configured",
       httpStatus: 503,
+      ok: false,
     });
   });
 });

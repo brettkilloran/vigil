@@ -34,19 +34,19 @@ export async function GET(req: Request) {
   if (searchRateLimitExceeded(req)) {
     return Response.json(
       {
-        ok: false,
-        error: "Too many search requests. Try again in a minute.",
         code: "search_rate_limited",
+        error: "Too many search requests. Try again in a minute.",
         items: [],
+        ok: false,
       },
-      { status: 429, headers: { "Retry-After": "60" } }
+      { headers: { "Retry-After": "60" }, status: 429 }
     );
   }
 
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", items: [] },
+      { error: "Database not configured", items: [], ok: false },
       { status: 503 }
     );
   }
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
       return heartgardenMaskNotFoundForPlayer(
         bootCtx,
         Response.json(
-          { ok: false, error: "Space not found", items: [] },
+          { error: "Space not found", items: [], ok: false },
           { status: 404 }
         )
       );
@@ -97,17 +97,17 @@ export async function GET(req: Request) {
   }
 
   if (q.length < 2) {
-    return Response.json({ ok: true, items: [], mode });
+    return Response.json({ items: [], mode, ok: true });
   }
 
   if (mode === "fts") {
     const rows = await searchItemsFTS(db, q, filters);
-    return Response.json({ ok: true, items: mapRows(rows), mode: "fts" });
+    return Response.json({ items: mapRows(rows), mode: "fts", ok: true });
   }
 
   if (mode === "fuzzy") {
     const rows = await searchItemsFuzzy(db, q, filters);
-    return Response.json({ ok: true, items: mapRows(rows), mode: "fuzzy" });
+    return Response.json({ items: mapRows(rows), mode: "fuzzy", ok: true });
   }
 
   const hybridQueryOverrides = parseHybridRetrieveQueryParams(url.searchParams);
@@ -115,21 +115,21 @@ export async function GET(req: Request) {
   const hybridRetrieveOpts = {
     ...API_SEARCH_HYBRID_OPTIONS,
     ...hybridQueryOverrides,
-    maxItems: hybridQueryOverrides.maxItems ?? retrievalBaseLimit,
-    includeVector: true as const,
     // `/api/search` returns rows only (snippets are stripped by `mapRows`); skip
     // `ts_headline` generation in the lexical leg. (`REVIEW_2026-04-25_1835` M5.)
     includeSnippets: false,
+    includeVector: true as const,
+    maxItems: hybridQueryOverrides.maxItems ?? retrievalBaseLimit,
   };
 
   if (mode === "semantic") {
     if (!isEmbeddingApiConfigured()) {
       const rows = await searchItemsFTS(db, q, filters);
       return Response.json({
-        ok: true,
         items: mapRows(rows),
         mode: "fts",
         note: "Vector search unavailable; fell back to full-text search.",
+        ok: true,
       });
     }
     const { rows } = await hybridRetrieveItems(
@@ -139,9 +139,9 @@ export async function GET(req: Request) {
       hybridRetrieveOpts
     );
     return Response.json({
-      ok: true,
       items: mapRows(rows),
       mode: "semantic",
+      ok: true,
     });
   }
 
@@ -151,9 +151,9 @@ export async function GET(req: Request) {
       includeVector: isEmbeddingApiConfigured(),
     });
     return Response.json({
-      ok: true,
       items: mapRows(rows),
       mode: "hybrid",
+      ok: true,
       ...(isEmbeddingApiConfigured()
         ? {}
         : {
@@ -164,9 +164,9 @@ export async function GET(req: Request) {
 
   return Response.json(
     {
-      ok: false,
       error: "Invalid mode (use fts, fuzzy, semantic, or hybrid)",
       items: [],
+      ok: false,
     },
     { status: 400 }
   );

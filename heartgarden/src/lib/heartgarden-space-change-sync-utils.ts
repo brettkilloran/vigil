@@ -261,8 +261,8 @@ export function parseSpaceChangesResponseJson(
   const hasMore = o.hasMore === true ? true : undefined;
 
   return {
-    ok: true,
     items,
+    ok: true,
     spaces,
     ...(itemIds === undefined ? {} : { itemIds }),
     ...(cursor === undefined ? {} : { cursor }),

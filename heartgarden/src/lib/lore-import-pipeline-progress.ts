@@ -15,12 +15,12 @@ const PIPELINE_ORDER = [
 
 const PIPELINE_WEIGHT: Record<string, number> = {
   chunking: 5,
-  outline: 33,
-  vault_retrieval: 19,
-  merge: 22,
   clarify: 13,
   finalize: 3,
+  merge: 22,
+  outline: 33,
   persist_review: 5,
+  vault_retrieval: 19,
 };
 
 const PIPELINE_SUM = PIPELINE_ORDER.reduce((a, k) => a + PIPELINE_WEIGHT[k], 0);

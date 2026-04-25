@@ -13,8 +13,8 @@ export function scheduleLoreImportJobProcessing(jobId: string): void {
     after(runJob);
   } catch (error) {
     console.warn("[lore-import-job] after() unavailable; running immediately", {
-      jobId,
       error: error instanceof Error ? error.message : String(error),
+      jobId,
     });
     void runJob();
   }

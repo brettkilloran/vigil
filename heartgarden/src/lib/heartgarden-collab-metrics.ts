@@ -22,10 +22,10 @@ interface Snapshot {
 }
 
 const spaceSyncRuns: Record<HeartgardenSpaceSyncRunSource, number> = {
-  poll_interval: 0,
-  poll_catchup: 0,
-  realtime_invalidate: 0,
   initial: 0,
+  poll_catchup: 0,
+  poll_interval: 0,
+  realtime_invalidate: 0,
   visibility: 0,
 };
 
@@ -96,14 +96,14 @@ export function recordItemPatchConflict(): void {
 
 export function getHeartgardenCollabMetricsSnapshot(): Snapshot {
   return {
-    spaceSyncRuns: { ...spaceSyncRuns },
+    bootstrapRepairAttempts,
+    itemPatchConflict,
+    itemPatchOk,
+    pollContractFailures,
+    realtimeMessagesReceived,
     realtimeWsConnects,
     realtimeWsDisconnects,
-    realtimeMessagesReceived,
-    pollContractFailures,
-    bootstrapRepairAttempts,
-    itemPatchOk,
-    itemPatchConflict,
+    spaceSyncRuns: { ...spaceSyncRuns },
   };
 }
 
@@ -122,7 +122,6 @@ export function installHeartgardenCollabMetricsGlobal(): void {
     return;
   }
   w.__heartgardenCollabMetrics = {
-    snapshot: () => getHeartgardenCollabMetricsSnapshot(),
     reset: () => {
       spaceSyncRuns.poll_interval = 0;
       spaceSyncRuns.poll_catchup = 0;
@@ -138,5 +137,6 @@ export function installHeartgardenCollabMetricsGlobal(): void {
       itemPatchConflict = 0;
       emit();
     },
+    snapshot: () => getHeartgardenCollabMetricsSnapshot(),
   };
 }

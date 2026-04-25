@@ -5,6 +5,18 @@ import "./preview-overrides.css";
 
 const preview: Preview = {
   parameters: {
+    a11y: {
+      test: "todo",
+    },
+    controls: {
+      matchers: {
+        color: /(background|color)$/i,
+        date: /Date$/i,
+      },
+    },
+    nextjs: {
+      appDirectory: true,
+    },
     options: {
       // Serializable for `storybook build` (no functions). Nested tuples = group / nested path.
       storySort: {
@@ -16,18 +28,6 @@ const preview: Preview = {
           "*",
         ],
       },
-    },
-    nextjs: {
-      appDirectory: true,
-    },
-    controls: {
-      matchers: {
-        color: /(background|color)$/i,
-        date: /Date$/i,
-      },
-    },
-    a11y: {
-      test: "todo",
     },
   },
 };

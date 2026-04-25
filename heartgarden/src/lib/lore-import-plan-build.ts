@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
 import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
@@ -109,14 +110,14 @@ export async function buildLoreImportPlan(args: {
   let currentPhase: string | null = null;
   let currentPhaseStartedAt = 0;
   let findings: LoreImportFindings = {
-    chunks: 0,
-    folders: 0,
-    notes: 0,
-    candidates: 0,
     candidateSpaces: 0,
-    mergeProposals: 0,
-    contradictions: 0,
+    candidates: 0,
+    chunks: 0,
     clarifications: 0,
+    contradictions: 0,
+    folders: 0,
+    mergeProposals: 0,
+    notes: 0,
     targetSpaceRoutes: 0,
   };
   const emitEvent = async (event: LoreImportPlanEvent): Promise<void> => {
@@ -132,9 +133,9 @@ export async function buildLoreImportPlan(args: {
     const now = Date.now();
     if (currentPhase) {
       await emitEvent({
+        durationMs: Math.max(0, now - currentPhaseStartedAt),
         kind: "phase_end",
         phase: currentPhase,
-        durationMs: Math.max(0, now - currentPhaseStartedAt),
         text: `${currentPhase} completed`,
       });
     }
@@ -152,9 +153,9 @@ export async function buildLoreImportPlan(args: {
     }
     const now = Date.now();
     await emitEvent({
+      durationMs: Math.max(0, now - currentPhaseStartedAt),
       kind: "phase_end",
       phase: currentPhase,
-      durationMs: Math.max(0, now - currentPhaseStartedAt),
       text: `${currentPhase} completed`,
     });
     currentPhase = null;
@@ -165,15 +166,15 @@ export async function buildLoreImportPlan(args: {
     phase: string
   ): Promise<void> => {
     await emitEvent({
-      kind: "llm_call",
-      phase,
       durationMs: event.durationMs,
+      kind: "llm_call",
       model: event.model,
+      phase,
+      responseSnippet: event.responseSnippet,
+      stopReason: event.stopReason ?? null,
+      text: event.label,
       tokensIn: event.inputTokens ?? null,
       tokensOut: event.outputTokens ?? null,
-      stopReason: event.stopReason ?? null,
-      responseSnippet: event.responseSnippet,
-      text: event.label,
     });
   };
   const reportProgress = async (
@@ -189,16 +190,16 @@ export async function buildLoreImportPlan(args: {
     await beginPhaseIfNeeded(phase);
     const pipelinePercent =
       computeLoreImportPipelinePercent(phase, {
+        phaseFraction: detail?.phaseFraction,
         step: detail?.step,
         total: detail?.total,
-        phaseFraction: detail?.phaseFraction,
       }) ?? 8;
     await args.onProgress?.({
-      phase,
       message,
+      meta: { ...detail?.meta, findings, pipelinePercent },
+      phase,
       step: detail?.step,
       total: detail?.total,
-      meta: { ...detail?.meta, pipelinePercent, findings },
     });
   };
   await reportProgress("chunking", "Splitting source text into import chunks", {
@@ -206,8 +207,8 @@ export async function buildLoreImportPlan(args: {
   });
   const chunks = chunkSourceText(args.fullText);
   await reportProgress("outline", "Generating initial folder/note outline", {
-    phaseFraction: 0.12,
     meta: { subphase: "drafting" },
+    phaseFraction: 0.12,
   });
   const outline = await runLoreImportOutlineLlm(
     args.apiKey,
@@ -223,13 +224,13 @@ export async function buildLoreImportPlan(args: {
     "outline",
     "Outline generated; attaching chunk-backed note bodies",
     {
-      phaseFraction: 0.92,
       meta: { subphase: "parsing" },
+      phaseFraction: 0.92,
     }
   );
   await reportProgress("outline", "Attaching chunk-backed note bodies", {
-    phaseFraction: 0.96,
     meta: { subphase: "attaching_bodies" },
+    phaseFraction: 0.96,
   });
   ensureOutlineHasFallbackNote(outline, chunks);
   const chunkDiagnostics = attachBodiesToOutline(outline, chunks);
@@ -243,16 +244,16 @@ export async function buildLoreImportPlan(args: {
     await emitEvent({
       kind: "warning",
       phase: "outline",
-      text: `Unassigned chunks detected (${chunkDiagnostics.unassignedChunkIds.length})`,
       ref: chunkDiagnostics.unassignedChunkIds[0],
+      text: `Unassigned chunks detected (${chunkDiagnostics.unassignedChunkIds.length})`,
     });
   }
   if (chunkDiagnostics.noteClientIdsWithoutChunks.length > 0) {
     await emitEvent({
       kind: "warning",
       phase: "outline",
-      text: `Notes without chunk assignments (${chunkDiagnostics.noteClientIdsWithoutChunks.length})`,
       ref: chunkDiagnostics.noteClientIdsWithoutChunks[0],
+      text: `Notes without chunk assignments (${chunkDiagnostics.noteClientIdsWithoutChunks.length})`,
     });
   }
   const locationTopFieldTrimWarnings: string[] = [];
@@ -390,19 +391,17 @@ export async function buildLoreImportPlan(args: {
             hybrid.itemIdToChunks.get(r.item.id)?.[0] ??
             undefined;
           return {
+            entityType: r.item.entityType,
             itemId: r.item.id,
-            title: r.item.title ?? "",
+            itemType: r.item.itemType,
+            snippet,
             spaceId: r.space.id,
             spaceName: r.space.name,
-            snippet,
-            itemType: r.item.itemType,
-            entityType: r.item.entityType,
+            title: r.item.title ?? "",
           };
         });
         const relatedItems = hybrid.rows.slice(0, 12).map((r) => ({
           itemId: r.item.id,
-          spaceId: r.space.id,
-          title: (r.item.title ?? "").slice(0, 255),
           score:
             typeof r.score === "number"
               ? Math.max(0, Math.min(1, r.score))
@@ -410,6 +409,8 @@ export async function buildLoreImportPlan(args: {
           snippet:
             hybrid.itemIdToFtsSnippet.get(r.item.id)?.slice(0, 1200) ??
             hybrid.itemIdToChunks.get(r.item.id)?.[0]?.slice(0, 1200),
+          spaceId: r.space.id,
+          title: (r.item.title ?? "").slice(0, 255),
         }));
         const bySpace = new Map<
           string,
@@ -417,8 +418,8 @@ export async function buildLoreImportPlan(args: {
         >();
         for (const row of hybrid.rows) {
           const entry = bySpace.get(row.space.id) ?? {
-            spaceTitle: row.space.name,
             score: 0,
+            spaceTitle: row.space.name,
             topTitles: [],
           };
           entry.score += typeof row.score === "number" ? row.score : 0;
@@ -437,18 +438,18 @@ export async function buildLoreImportPlan(args: {
             const path = buildSpacePath(spaceId, spaceById);
             const score = Math.max(0, Math.min(1, entry.score));
             return {
-              spaceId,
-              spaceTitle: entry.spaceTitle.slice(0, 255),
               path: path || undefined,
-              score,
               reason:
                 entry.topTitles.length > 0
                   ? `Related cards: ${entry.topTitles.join(", ")}`
                   : undefined,
+              score,
+              spaceId,
+              spaceTitle: entry.spaceTitle.slice(0, 255),
               topTitles: entry.topTitles,
             };
           });
-        return { clientId: n.clientId, rows, relatedItems, spaceCandidates };
+        return { clientId: n.clientId, relatedItems, rows, spaceCandidates };
       })
     );
     for (const r of results) {
@@ -459,27 +460,27 @@ export async function buildLoreImportPlan(args: {
         const existing = globalSpaceSuggestions.get(candidate.spaceId);
         if (!existing || (candidate.score ?? 0) > existing.score) {
           globalSpaceSuggestions.set(candidate.spaceId, {
+            path: candidate.path,
+            reason: candidate.reason,
+            score: candidate.score ?? 0,
             spaceId: candidate.spaceId,
             spaceTitle: candidate.spaceTitle,
-            path: candidate.path,
-            score: candidate.score ?? 0,
-            reason: candidate.reason,
           });
         }
       }
     }
     findings = {
       ...findings,
+      candidateSpaces: globalSpaceSuggestions.size,
       candidates: Object.values(candidatesByNoteClientId).reduce(
         (sum, rows) => sum + rows.length,
         0
       ),
-      candidateSpaces: globalSpaceSuggestions.size,
     };
     await emitEvent({
+      durationMs: Math.max(0, Date.now() - retrievalStartedAt),
       kind: "vault_search",
       phase: "vault_retrieval",
-      durationMs: Math.max(0, Date.now() - retrievalStartedAt),
       text: `Vault retrieval batch ${retrievalStep} of ${retrievalTotal}`,
     });
   }
@@ -492,14 +493,14 @@ export async function buildLoreImportPlan(args: {
   }
 
   const mergeInput = notesInternal.map((n) => ({
-    clientId: n.clientId,
-    title: n.title,
-    summary: n.summary,
     bodyPreview: n.bodyText.slice(0, 3500),
+    clientId: n.clientId,
+    summary: n.summary,
+    title: n.title,
   }));
   await reportProgress("merge", "Comparing import notes with candidate cards", {
-    phaseFraction: 0.08,
     meta: { subphase: "candidate_match" },
+    phaseFraction: 0.08,
   });
 
   const {
@@ -514,11 +515,11 @@ export async function buildLoreImportPlan(args: {
     spaceCandidatesByNoteClientId,
     async (step, total) => {
       await reportProgress("merge", "Running merge analysis batches", {
-        step,
-        total,
         meta: {
           subphase: `batch ${step} of ${total}`,
         },
+        step,
+        total,
       });
     },
     async (event) => {
@@ -536,27 +537,27 @@ export async function buildLoreImportPlan(args: {
     return {
       id: randomUUID(),
       noteClientId: m.noteClientId,
-      targetItemId: m.targetItemId,
-      targetTitle: row?.title ?? "Item",
-      targetSpaceName: row?.spaceName,
-      targetItemType: row?.itemType ?? null,
-      targetEntityType: row?.entityType ?? null,
-      strategy: m.strategy,
       proposedText: m.proposedText,
       rationale: m.rationale,
+      strategy: m.strategy,
+      targetEntityType: row?.entityType ?? null,
+      targetItemId: m.targetItemId,
+      targetItemType: row?.itemType ?? null,
+      targetSpaceName: row?.spaceName,
+      targetTitle: row?.title ?? "Item",
     };
   });
 
   const contradictions = rawContra.map((c) => ({
+    details: c.details,
     id: randomUUID(),
     noteClientId: c.noteClientId,
     summary: c.summary,
-    details: c.details,
   }));
   findings = {
     ...findings,
-    mergeProposals: mergeProposals.length,
     contradictions: contradictions.length,
+    mergeProposals: mergeProposals.length,
     targetSpaceRoutes: rawTargetSpaces.filter((row) => row.targetSpaceId)
       .length,
   };
@@ -578,9 +579,9 @@ export async function buildLoreImportPlan(args: {
       }
       return {
         fromClientId: n.clientId,
-        toClientId: target,
-        linkType: "alliance",
         linkIntent: "binding_hint" as const,
+        linkType: "alliance",
+        toClientId: target,
       };
     })
     .filter(
@@ -606,9 +607,9 @@ export async function buildLoreImportPlan(args: {
       }
       return {
         fromClientId: l.fromClientId,
-        toClientId: l.toClientId,
-        linkType: coerced.linkType,
         linkIntent: l.linkIntent,
+        linkType: coerced.linkType,
+        toClientId: l.toClientId,
       };
     }
   );
@@ -671,10 +672,10 @@ export async function buildLoreImportPlan(args: {
     }
     const list = mentionsBySource.get(m.fromClientId) ?? [];
     list.push({
-      toClientId: m.toClientId,
-      targetTitle,
-      linkType: m.linkType ?? "history",
       linkIntent: m.linkIntent,
+      linkType: m.linkType ?? "history",
+      targetTitle,
+      toClientId: m.toClientId,
     });
     mentionsBySource.set(m.fromClientId, list);
   }
@@ -691,42 +692,42 @@ export async function buildLoreImportPlan(args: {
   }
 
   const clarifyPayload = {
+    chunks: chunks.map((c) => ({
+      excerpt: args.fullText.slice(
+        c.charStart,
+        Math.min(c.charEnd, c.charStart + 2400)
+      ),
+      heading: c.heading,
+      id: c.id,
+    })),
+    contradictions: contradictions.map((c) => ({
+      details: c.details,
+      id: c.id,
+      noteClientId: c.noteClientId,
+      summary: c.summary,
+    })),
     folders: outline.folders.map((f) => ({
       clientId: f.clientId,
-      title: f.title,
       parentClientId: f.parentClientId,
-    })),
-    notes: notesInternal.map((n) => ({
-      clientId: n.clientId,
-      title: n.title,
-      summary: n.summary.slice(0, 600),
-      folderClientId: n.folderClientId,
-      canonicalEntityKind: n.canonicalEntityKind,
-      ingestionSignals: n.ingestionSignals,
-      loreHistorical: n.loreHistorical,
+      title: f.title,
     })),
     links: coLocatedLinks,
     mergeProposals: mergeProposals.map((m) => ({
       id: m.id,
       noteClientId: m.noteClientId,
+      rationale: m.rationale,
+      strategy: m.strategy,
       targetItemId: m.targetItemId,
       targetTitle: m.targetTitle,
-      strategy: m.strategy,
-      rationale: m.rationale,
     })),
-    contradictions: contradictions.map((c) => ({
-      id: c.id,
-      noteClientId: c.noteClientId,
-      summary: c.summary,
-      details: c.details,
-    })),
-    chunks: chunks.map((c) => ({
-      id: c.id,
-      heading: c.heading,
-      excerpt: args.fullText.slice(
-        c.charStart,
-        Math.min(c.charEnd, c.charStart + 2400)
-      ),
+    notes: notesInternal.map((n) => ({
+      canonicalEntityKind: n.canonicalEntityKind,
+      clientId: n.clientId,
+      folderClientId: n.folderClientId,
+      ingestionSignals: n.ingestionSignals,
+      loreHistorical: n.loreHistorical,
+      summary: n.summary.slice(0, 600),
+      title: n.title,
     })),
   };
 
@@ -762,21 +763,39 @@ export async function buildLoreImportPlan(args: {
   };
 
   const planRaw: LoreImportPlan = {
-    importBatchId: args.importBatchId,
-    fileName: args.fileName,
-    sourceCharCount: args.fullText.length,
     chunks: chunks.map((c) => ({
-      id: c.id,
-      heading: c.heading,
-      charStart: c.charStart,
-      charEnd: c.charEnd,
       body: c.body.slice(0, 32_000),
+      charEnd: c.charEnd,
+      charStart: c.charStart,
+      heading: c.heading,
+      id: c.id,
     })),
+    clarifications,
+    contradictions,
+    fileName: args.fileName,
     folders: outline.folders.map((f) => ({
       clientId: f.clientId,
-      title: f.title,
       parentClientId: f.parentClientId,
+      title: f.title,
     })),
+    importBatchId: args.importBatchId,
+    importPlanWarnings:
+      linkWarnings.length > 0 ||
+      coercionWarnings.length > 0 ||
+      locationTopFieldTrimWarnings.length > 0
+        ? [
+            ...locationTopFieldTrimWarnings,
+            ...coercionWarnings,
+            ...linkWarnings,
+          ]
+        : undefined,
+    links: coLocatedLinks.map((l) => ({
+      fromClientId: l.fromClientId,
+      linkType: l.linkType,
+      toClientId: l.toClientId,
+      ...(l.linkIntent ? { linkIntent: l.linkIntent } : {}),
+    })),
+    mergeProposals,
     notes: notesInternal.map((n) => {
       const mentions = (
         n as {
@@ -791,18 +810,18 @@ export async function buildLoreImportPlan(args: {
       const targetSpace = targetSpaceByNoteClientId.get(n.clientId);
       const relatedItems = relatedItemsByNoteClientId[n.clientId] ?? [];
       return {
-        clientId: n.clientId,
-        title: n.title,
-        canonicalEntityKind: n.canonicalEntityKind,
-        summary: n.summary,
         bodyText: n.bodyText,
-        folderClientId: n.folderClientId,
-        targetItemType: null,
-        ingestionSignals: n.ingestionSignals,
         campaignEpoch: n.campaignEpoch,
+        canonicalEntityKind: n.canonicalEntityKind,
+        clientId: n.clientId,
+        folderClientId: n.folderClientId,
+        ingestionSignals: n.ingestionSignals,
         loreHistorical: n.loreHistorical,
         sourceChunkIds: n.sourceChunkIds,
         sourcePassages: n.sourcePassages,
+        summary: n.summary,
+        targetItemType: null,
+        title: n.title,
         ...(n.body ? { body: n.body } : {}),
         ...(typeof targetSpace?.targetSpaceId === "string"
           ? { targetSpaceId: targetSpace.targetSpaceId }
@@ -819,37 +838,19 @@ export async function buildLoreImportPlan(args: {
           : {}),
       };
     }),
-    links: coLocatedLinks.map((l) => ({
-      fromClientId: l.fromClientId,
-      toClientId: l.toClientId,
-      linkType: l.linkType,
-      ...(l.linkIntent ? { linkIntent: l.linkIntent } : {}),
-    })),
-    mergeProposals,
-    contradictions,
-    clarifications,
+    sourceCharCount: args.fullText.length,
     spaceSuggestions:
       globalSpaceSuggestions.size > 0
         ? [...globalSpaceSuggestions.values()]
             .sort((a, b) => b.score - a.score)
             .slice(0, 25)
             .map((row) => ({
+              path: row.path,
+              reason: row.reason,
+              score: row.score,
               spaceId: row.spaceId,
               spaceTitle: row.spaceTitle,
-              path: row.path,
-              score: row.score,
-              reason: row.reason,
             }))
-        : undefined,
-    importPlanWarnings:
-      linkWarnings.length > 0 ||
-      coercionWarnings.length > 0 ||
-      locationTopFieldTrimWarnings.length > 0
-        ? [
-            ...locationTopFieldTrimWarnings,
-            ...coercionWarnings,
-            ...linkWarnings,
-          ]
         : undefined,
     userContext: args.userContext,
   };

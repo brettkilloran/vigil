@@ -20,10 +20,10 @@ export async function GET(
   if (!db) {
     return Response.json(
       {
-        ok: false,
         error: "Database not configured",
-        outgoing: [],
         incoming: [],
+        ok: false,
+        outgoing: [],
       },
       { status: 503 }
     );
@@ -41,7 +41,7 @@ export async function GET(
   if (!row) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Not found" }, { status: 404 })
+      Response.json({ error: "Not found", ok: false }, { status: 404 })
     );
   }
   if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, row.spaceId))) {
@@ -51,5 +51,5 @@ export async function GET(
     return heartgardenApiForbiddenJsonResponse();
   }
   const { outgoing, incoming } = await getItemLinksResolved(db, itemId);
-  return Response.json({ ok: true, outgoing, incoming });
+  return Response.json({ incoming, ok: true, outgoing });
 }

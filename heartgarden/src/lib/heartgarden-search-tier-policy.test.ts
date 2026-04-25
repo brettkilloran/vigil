@@ -26,8 +26,8 @@ describe("applySearchTierPolicy", () => {
 
   it("downgrades hybrid to fts for player without mutating space filters", () => {
     const ctx: HeartgardenApiBootContext = {
-      role: "player",
       playerSpaceId: PLAYER_UUID,
+      role: "player",
     };
     const r = applySearchTierPolicy(ctx, {}, "hybrid");
     expect(r.ok).toBe(true);
@@ -44,8 +44,8 @@ describe("applySearchTierPolicy", () => {
     ).mockResolvedValue(false);
     const db = {} as unknown as VigilDb;
     const ctx: HeartgardenApiBootContext = {
-      role: "player",
       playerSpaceId: PLAYER_UUID,
+      role: "player",
     };
     const out = await finalizeHeartgardenSearchFiltersForDb(db, ctx, {
       spaceId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
@@ -63,8 +63,8 @@ describe("applySearchTierPolicy", () => {
       select: () => ({ from: () => Promise.resolve(slim) }),
     } as unknown as VigilDb;
     const ctx: HeartgardenApiBootContext = {
-      role: "player",
       playerSpaceId: PLAYER_UUID,
+      role: "player",
     };
     const out = await finalizeHeartgardenSearchFiltersForDb(db, ctx, {});
     expect(out?.spaceId).toBeUndefined();

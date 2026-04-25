@@ -30,19 +30,19 @@ export async function extractLoreItemMeta(
   const res = await callAnthropic(
     apiKey,
     {
-      model,
-      system: buildCachedSystem(SYSTEM),
       messages: [
         {
-          role: "user",
           content: `Note text:\n\n${trimmed || "(empty)"}`,
+          role: "user",
         },
       ],
+      model,
+      system: buildCachedSystem(SYSTEM),
     },
-    { label: "lore.item_meta", expectJson: true }
+    { expectJson: true, label: "lore.item_meta" }
   );
   if (!res.jsonText) {
-    return { summary: "", aliases: [] };
+    return { aliases: [], summary: "" };
   }
   try {
     const parsed = JSON.parse(res.jsonText) as {
@@ -60,8 +60,8 @@ export async function extractLoreItemMeta(
           .filter(Boolean)
           .slice(0, 12)
       : [];
-    return { summary, aliases };
+    return { aliases, summary };
   } catch {
-    return { summary: "", aliases: [] };
+    return { aliases: [], summary: "" };
   }
 }

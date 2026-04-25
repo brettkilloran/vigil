@@ -35,19 +35,19 @@ function content(
   >
 ): Extract<CanvasEntity, { kind: "content" }> {
   return {
+    bodyHtml: "",
+    height: opts?.height,
     id,
     kind: "content",
-    title: id,
-    theme: "default",
     rotation: opts?.rotation ?? 0,
-    width: opts?.width,
-    height: opts?.height,
-    tapeRotation: 0,
-    tapeVariant: "clear",
-    bodyHtml: "",
+    slots: { [SPACE]: { x, y } },
     stackId: opts?.stackId ?? null,
     stackOrder: opts?.stackOrder ?? null,
-    slots: { [SPACE]: { x, y } },
+    tapeRotation: 0,
+    tapeVariant: "clear",
+    theme: "default",
+    title: id,
+    width: opts?.width,
   };
 }
 
@@ -58,14 +58,14 @@ function folder(
   childSpaceId = "child"
 ): Extract<CanvasEntity, { kind: "folder" }> {
   return {
+    childSpaceId,
     id,
     kind: "folder",
-    title: id,
-    theme: "folder",
     rotation: 0,
-    tapeRotation: 0,
-    childSpaceId,
     slots: { [SPACE]: { x, y } },
+    tapeRotation: 0,
+    theme: "folder",
+    title: id,
   };
 }
 
@@ -73,12 +73,12 @@ function graphWith(entities: CanvasEntity[]): CanvasGraph {
   const ids = entities.map((e) => e.id);
   const entMap = Object.fromEntries(entities.map((e) => [e.id, e]));
   return {
+    connections: {},
+    entities: entMap,
     rootSpaceId: SPACE,
     spaces: {
-      [SPACE]: { id: SPACE, name: "S", parentSpaceId: null, entityIds: ids },
+      [SPACE]: { entityIds: ids, id: SPACE, name: "S", parentSpaceId: null },
     },
-    entities: entMap,
-    connections: {},
   };
 }
 
@@ -123,7 +123,7 @@ describe("computeSpaceContentBounds", () => {
   it("uses measured placement height when provided (DOM taller than graph default)", () => {
     const g = graphWith([content("a", 10, 20)]);
     const graphOnly = computeSpaceContentBounds(g, SPACE, []);
-    const measured = new Map([["a", { width: 340, height: 900 }]]);
+    const measured = new Map([["a", { height: 900, width: 340 }]]);
     const withDom = computeSpaceContentBounds(g, SPACE, [], measured);
     expect(withDom?.maxY - withDom?.minY).toBeGreaterThan(
       graphOnly?.maxY - graphOnly?.minY
@@ -159,19 +159,19 @@ describe("minimapLayoutSignature", () => {
 describe("minimapPlacementMapsEqual", () => {
   it("returns true for identical maps", () => {
     const a = new Map([
-      ["x", { width: 100, height: 200 }],
-      ["y", { width: 10, height: 10 }],
+      ["x", { height: 200, width: 100 }],
+      ["y", { height: 10, width: 10 }],
     ]);
     const b = new Map([
-      ["x", { width: 100, height: 200 }],
-      ["y", { width: 10, height: 10 }],
+      ["x", { height: 200, width: 100 }],
+      ["y", { height: 10, width: 10 }],
     ]);
     expect(minimapPlacementMapsEqual(a, b)).toBe(true);
   });
 
   it("returns false when dimensions differ", () => {
-    const a = new Map([["x", { width: 100, height: 200 }]]);
-    const b = new Map([["x", { width: 101, height: 200 }]]);
+    const a = new Map([["x", { height: 200, width: 100 }]]);
+    const b = new Map([["x", { height: 200, width: 101 }]]);
     expect(minimapPlacementMapsEqual(a, b)).toBe(false);
   });
 });
@@ -216,14 +216,14 @@ describe("computeBoundsForEntitySubset", () => {
 
 describe("fitCameraToBounds", () => {
   it("centers bounds and scales to viewport with padding", () => {
-    const bounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    const bounds = { maxX: 100, maxY: 100, minX: 0, minY: 0 };
     const cam = fitCameraToBounds({
       bounds,
-      viewportWidth: 500,
-      viewportHeight: 500,
-      paddingPx: 100,
-      minZoom: 0.1,
       maxZoom: 10,
+      minZoom: 0.1,
+      paddingPx: 100,
+      viewportHeight: 500,
+      viewportWidth: 500,
     });
     expect(cam.scale).toBeCloseTo(4);
     const cx = (bounds.minX + bounds.maxX) / 2;
@@ -253,7 +253,7 @@ describe("listMinimapAtomRects", () => {
 
   it("prefers placementSizes over stale graph height for minimap rect", () => {
     const g = graphWith([content("doc", 0, 0, { height: 280 })]);
-    const measured = new Map([["doc", { width: 340, height: 720 }]]);
+    const measured = new Map([["doc", { height: 720, width: 340 }]]);
     const atoms = listMinimapAtomRects(g, SPACE, [], new Set(), measured);
     expect(atoms[0]?.height).toBe(720);
     expect(atoms[0]?.width).toBe(340);
@@ -276,7 +276,7 @@ describe("listMinimapAtomRects", () => {
 
 describe("viewportWorldRect + isContentMostlyOffScreen", () => {
   it("detects when viewport misses content", () => {
-    const contentBox = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    const contentBox = { maxX: 100, maxY: 100, minX: 0, minY: 0 };
     const on = viewportWorldRect(0, 0, 1, 800, 600);
     expect(isContentMostlyOffScreen(contentBox, on)).toBe(false);
 

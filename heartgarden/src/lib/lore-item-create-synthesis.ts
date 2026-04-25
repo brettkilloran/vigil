@@ -65,14 +65,14 @@ export function synthesizeLoreCardContentJsonAndPlainText(args: {
 
   const contentJson: Record<string, unknown> = {
     format: "html",
-    html: bodyHtml,
     hgArch: {
-      theme: "default",
-      tapeVariant,
+      loreCard,
       rotation,
       tapeRotation,
-      loreCard,
+      tapeVariant,
+      theme: "default",
     },
+    html: bodyHtml,
   };
 
   const plainText = stripLegacyHtmlToPlainText(bodyHtml)

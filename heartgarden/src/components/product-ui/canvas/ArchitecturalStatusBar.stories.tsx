@@ -5,39 +5,39 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import { ArchitecturalStatusBar } from "@/src/components/foundation/ArchitecturalStatusBar";
 
 const meta: Meta<typeof ArchitecturalStatusBar> = {
-  title: "Heartgarden/Product UI/Canvas/Status bar",
-  component: ArchitecturalStatusBar,
   args: {
     envLabel: "波途画電",
-    showPulse: true,
-    syncBootstrapPending: false,
+    exportGraphPaletteHint: "⌘K → Export graph JSON",
     onExportGraphJson: () => {
       console.info("Export graph JSON");
     },
-    exportGraphPaletteHint: "⌘K → Export graph JSON",
+    showPulse: true,
+    syncBootstrapPending: false,
   },
   argTypes: {
     envLabel: { control: "text" },
     showPulse: { control: "boolean" },
     syncBootstrapPending: { control: "boolean" },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalStatusBar,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          height: "100vh",
           position: "relative",
           width: "100vw",
-          height: "100vh",
-          background: "var(--sem-surface-base)",
         }}
       >
         <Story />
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Canvas/Status bar",
 };
 
 export default meta;
@@ -65,28 +65,28 @@ export const WithCollabPeers: Story = {
     collabNameplateEnabled: true,
     collabPeers: [
       {
-        clientId: "11111111-1111-4111-8111-111111111111",
-        initials: "AN",
-        displayName: "Avery North",
-        sigilLabel: "Thread",
-        title: "Notes · Avery North · last seen 12s ago",
         ariaLabel: "Follow collaborator Avery North",
+        clientId: "11111111-1111-4111-8111-111111111111",
+        displayName: "Avery North",
+        initials: "AN",
         muted: false,
         onFollow: () => {
           console.info("follow peer a");
         },
+        sigilLabel: "Thread",
+        title: "Notes · Avery North · last seen 12s ago",
       },
       {
-        clientId: "22222222-2222-4222-8222-222222222222",
-        initials: "MC",
-        displayName: "Mina Cedar",
-        sigilLabel: "Quill",
-        title: "Lore · Mina Cedar · last seen 2m ago · may be stale",
         ariaLabel: "Follow collaborator Mina Cedar",
+        clientId: "22222222-2222-4222-8222-222222222222",
+        displayName: "Mina Cedar",
+        initials: "MC",
         muted: true,
         onFollow: () => {
           console.info("follow peer b");
         },
+        sigilLabel: "Quill",
+        title: "Lore · Mina Cedar · last seen 2m ago · may be stale",
       },
     ],
   },

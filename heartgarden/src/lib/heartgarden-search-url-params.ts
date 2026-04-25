@@ -40,21 +40,21 @@ export function parseSearchFiltersFromUrl(
   if (variant === "chunks") {
     const limitRaw = Number(url.searchParams.get("limit"));
     return {
-      spaceId: url.searchParams.get("spaceId") ?? undefined,
       limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
+      spaceId: url.searchParams.get("spaceId") ?? undefined,
     };
   }
 
   if (variant === "suggest") {
     const limitRaw = Number(url.searchParams.get("limit"));
     return {
-      spaceId: url.searchParams.get("spaceId") ?? undefined,
-      itemTypes: parseCsv(url.searchParams.get("types")),
-      entityTypes: parseCsv(url.searchParams.get("entityTypes")),
       canonicalEntityKinds: parseCsv(url.searchParams.get("canonicalKind")),
+      entityTypes: parseCsv(url.searchParams.get("entityTypes")),
       hasLinks: parseBool(url.searchParams.get("hasLinks")),
       inStack: parseBool(url.searchParams.get("inStack")),
+      itemTypes: parseCsv(url.searchParams.get("types")),
       limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
+      spaceId: url.searchParams.get("spaceId") ?? undefined,
     };
   }
 
@@ -71,23 +71,23 @@ export function parseSearchFiltersFromUrl(
   const limitRaw = Number(url.searchParams.get("limit"));
   const minEpochRaw = Number(url.searchParams.get("minCampaignEpoch"));
   return {
-    spaceId: url.searchParams.get("spaceId") ?? undefined,
-    itemTypes: parseCsv(url.searchParams.get("types")),
-    entityTypes: parseCsv(url.searchParams.get("entityTypes")),
     canonicalEntityKinds: parseCsv(url.searchParams.get("canonicalKind")),
-    updatedAfter:
-      updatedAfter && Number.isFinite(updatedAfter.getTime())
-        ? updatedAfter
-        : undefined,
+    entityTypes: parseCsv(url.searchParams.get("entityTypes")),
+    excludeLoreHistorical: parseBool(
+      url.searchParams.get("excludeLoreHistorical")
+    ),
     hasLinks: parseBool(url.searchParams.get("hasLinks")),
     inStack: parseBool(url.searchParams.get("inStack")),
-    sort,
+    itemTypes: parseCsv(url.searchParams.get("types")),
     limit: Number.isFinite(limitRaw) ? limitRaw : undefined,
     minCampaignEpoch: Number.isFinite(minEpochRaw)
       ? Math.floor(minEpochRaw)
       : undefined,
-    excludeLoreHistorical: parseBool(
-      url.searchParams.get("excludeLoreHistorical")
-    ),
+    sort,
+    spaceId: url.searchParams.get("spaceId") ?? undefined,
+    updatedAfter:
+      updatedAfter && Number.isFinite(updatedAfter.getTime())
+        ? updatedAfter
+        : undefined,
   };
 }

@@ -28,6 +28,7 @@ import {
   useRef,
   useState,
 } from "react";
+
 import { BufferedContentEditable } from "@/src/components/editing/BufferedContentEditable";
 import canvasStyles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import {
@@ -66,6 +67,7 @@ import {
   syncLoreV9RedactedPlaceholderState,
 } from "@/src/lib/lore-v9-placeholder";
 import { installLoreV11PlaceholderCaretSync } from "@/src/lib/lore-v11-ph-caret";
+
 import labStyles from "./lore-entity-node-lab.module.css";
 
 /**
@@ -603,7 +605,7 @@ function LabCard({
         canvasStyles.a4DocumentNode,
         className
       )}
-      style={{ width: 340, "--entity-width": "340px" } as CSSProperties}
+      style={{ "--entity-width": "340px", width: 340 } as CSSProperties}
     >
       <ArchitecturalNodeTape rotationDeg={tapeRotation} variant={tapeVariant} />
       <ArchitecturalNodeHeader
@@ -669,7 +671,7 @@ function FactionLabPlate({
         className
       )}
       data-hg-lab-faction-plate={plateKind}
-      style={{ width: 340, "--entity-width": "340px" } as CSSProperties}
+      style={{ "--entity-width": "340px", width: 340 } as CSSProperties}
     >
       {children}
     </div>
@@ -1303,9 +1305,9 @@ function LocationOrdoCoordinateSlabV6Body({ testId }: { testId: string }) {
 
         <BufferedContentEditable
           checklistDeletion={{
+            taskCheckbox: canvasStyles.taskCheckbox,
             taskItem: canvasStyles.taskItem,
             taskText: canvasStyles.taskText,
-            taskCheckbox: canvasStyles.taskCheckbox,
           }}
           className={cx(labStyles.facOrdoV6RichHost)}
           dataAttribute="data-node-body-editor"
@@ -1341,9 +1343,9 @@ function LocationOrdoCoordinateSlabV7LabBody() {
 function FactionSilentSynodBody({ testId }: { testId: string }) {
   const [dateStr] = useState(() =>
     new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
       day: "numeric",
+      month: "short",
+      year: "numeric",
     })
   );
 
@@ -2533,38 +2535,38 @@ const ESSENTIALIST_ID_BAR_STRIP: { w: 1 | 2 | 3 | 4; half?: boolean }[] = [
   { w: 3 },
   { w: 1 },
   { w: 2 },
-  { w: 4, half: true },
+  { half: true, w: 4 },
   { w: 1 },
   { w: 1 },
   { w: 2 },
   { w: 3 },
   { w: 1 },
-  { w: 2, half: true },
+  { half: true, w: 2 },
   { w: 1 },
   { w: 4 },
   { w: 1 },
-  { w: 2, half: true },
+  { half: true, w: 2 },
   { w: 1 },
   { w: 3 },
   { w: 2 },
   { w: 1 },
   { w: 2 },
   { w: 1 },
-  { w: 4, half: true },
+  { half: true, w: 4 },
   { w: 4 },
   { w: 1 },
   { w: 2 },
   { w: 1 },
   { w: 3 },
   { w: 1 },
-  { w: 2, half: true },
+  { half: true, w: 2 },
   { w: 2 },
   { w: 1 },
   { w: 2 },
   { w: 1 },
   { w: 3 },
   { w: 1 },
-  { w: 2, half: true },
+  { half: true, w: 2 },
   { w: 2 },
   { w: 1 },
 ];
@@ -2705,7 +2707,7 @@ function FactionEssentialistIdV17Body({ testId }: { testId: string }) {
                       b.half ? labStyles.facEssIdBarHalf : undefined
                     )}
                     key={i}
-                    style={{ width: b.w, height: b.half ? "60%" : "100%" }}
+                    style={{ height: b.half ? "60%" : "100%", width: b.w }}
                   />
                 ))}
               </div>
@@ -3133,9 +3135,9 @@ function LabSkeuoCard({
       ref={rootRef}
       style={
         {
-          width: 340,
           "--entity-width": "340px",
           boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+          width: 340,
         } as CSSProperties
       }
     >

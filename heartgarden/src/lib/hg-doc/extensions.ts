@@ -6,6 +6,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import type { ResolvedPos } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
+
 import { HgAiPending } from "@/src/lib/hg-doc/hg-ai-pending-mark";
 import { hgDocLowlight } from "@/src/lib/hg-doc/hg-doc-lowlight";
 
@@ -34,22 +35,22 @@ export function getHgDocExtensions(options?: {
 
   return [
     StarterKit.configure({
+      blockquote: { HTMLAttributes: { "data-hg-callout": "true" } },
+      bulletList: { HTMLAttributes: { "data-hg-list": "bullet" } },
       codeBlock: false,
+      dropcursor: { class: "hgDropcursor", width: 2 },
       heading: { levels: [1, 2, 3] },
       horizontalRule: false,
-      bulletList: { HTMLAttributes: { "data-hg-list": "bullet" } },
-      orderedList: { HTMLAttributes: { "data-hg-list": "ordered" } },
-      blockquote: { HTMLAttributes: { "data-hg-callout": "true" } },
       link: {
-        openOnClick: false,
         autolink: true,
-        protocols: ["http", "https", "mailto", "vigil"],
         HTMLAttributes: {
-          rel: "noopener noreferrer nofollow",
           class: "hgProseLink",
+          rel: "noopener noreferrer nofollow",
         },
+        openOnClick: false,
+        protocols: ["http", "https", "mailto", "vigil"],
       },
-      dropcursor: { width: 2, class: "hgDropcursor" },
+      orderedList: { HTMLAttributes: { "data-hg-list": "ordered" } },
     }),
     HorizontalRule.extend({
       addKeyboardShortcuts() {
@@ -67,12 +68,12 @@ export function getHgDocExtensions(options?: {
         };
       },
     }).configure({
-      inline: false,
       allowBase64: false,
       HTMLAttributes: {
         class: "hgProseImage",
         "data-hg-image-block": "true",
       },
+      inline: false,
     }),
     TaskList.configure({
       HTMLAttributes: {
@@ -80,30 +81,16 @@ export function getHgDocExtensions(options?: {
       },
     }),
     CodeBlockLowlight.configure({
-      lowlight: hgDocLowlight,
       defaultLanguage: "typescript",
       HTMLAttributes: {
         class: "hgCodeBlock",
       },
+      lowlight: hgDocLowlight,
     }),
     HgAiPending,
     TaskItem.extend({
       addKeyboardShortcuts() {
         return {
-          Enter: () => {
-            const { $from, empty } = this.editor.state.selection;
-            if (!empty) {
-              return false;
-            }
-            if (!this.editor.isActive("taskItem")) {
-              return false;
-            }
-            const text = activeTaskItemText($from);
-            if (text.length === 0) {
-              return this.editor.commands.liftListItem("taskItem");
-            }
-            return this.editor.commands.splitListItem("taskItem");
-          },
           Backspace: () => {
             const { $from, empty } = this.editor.state.selection;
             if (!empty) {
@@ -121,19 +108,33 @@ export function getHgDocExtensions(options?: {
             }
             return false;
           },
+          Enter: () => {
+            const { $from, empty } = this.editor.state.selection;
+            if (!empty) {
+              return false;
+            }
+            if (!this.editor.isActive("taskItem")) {
+              return false;
+            }
+            const text = activeTaskItemText($from);
+            if (text.length === 0) {
+              return this.editor.commands.liftListItem("taskItem");
+            }
+            return this.editor.commands.splitListItem("taskItem");
+          },
         };
       },
     }).configure({
-      nested: false,
       HTMLAttributes: {
         "data-hg-task-item": "true",
       },
+      nested: false,
     }),
     ...(withPlaceholder && placeholder
       ? [
           Placeholder.configure({
-            placeholder,
             emptyEditorClass: "hgProseIsEmpty",
+            placeholder,
             showOnlyWhenEditable: true,
           }),
         ]

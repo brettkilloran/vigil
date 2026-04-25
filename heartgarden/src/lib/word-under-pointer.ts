@@ -68,5 +68,5 @@ export function readWordUnderPointer(
   range.setStart(node, start);
   range.setEnd(node, end);
   const rect = range.getBoundingClientRect();
-  return { word, rect };
+  return { rect, word };
 }

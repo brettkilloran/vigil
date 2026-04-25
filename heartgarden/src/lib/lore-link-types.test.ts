@@ -18,15 +18,15 @@ function contentEntity(
         ? { kind: "location" as const, variant: "v2" as const }
         : { kind: "faction" as const, variant: "v4" as const };
   return {
+    bodyHtml: "",
     id,
     kind: "content",
+    loreCard,
+    rotation: 0,
+    slots: {},
+    tapeRotation: 0,
     theme: "default",
     title: id,
-    rotation: 0,
-    tapeRotation: 0,
-    slots: {},
-    bodyHtml: "",
-    loreCard,
   };
 }
 

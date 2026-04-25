@@ -39,14 +39,14 @@ describe("chunkVaultSections", () => {
   it("keeps overlap inside section boundaries", () => {
     const chunks = chunkVaultSections([
       {
+        charRange: [0, 1800],
         headingPath: ["Doc", "Section A"],
         text: "A ".repeat(900),
-        charRange: [0, 1800],
       },
       {
+        charRange: [1801, 1810],
         headingPath: ["Doc", "Section B"],
         text: "B summary",
-        charRange: [1801, 1810],
       },
     ]);
     expect(chunks.length).toBeGreaterThan(1);
@@ -59,10 +59,10 @@ describe("chunkVaultSections", () => {
 describe("buildVaultEmbedDocument", () => {
   it("includes title summary and aliases", () => {
     const d = buildVaultEmbedDocument({
-      title: "Kellan",
       contentText: "Body text.",
-      loreSummary: "A captain.",
       loreAliases: ["the turncoat", "Rivers"],
+      loreSummary: "A captain.",
+      title: "Kellan",
     });
     expect(d).toContain("Title: Kellan");
     expect(d).toContain("Summary:");

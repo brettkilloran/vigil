@@ -110,12 +110,12 @@ export function readHgDocFormatChrome(editor: Editor): {
   }
 
   return {
+    blockTag,
     bold: editor.isActive("bold"),
     italic: editor.isActive("italic"),
-    underline: editor.isActive("underline"),
-    strikeThrough: editor.isActive("strike"),
-    unorderedList: editor.isActive("bulletList"),
     orderedList: editor.isActive("orderedList"),
-    blockTag,
+    strikeThrough: editor.isActive("strike"),
+    underline: editor.isActive("underline"),
+    unorderedList: editor.isActive("bulletList"),
   };
 }

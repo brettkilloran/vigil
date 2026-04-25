@@ -23,11 +23,11 @@ export function readR2Env(): R2Env | null {
     return null;
   }
   return {
-    accountId,
     accessKeyId,
-    secretAccessKey,
+    accountId,
     bucket,
     publicBaseUrl,
+    secretAccessKey,
   };
 }
 
@@ -52,18 +52,18 @@ export async function presignImagePut(
   const key = `heartgarden/${seg}/${id}-${name}`;
 
   const client = new S3Client({
-    region: "auto",
-    endpoint: `https://${env.accountId}.r2.cloudflarestorage.com`,
     credentials: {
       accessKeyId: env.accessKeyId,
       secretAccessKey: env.secretAccessKey,
     },
+    endpoint: `https://${env.accountId}.r2.cloudflarestorage.com`,
+    region: "auto",
   });
 
   const command = new PutObjectCommand({
     Bucket: env.bucket,
-    Key: key,
     ContentType: opts.contentType,
+    Key: key,
   });
 
   const uploadUrl = await getSignedUrl(client, command, {
@@ -75,5 +75,5 @@ export async function presignImagePut(
     .map((p) => encodeURIComponent(p))
     .join("/")}`;
 
-  return { uploadUrl, publicUrl, key };
+  return { key, publicUrl, uploadUrl };
 }

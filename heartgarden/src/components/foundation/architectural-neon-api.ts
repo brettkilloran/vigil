@@ -99,9 +99,9 @@ function scheduleVaultIndexForItem(itemId: string) {
         const res = await fetch(
           `/api/items/${encodeURIComponent(itemId)}/index`,
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: "{}",
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         );
         const rawText = await res.text();
@@ -165,10 +165,10 @@ function finishNeonTrack(
   neonSyncEndRequest(
     false,
     detail ?? {
-      operation,
+      cause: "http",
       httpStatus: res.status,
       message: `HTTP ${res.status}`,
-      cause: "http",
+      operation,
     }
   );
 }
@@ -247,9 +247,9 @@ export async function fetchBootstrapDetailed(
       throw e;
     }
     return {
-      ok: false,
       cause: "network",
       message: e instanceof Error ? e.message : String(e),
+      ok: false,
     };
   }
 
@@ -259,33 +259,33 @@ export async function fetchBootstrapDetailed(
     try {
       body = JSON.parse(rawText);
     } catch {
-      return { ok: false, cause: "parse", status: res.status };
+      return { cause: "parse", ok: false, status: res.status };
     }
   }
 
   if (!res.ok) {
     const message = extractServerErrorMessage(body);
     if (res.status === 403) {
-      return { ok: false, cause: "forbidden", status: res.status, message };
+      return { cause: "forbidden", message, ok: false, status: res.status };
     }
-    return { ok: false, cause: "http", status: res.status, message };
+    return { cause: "http", message, ok: false, status: res.status };
   }
 
   const data = (body as BootstrapResponse | null) ?? null;
   if (!data || data.ok !== true) {
     return {
-      ok: false,
       cause: "http",
-      status: res.status,
       message: extractServerErrorMessage(body) ?? "Response ok=false",
+      ok: false,
+      status: res.status,
     };
   }
   if (data.demo === true || !data.spaceId) {
-    return { ok: false, cause: "demo", status: res.status, data };
+    return { cause: "demo", data, ok: false, status: res.status };
   }
   return {
-    ok: true,
     data: data as BootstrapResponse & { demo: false; spaceId: string },
+    ok: true,
   };
 }
 
@@ -344,9 +344,9 @@ function spaceChangesFailure(
   httpStatus?: number
 ): SpaceChangesFailure {
   return {
-    ok: false,
-    error,
     cause,
+    error,
+    ok: false,
     ...(httpStatus == null ? {} : { httpStatus }),
   };
 }
@@ -408,8 +408,8 @@ export async function fetchSpaceChanges(
       );
     }
     return {
-      ok: true,
       items: parsed.items,
+      ok: true,
       ...(parsed.spaces.length > 0 ? { spaces: parsed.spaces } : {}),
       ...(parsed.itemIds === undefined ? {} : { itemIds: parsed.itemIds }),
       ...(parsed.cursor === undefined ? {} : { cursor: parsed.cursor }),
@@ -477,11 +477,11 @@ function parseSpacePresencePeer(raw: unknown): SpacePresencePeer | null {
     }
   }
   return {
-    clientId: o.clientId,
     activeSpaceId: o.activeSpaceId,
     camera: { x: c.x, y: c.y, zoom: c.zoom },
-    pointer,
+    clientId: o.clientId,
     displayName,
+    pointer,
     sigil,
     updatedAt: o.updatedAt,
   };
@@ -502,15 +502,15 @@ export async function postPresencePayload(
     const res = await fetch(
       `/api/spaces/${encodeURIComponent(spaceId)}/presence`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientId,
           camera: payload.camera,
-          pointer: payload.pointer,
+          clientId,
           displayName: payload.displayName ?? undefined,
+          pointer: payload.pointer,
           sigil: payload.sigil ?? undefined,
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       }
     );
     const body = (await res.json()) as { ok?: boolean };
@@ -528,7 +528,7 @@ export async function postPresencePayload(
 export function leavePresenceBeacon(spaceId: string, clientId: string): void {
   try {
     const url = `/api/spaces/${encodeURIComponent(spaceId)}/presence?clientId=${encodeURIComponent(clientId)}`;
-    void fetch(url, { method: "DELETE", keepalive: true }).catch(() => {
+    void fetch(url, { keepalive: true, method: "DELETE" }).catch(() => {
       /* swallow — page is unloading; cannot recover anyway */
     });
   } catch {
@@ -594,9 +594,9 @@ export async function apiCreateSpace(
       payload.id = options.id;
     }
     const res = await fetch("/api/spaces", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const rawText = await res.text();
     const body = parseJsonBody(rawText) as {
@@ -606,16 +606,16 @@ export async function apiCreateSpace(
     };
     const logicalOk = res.ok && !!body.ok;
     finishNeonTrack(track, op, res, rawText, body, logicalOk);
-    return { ok: logicalOk, space: body.space, error: body.error };
+    return { error: body.error, ok: logicalOk, space: body.space };
   } catch (e) {
     if (track) {
       neonSyncEndRequest(false, {
-        operation: op,
-        message: e instanceof Error ? e.message : "Network error",
         cause: "network",
+        message: e instanceof Error ? e.message : "Network error",
+        operation: op,
       });
     }
-    return { ok: false, error: "Network error" };
+    return { error: "Network error", ok: false };
   }
 }
 
@@ -630,9 +630,9 @@ export async function apiCreateItem(
   const op = `POST /api/spaces/${spaceId}/items`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}/items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(bodyPayload),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
     const rawText = await res.text();
     const body = parseJsonBody(rawText) as {
@@ -645,16 +645,16 @@ export async function apiCreateItem(
     if (logicalOk && body.item?.id) {
       scheduleVaultIndexForItem(body.item.id);
     }
-    return { ok: logicalOk, item: body.item, error: body.error };
+    return { error: body.error, item: body.item, ok: logicalOk };
   } catch (e) {
     if (track) {
       neonSyncEndRequest(false, {
-        operation: op,
-        message: e instanceof Error ? e.message : "Network error",
         cause: "network",
+        message: e instanceof Error ? e.message : "Network error",
+        operation: op,
       });
     }
-    return { ok: false, error: "Network error" };
+    return { error: "Network error", ok: false };
   }
 }
 
@@ -673,9 +673,9 @@ export async function apiPatchItem(
       debug && typeof performance !== "undefined" ? performance.now() : 0;
     try {
       const res = await fetch(`/api/items/${itemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       });
       const rawText = await res.text();
       const body = parseJsonBody(rawText) as {
@@ -686,31 +686,31 @@ export async function apiPatchItem(
 
       if (debug && typeof performance !== "undefined") {
         heartgardenSyncDebugLog(`PATCH ${itemId}`, {
-          ms: Math.round(performance.now() - t0),
-          status: res.status,
           baseUpdatedAt:
             typeof patch.baseUpdatedAt === "string"
               ? patch.baseUpdatedAt
               : undefined,
+          ms: Math.round(performance.now() - t0),
+          status: res.status,
         });
       }
 
       if (res.status === 404) {
         finishNeonTrack(track, op, res, rawText, body, false);
-        return { ok: false, gone: true };
+        return { gone: true, ok: false };
       }
 
       if (res.status === 409 && body.error === "conflict" && body.item) {
         if (track) {
           neonSyncEndRequest(false, {
-            operation: op,
-            message: "Edit conflict — server has a newer version",
             cause: "http",
             httpStatus: 409,
+            message: "Edit conflict — server has a newer version",
+            operation: op,
           });
         }
         recordItemPatchConflict();
-        return { ok: false, conflict: true, item: body.item };
+        return { conflict: true, item: body.item, ok: false };
       }
 
       const logicalOk = res.ok && body.ok === true;
@@ -725,25 +725,25 @@ export async function apiPatchItem(
       }
       if (logicalOk && body.item) {
         recordItemPatchOk();
-        return { ok: true, item: body.item };
+        return { item: body.item, ok: true };
       }
       if (logicalOk) {
-        return { ok: false, error: "Missing item in response" };
+        return { error: "Missing item in response", ok: false };
       }
       return {
-        ok: false,
         error:
           typeof body.error === "string" ? body.error : `HTTP ${res.status}`,
+        ok: false,
       };
     } catch (e) {
       if (track) {
         neonSyncEndRequest(false, {
-          operation: op,
-          message: e instanceof Error ? e.message : "Network error",
           cause: "network",
+          message: e instanceof Error ? e.message : "Network error",
+          operation: op,
         });
       }
-      return { ok: false, error: "Network error" };
+      return { error: "Network error", ok: false };
     }
   });
 }
@@ -764,9 +764,9 @@ export async function apiDeleteItem(itemId: string): Promise<boolean> {
   } catch (e) {
     if (track) {
       neonSyncEndRequest(false, {
-        operation: op,
-        message: e instanceof Error ? e.message : "Network error",
         cause: "network",
+        message: e instanceof Error ? e.message : "Network error",
+        operation: op,
       });
     }
     return false;
@@ -790,9 +790,9 @@ export async function apiDeleteSpaceSubtree(spaceId: string): Promise<boolean> {
   } catch (e) {
     if (track) {
       neonSyncEndRequest(false, {
-        operation: op,
-        message: e instanceof Error ? e.message : "Network error",
         cause: "network",
+        message: e instanceof Error ? e.message : "Network error",
+        operation: op,
       });
     }
     return false;
@@ -810,9 +810,9 @@ export async function apiPatchSpaceName(
   const op = `PATCH /api/spaces/${spaceId} (name)`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
+      headers: { "Content-Type": "application/json" },
+      method: "PATCH",
     });
     const rawText = await res.text();
     const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
@@ -822,9 +822,9 @@ export async function apiPatchSpaceName(
   } catch (e) {
     if (track) {
       neonSyncEndRequest(false, {
-        operation: op,
-        message: e instanceof Error ? e.message : "Network error",
         cause: "network",
+        message: e instanceof Error ? e.message : "Network error",
+        operation: op,
       });
     }
     return false;
@@ -842,9 +842,9 @@ export async function apiPatchSpaceParent(
   const op = `PATCH /api/spaces/${spaceId} (parentSpaceId)`;
   try {
     const res = await fetch(`/api/spaces/${spaceId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ parentSpaceId }),
+      headers: { "Content-Type": "application/json" },
+      method: "PATCH",
     });
     const rawText = await res.text();
     const body = parseJsonBody(rawText) as { ok?: boolean; error?: string };
@@ -854,9 +854,9 @@ export async function apiPatchSpaceParent(
   } catch (e) {
     if (track) {
       neonSyncEndRequest(false, {
-        operation: op,
-        message: e instanceof Error ? e.message : "Network error",
         cause: "network",
+        message: e instanceof Error ? e.message : "Network error",
+        operation: op,
       });
     }
     return false;

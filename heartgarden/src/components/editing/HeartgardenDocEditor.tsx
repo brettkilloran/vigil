@@ -1,22 +1,16 @@
 "use client";
 
 import type { JSONContent } from "@tiptap/core";
-
 import { EditorContent, useEditor } from "@tiptap/react";
-
 import { useEffect, useMemo, useRef } from "react";
+
 import styles from "@/src/components/editing/HeartgardenDocEditor.module.css";
 import { HgAiPendingEditorGutter } from "@/src/components/editing/HgAiPendingEditorGutter";
 import { HgDocPointerBlockDrag } from "@/src/components/editing/HgDocPointerBlockDrag";
-
 import { EMPTY_HG_DOC } from "@/src/lib/hg-doc/constants";
-
 import type { HgDocEditorApi } from "@/src/lib/hg-doc/editor-registry";
-
 import { registerHgDocEditor } from "@/src/lib/hg-doc/editor-registry";
-
 import { getHgDocExtensions } from "@/src/lib/hg-doc/extensions";
-
 import {
   applyHgDocFormatCommand,
   readHgDocFormatChrome,
@@ -104,13 +98,9 @@ export function HeartgardenDocEditor({
 
   const editor = useEditor(
     {
-      immediatelyRender: false,
+      content: value?.type === "doc" ? value : EMPTY_HG_DOC,
 
       editable,
-
-      extensions,
-
-      content: value?.type === "doc" ? value : EMPTY_HG_DOC,
 
       editorProps: {
         attributes: {
@@ -119,6 +109,9 @@ export function HeartgardenDocEditor({
           spellcheck: "false",
         },
       },
+
+      extensions,
+      immediatelyRender: false,
 
       onUpdate: ({ editor: ed }) => {
         const nextDoc = ed.getJSON();
@@ -159,33 +152,32 @@ export function HeartgardenDocEditor({
     }
 
     const api: HgDocEditorApi = {
-      runFormat: (command, v) => applyHgDocFormatCommand(editor, command, v),
+      canRedo: () => editor.can().redo(),
 
-      getFormatState: () => readHgDocFormatChrome(editor),
-
-      getJSON: () => editor.getJSON(),
+      canUndo: () => editor.can().undo(),
 
       focus: () => {
         editor.commands.focus();
       },
 
+      getFormatState: () => readHgDocFormatChrome(editor),
+
+      getJSON: () => editor.getJSON(),
+
       insertImageFromDataUrl: (src, alt) => {
         editor
           .chain()
           .focus()
-          .setImage({ src, alt: alt || "" })
+          .setImage({ alt: alt || "", src })
           .run();
       },
 
-      undo: () => editor.commands.undo(),
+      isEmptyDocument: () => editor.isEmpty,
 
       redo: () => editor.commands.redo(),
+      runFormat: (command, v) => applyHgDocFormatCommand(editor, command, v),
 
-      canUndo: () => editor.can().undo(),
-
-      canRedo: () => editor.can().redo(),
-
-      isEmptyDocument: () => editor.isEmpty,
+      undo: () => editor.commands.undo(),
     };
 
     registerHgDocEditor(surfaceKey, api);

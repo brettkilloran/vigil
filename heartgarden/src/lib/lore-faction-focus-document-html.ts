@@ -91,14 +91,14 @@ export function readFactionFocusPartsFromMetaHost(
 ): FactionFocusParts {
   const root = metaHost as unknown as ParentNode;
   return {
-    orgPrimaryHtml: takeInnerHtml(
-      root,
-      '[data-hg-faction-focus-field="orgNamePrimary"]',
-      LORE_V9_REDACTED_SENTINEL
-    ),
     orgAccentHtml: takeInnerHtml(
       root,
       '[data-hg-faction-focus-field="orgNameAccent"]',
+      LORE_V9_REDACTED_SENTINEL
+    ),
+    orgPrimaryHtml: takeInnerHtml(
+      root,
+      '[data-hg-faction-focus-field="orgNamePrimary"]',
       LORE_V9_REDACTED_SENTINEL
     ),
     recordHtml,
@@ -124,14 +124,14 @@ export function parseFactionFocusDocumentHtml(
     return null;
   }
   return {
-    orgPrimaryHtml: takeInnerHtml(
-      root,
-      '[data-hg-faction-focus-field="orgNamePrimary"]',
-      LORE_V9_REDACTED_SENTINEL
-    ),
     orgAccentHtml: takeInnerHtml(
       root,
       '[data-hg-faction-focus-field="orgNameAccent"]',
+      LORE_V9_REDACTED_SENTINEL
+    ),
+    orgPrimaryHtml: takeInnerHtml(
+      root,
+      '[data-hg-faction-focus-field="orgNamePrimary"]',
       LORE_V9_REDACTED_SENTINEL
     ),
     recordHtml: takeInnerHtml(
@@ -148,8 +148,8 @@ export function factionBodyToFocusDocumentHtml(bodyHtml: string): string {
     return bodyHtml;
   }
   return buildFactionFocusDocumentHtml({
-    orgPrimaryHtml: p.orgPrimaryInnerHtml,
     orgAccentHtml: p.orgAccentInnerHtml,
+    orgPrimaryHtml: p.orgPrimaryInnerHtml,
     recordHtml: p.recordInnerHtml,
   });
 }
@@ -181,10 +181,10 @@ export function focusDocumentHtmlToFactionBody(
   );
 
   return buildFactionArchive091BodyHtml({
-    orgPrimaryInnerHtml: primary,
     orgAccentInnerHtml: accent,
-    recordInnerHtml: record,
-    railUpper: templateRails.railUpper,
+    orgPrimaryInnerHtml: primary,
     railLower: templateRails.railLower,
+    railUpper: templateRails.railUpper,
+    recordInnerHtml: record,
   });
 }

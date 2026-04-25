@@ -102,10 +102,10 @@ export function syncFailureFromApiResponse(
     (rawText.trim() ? rawText.trim().slice(0, 280) : `HTTP ${res.status}`);
   const snippet = rawText.length > 800 ? `${rawText.slice(0, 800)}…` : rawText;
   return {
-    operation,
+    cause: "http",
     httpStatus: res.status,
     message: msg,
+    operation,
     responseSnippet: snippet || undefined,
-    cause: "http",
   };
 }

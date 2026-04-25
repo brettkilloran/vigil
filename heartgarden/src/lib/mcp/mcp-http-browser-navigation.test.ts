@@ -7,8 +7,8 @@ describe("isLikelyBrowserDocumentNavigation", () => {
   it("is true for typical browser address-bar navigation", () => {
     const r = new NextRequest("http://localhost/api/mcp", {
       headers: {
-        "sec-fetch-mode": "navigate",
         "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
       },
     });
     expect(isLikelyBrowserDocumentNavigation(r)).toBe(true);
@@ -23,11 +23,11 @@ describe("isLikelyBrowserDocumentNavigation", () => {
 
   it("is false for non-GET", () => {
     const r = new NextRequest("http://localhost/api/mcp", {
-      method: "POST",
       headers: {
-        "sec-fetch-mode": "navigate",
         "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
       },
+      method: "POST",
     });
     expect(isLikelyBrowserDocumentNavigation(r)).toBe(false);
   });

@@ -6,33 +6,33 @@ import { type ComponentProps, useState } from "react";
 import { HeartgardenPinField } from "@/src/components/ui/HeartgardenPinField";
 
 const meta: Meta<typeof HeartgardenPinField> = {
-  title: "Heartgarden/Design System/Primitives/Pin field",
+  args: {
+    autoFocus: false,
+    disabled: false,
+    errorMessage: null,
+    legend: "Access code",
+    submitting: false,
+  },
+  argTypes: {
+    onSubmit: { control: false },
+    onValueChange: { control: false },
+    value: { control: false },
+  },
   component: HeartgardenPinField,
   decorators: [
     (Story) => (
       <div
         style={{
-          padding: 32,
-          minHeight: 200,
           background: "var(--sem-surface-base)",
+          minHeight: 200,
+          padding: 32,
         }}
       >
         <Story />
       </div>
     ),
   ],
-  args: {
-    legend: "Access code",
-    disabled: false,
-    submitting: false,
-    errorMessage: null,
-    autoFocus: false,
-  },
-  argTypes: {
-    onValueChange: { control: false },
-    onSubmit: { control: false },
-    value: { control: false },
-  },
+  title: "Heartgarden/Design System/Primitives/Pin field",
 };
 
 export default meta;

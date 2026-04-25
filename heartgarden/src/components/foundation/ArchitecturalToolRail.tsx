@@ -48,6 +48,7 @@ export function ArchitecturalToolButton({
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tool rail renders many conditional sections (select/pan, connection modes, zoom, recenter) gated by visibility props
 export function ArchitecturalToolRail({
   activeTool,
   onSetTool,

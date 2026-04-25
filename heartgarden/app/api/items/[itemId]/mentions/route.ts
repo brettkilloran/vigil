@@ -20,7 +20,7 @@ export async function GET(
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -34,7 +34,7 @@ export async function GET(
   const itemId = parseSpaceIdParam(rawItemId);
   if (!itemId) {
     return Response.json(
-      { ok: false, error: "Invalid item id" },
+      { error: "Invalid item id", ok: false },
       { status: 400 }
     );
   }
@@ -47,7 +47,7 @@ export async function GET(
   if (!itemRow) {
     return heartgardenMaskNotFoundForPlayer(
       bootCtx,
-      Response.json({ ok: false, error: "Item not found" }, { status: 404 })
+      Response.json({ error: "Item not found", ok: false }, { status: 404 })
     );
   }
   if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, itemRow.spaceId))) {
@@ -57,30 +57,30 @@ export async function GET(
   const [mentionsRows, mentionedByRows] = await Promise.all([
     db
       .select({
+        headingPath: entityMentions.headingPath,
         id: entityMentions.id,
         itemId: entityMentions.targetItemId,
-        title: items.title,
-        sourceKind: entityMentions.sourceKind,
         matchedTerm: entityMentions.matchedTerm,
         mentionCount: entityMentions.mentionCount,
         snippet: entityMentions.snippet,
-        headingPath: entityMentions.headingPath,
+        sourceKind: entityMentions.sourceKind,
         sourceSpaceId: entityMentions.sourceSpaceId,
+        title: items.title,
       })
       .from(entityMentions)
       .innerJoin(items, eq(items.id, entityMentions.targetItemId))
       .where(eq(entityMentions.sourceItemId, itemId)),
     db
       .select({
+        headingPath: entityMentions.headingPath,
         id: entityMentions.id,
         itemId: entityMentions.sourceItemId,
-        title: items.title,
-        sourceKind: entityMentions.sourceKind,
         matchedTerm: entityMentions.matchedTerm,
         mentionCount: entityMentions.mentionCount,
         snippet: entityMentions.snippet,
-        headingPath: entityMentions.headingPath,
+        sourceKind: entityMentions.sourceKind,
         sourceSpaceId: entityMentions.sourceSpaceId,
+        title: items.title,
       })
       .from(entityMentions)
       .innerJoin(items, eq(items.id, entityMentions.sourceItemId))
@@ -88,8 +88,8 @@ export async function GET(
   ]);
 
   return Response.json({
-    ok: true,
-    mentions: mentionsRows,
     mentionedBy: mentionedByRows,
+    mentions: mentionsRows,
+    ok: true,
   });
 }

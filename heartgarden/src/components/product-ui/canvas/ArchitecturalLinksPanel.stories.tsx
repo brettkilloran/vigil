@@ -2,36 +2,37 @@
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import { fn } from "storybook/test";
+
 import styles from "@/src/components/foundation/ArchitecturalCanvasApp.module.css";
 import { buildArchitecturalSeedGraph } from "@/src/components/foundation/architectural-seed";
 import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
 
 const seedGraph = buildArchitecturalSeedGraph(
   {
-    taskItem: styles.taskItem,
     done: styles.done,
-    taskCheckbox: styles.taskCheckbox,
-    taskText: styles.taskText,
     mediaFrame: styles.mediaFrame,
     mediaImage: styles.mediaImage,
     mediaImageActions: styles.mediaImageActions,
     mediaUploadBtn: styles.mediaUploadBtn,
+    taskCheckbox: styles.taskCheckbox,
+    taskItem: styles.taskItem,
+    taskText: styles.taskText,
   },
   "default"
 );
 
 const meta = {
-  title: "Heartgarden/Product UI/Canvas/Links panel (debug)",
   component: ArchitecturalLinksPanel,
   parameters: {
-    layout: "fullscreen",
     docs: {
       description: {
         component:
           "Right-rail debug inspector for wiki targets in note HTML and (when `cloudEnabled` and UUID item ids) Neon links + FTS related items. Story uses **local** mode only — no network.",
       },
     },
+    layout: "fullscreen",
   },
+  title: "Heartgarden/Product UI/Canvas/Links panel (debug)",
 } satisfies Meta<typeof ArchitecturalLinksPanel>;
 
 export default meta;
@@ -39,11 +40,11 @@ type Story = StoryObj<typeof meta>;
 
 export const LocalNoteSelected: Story = {
   args: {
-    graph: seedGraph,
     activeSpaceId: "root",
-    selectedEntityIds: ["node-1"],
     cloudEnabled: false,
+    graph: seedGraph,
     onFocusEntity: fn(),
+    selectedEntityIds: ["node-1"],
   },
   decorators: [
     (Story) => (
@@ -56,11 +57,11 @@ export const LocalNoteSelected: Story = {
 
 export const NothingSelected: Story = {
   args: {
-    graph: seedGraph,
     activeSpaceId: "root",
-    selectedEntityIds: [],
     cloudEnabled: false,
+    graph: seedGraph,
     onFocusEntity: fn(),
+    selectedEntityIds: [],
   },
   decorators: [
     (Story) => (

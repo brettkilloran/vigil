@@ -22,19 +22,19 @@ describe("lore-import registry wiring", () => {
         aiPending: true,
       });
       const blob = buildSearchBlob({
-        title: "T",
-        contentText: "hello",
         contentJson,
-        entityType: persisted,
+        contentText: "hello",
         entityMeta: {
-          import: true,
-          canonicalEntityKind: kind,
           aiReview: "pending",
+          canonicalEntityKind: kind,
+          import: true,
         },
-        imageUrl: null,
+        entityType: persisted,
         imageMeta: null,
-        loreSummary: null,
+        imageUrl: null,
         loreAliases: null,
+        loreSummary: null,
+        title: "T",
       });
       expect(blob.length).toBeGreaterThan(0);
       expect(blob).toContain("hello");

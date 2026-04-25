@@ -29,10 +29,10 @@ describe("linkCharacterToFactionRosterRow", () => {
       return;
     }
     expect(r.roster[0]).toEqual({
-      id: "11111111-1111-4111-8111-111111111111",
-      kind: "character",
       characterItemId: charA,
       displayNameOverride: "Doc",
+      id: "11111111-1111-4111-8111-111111111111",
+      kind: "character",
       roleOverride: "Medic",
     });
   });
@@ -40,9 +40,9 @@ describe("linkCharacterToFactionRosterRow", () => {
   it("no-op when already linked to same character", () => {
     const roster: FactionRosterEntry[] = [
       {
+        characterItemId: charA,
         id: "11111111-1111-4111-8111-111111111111",
         kind: "character",
-        characterItemId: charA,
       },
     ];
     const r = linkCharacterToFactionRosterRow(
@@ -60,9 +60,9 @@ describe("linkCharacterToFactionRosterRow", () => {
   it("blocks replace by default when linked to different character", () => {
     const roster: FactionRosterEntry[] = [
       {
+        characterItemId: charA,
         id: "11111111-1111-4111-8111-111111111111",
         kind: "character",
-        characterItemId: charA,
       },
     ];
     const r = linkCharacterToFactionRosterRow(
@@ -80,10 +80,10 @@ describe("linkCharacterToFactionRosterRow", () => {
   it("allows replace when allowReplace is true", () => {
     const roster: FactionRosterEntry[] = [
       {
-        id: "11111111-1111-4111-8111-111111111111",
-        kind: "character",
         characterItemId: charA,
         displayNameOverride: "Keep",
+        id: "11111111-1111-4111-8111-111111111111",
+        kind: "character",
       },
     ];
     const r = linkCharacterToFactionRosterRow(
@@ -97,9 +97,9 @@ describe("linkCharacterToFactionRosterRow", () => {
       return;
     }
     expect(r.roster[0]).toMatchObject({
-      kind: "character",
       characterItemId: charB,
       displayNameOverride: "Keep",
+      kind: "character",
     });
   });
 

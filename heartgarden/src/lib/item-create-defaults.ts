@@ -38,15 +38,15 @@ export function defaultItemDimensions(
     entityType === "faction" ||
     entityType === "location"
   ) {
-    return { width: 340, height: 280 };
+    return { height: 280, width: 340 };
   }
   switch (itemType) {
     case "note":
-      return { width: 340, height: 270 };
+      return { height: 270, width: 340 };
     case "checklist":
-      return { width: 340, height: 188 };
+      return { height: 188, width: 340 };
     default:
-      return { width: 280, height: 200 };
+      return { height: 200, width: 280 };
   }
 }
 
@@ -66,13 +66,13 @@ export function synthesizeContentJsonForCreateItem(args: {
 
   if (args.itemType === "checklist") {
     return {
-      format: HG_DOC_FORMAT,
       doc: newTaskHgDocSeed(),
+      format: HG_DOC_FORMAT,
       hgArch: {
-        theme: "task",
-        tapeVariant,
         rotation: rot,
         tapeRotation: tapeRot,
+        tapeVariant,
+        theme: "task",
       },
     };
   }
@@ -92,10 +92,10 @@ export function synthesizeContentJsonForCreateItem(args: {
       ...base,
       hgArch: {
         ...hg,
-        theme,
-        tapeVariant: hg.tapeVariant ?? tapeVariant,
         rotation: rot,
         tapeRotation: tapeRot,
+        tapeVariant: hg.tapeVariant ?? tapeVariant,
+        theme,
       },
     };
   }

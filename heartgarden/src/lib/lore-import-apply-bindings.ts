@@ -16,6 +16,7 @@
  * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.6 and plan §7.
  */
 import { randomUUID } from "node:crypto";
+
 import type { BindingSlotId } from "@/src/lib/bindings-catalog";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
@@ -83,20 +84,20 @@ export function buildBindingPatchForImport(
 
   if (src === "faction" && tgt === "character") {
     const entry: FactionRosterEntry = {
+      characterItemId: input.targetItemId,
       id: randomUUID(),
       kind: "character",
-      characterItemId: input.targetItemId,
       ...(input.targetTitle
         ? { displayNameOverride: input.targetTitle.slice(0, 400) }
         : {}),
     };
-    return { kind: "faction.factionRoster", entry };
+    return { entry, kind: "faction.factionRoster" };
   }
 
   if (src === "character" && tgt === "faction") {
     return {
-      kind: "character.primaryFactions",
       factionItemId: input.targetItemId,
+      kind: "character.primaryFactions",
     };
   }
 
@@ -109,8 +110,8 @@ export function buildBindingPatchForImport(
 
   if (src === "location" && tgt === "character") {
     return {
-      kind: "location.linkedCharacters",
       characterItemId: input.targetItemId,
+      kind: "location.linkedCharacters",
     };
   }
 

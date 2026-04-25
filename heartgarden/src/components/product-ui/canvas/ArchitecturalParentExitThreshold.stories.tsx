@@ -7,17 +7,17 @@ import { fn } from "storybook/test";
 import { ArchitecturalParentExitThreshold } from "@/src/components/foundation/ArchitecturalParentExitThreshold";
 
 const meta = {
-  title: "Heartgarden/Product UI/Canvas/Parent exit threshold",
   component: ArchitecturalParentExitThreshold,
   parameters: {
-    layout: "fullscreen",
     docs: {
       description: {
         component:
           "Top-of-viewport drop well for “eject selection to parent space” when navigating nested folders on the canvas.",
       },
     },
+    layout: "fullscreen",
   },
+  title: "Heartgarden/Product UI/Canvas/Parent exit threshold",
 } satisfies Meta<typeof ArchitecturalParentExitThreshold>;
 
 export default meta;
@@ -52,31 +52,31 @@ function ThresholdStage(props: {
 
 export const VisibleIdle: Story = {
   args: {
-    toolbarBottomPx: 0,
-    visible: true,
     hovered: false,
     interactive: false,
+    toolbarBottomPx: 0,
+    visible: true,
   },
   render: () => <ThresholdStage hovered={false} interactive={false} visible />,
 };
 
 export const Hovered: Story = {
   args: {
-    toolbarBottomPx: 0,
-    visible: true,
     hovered: true,
     interactive: false,
+    toolbarBottomPx: 0,
+    visible: true,
   },
   render: () => <ThresholdStage hovered interactive={false} visible />,
 };
 
 export const Interactive: Story = {
   args: {
-    toolbarBottomPx: 0,
-    visible: true,
     hovered: true,
     interactive: true,
     onActivate: fn(),
+    toolbarBottomPx: 0,
+    visible: true,
   },
   render: () => {
     const onActivate = fn();
@@ -88,10 +88,10 @@ export const Interactive: Story = {
 
 export const Hidden: Story = {
   args: {
-    toolbarBottomPx: 0,
-    visible: false,
     hovered: false,
     interactive: false,
+    toolbarBottomPx: 0,
+    visible: false,
   },
   render: () => (
     <ThresholdStage hovered={false} interactive={false} visible={false} />

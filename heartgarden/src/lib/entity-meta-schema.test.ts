@@ -14,10 +14,10 @@ import {
 describe("entity-meta-schema", () => {
   it("parses a minimal importer meta", () => {
     const parsed = parseImportedEntityMeta({
+      aiReview: "pending",
+      canonicalEntityKind: "npc",
       import: true,
       importBatchId: "11111111-1111-4111-8111-111111111111",
-      canonicalEntityKind: "npc",
-      aiReview: "pending",
     });
     expect(parsed).not.toBeNull();
     expect(parsed?.canonicalEntityKind).toBe("npc");
@@ -34,8 +34,8 @@ describe("entity-meta-schema", () => {
   it("preserves unknown keys via passthrough", () => {
     const parsed = parseImportedEntityMeta({
       import: true,
-      unknownExternalKey: "hello",
       nested: { foo: 1 },
+      unknownExternalKey: "hello",
     });
     expect(parsed).not.toBeNull();
     const record = parsed as unknown as Record<string, unknown>;
@@ -52,10 +52,10 @@ describe("entity-meta-schema", () => {
 
   it("buildImportedEntityMeta merges existing + base + explicit fields", () => {
     const meta = buildImportedEntityMeta({
-      existing: { legacyKey: "keep", aiReview: "accepted" },
-      base: { import: true, canonicalEntityKind: "npc" },
-      importBatchId: "11111111-1111-4111-8111-111111111111",
       aiReview: "pending",
+      base: { canonicalEntityKind: "npc", import: true },
+      existing: { aiReview: "accepted", legacyKey: "keep" },
+      importBatchId: "11111111-1111-4111-8111-111111111111",
     });
     expect(meta.import).toBe(true);
     expect(meta.canonicalEntityKind).toBe("npc");
@@ -76,12 +76,12 @@ describe("entity-meta-schema", () => {
   it("withCrossFolderRef deduplicates by target title + id", () => {
     const base = buildImportedEntityMeta({ import: true });
     const once = withCrossFolderRef(base, {
-      targetTitle: "Moonhold",
       linkType: "history",
+      targetTitle: "Moonhold",
     });
     const twice = withCrossFolderRef(once, {
-      targetTitle: "Moonhold",
       linkType: "history",
+      targetTitle: "Moonhold",
     });
     expect(once.crossFolderRefs).toHaveLength(1);
     expect(twice.crossFolderRefs).toHaveLength(1);

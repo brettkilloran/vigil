@@ -39,7 +39,7 @@ export async function GET() {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured", spaces: [] },
+      { error: "Database not configured", ok: false, spaces: [] },
       { status: 503 }
     );
   }
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
 
   if (isHeartgardenImplicitPlayerRootSpaceName(name)) {
     return Response.json(
-      { ok: false, error: "Invalid space name" },
+      { error: "Invalid space name", ok: false },
       { status: 400 }
     );
   }
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
     }
     if (parentSpaceId === undefined || parentSpaceId === null) {
       return Response.json(
-        { ok: false, error: "Parent space required" },
+        { error: "Parent space required", ok: false },
         { status: 400 }
       );
     }
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
       return heartgardenMaskNotFoundForPlayer(
         bootCtx,
         Response.json(
-          { ok: false, error: "Parent space not found" },
+          { error: "Parent space not found", ok: false },
           { status: 404 }
         )
       );
@@ -142,18 +142,18 @@ export async function POST(req: Request) {
     const [created] = await db
       .insert(spaces)
       .values({
+        braneId: parent.braneId,
         name,
         parentSpaceId,
-        braneId: parent.braneId,
       })
       .returning();
 
     after(async () => {
       await publishHeartgardenSpaceInvalidation(db, {
+        directSpaceIds: [parentSpaceId],
+        lookupSpaceIds: [created?.id, parentSpaceId],
         originSpaceId: created?.id,
         reason: "space.created",
-        lookupSpaceIds: [created?.id, parentSpaceId],
-        directSpaceIds: [parentSpaceId],
       });
     });
 
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
       .limit(1);
     if (existing) {
       return Response.json(
-        { ok: false, error: "Space id already exists" },
+        { error: "Space id already exists", ok: false },
         { status: 409 }
       );
     }
@@ -196,13 +196,13 @@ export async function POST(req: Request) {
     const parent = await assertSpaceExists(db, parentSpaceId);
     if (!parent) {
       return Response.json(
-        { ok: false, error: "Parent space not found" },
+        { error: "Parent space not found", ok: false },
         { status: 404 }
       );
     }
     if (isHeartgardenImplicitPlayerRootSpaceName(parent.name)) {
       return Response.json(
-        { ok: false, error: "Invalid parent" },
+        { error: "Invalid parent", ok: false },
         { status: 400 }
       );
     }
@@ -221,12 +221,12 @@ export async function POST(req: Request) {
 
   after(async () => {
     await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: created?.id,
-      reason: "space.created",
+      directSpaceIds: parentSpaceId ? [parentSpaceId] : undefined,
       lookupSpaceIds: parentSpaceId
         ? [created?.id, parentSpaceId]
         : [created?.id],
-      directSpaceIds: parentSpaceId ? [parentSpaceId] : undefined,
+      originSpaceId: created?.id,
+      reason: "space.created",
     });
   });
 

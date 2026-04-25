@@ -14,13 +14,13 @@ export const hgStructuredParagraphBlockSchema = z.object({
 const hgStructuredListItemSchema = z.string().trim().min(1).max(1200);
 
 export const hgStructuredBulletListBlockSchema = z.object({
-  kind: z.literal("bullet_list"),
   items: z.array(hgStructuredListItemSchema).min(1).max(200),
+  kind: z.literal("bullet_list"),
 });
 
 export const hgStructuredOrderedListBlockSchema = z.object({
-  kind: z.literal("ordered_list"),
   items: z.array(hgStructuredListItemSchema).min(1).max(200),
+  kind: z.literal("ordered_list"),
 });
 
 export const hgStructuredQuoteBlockSchema = z.object({

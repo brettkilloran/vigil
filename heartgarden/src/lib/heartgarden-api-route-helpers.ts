@@ -17,12 +17,12 @@ export function heartgardenApiRequireDb(
     return {
       ok: false,
       response: Response.json(
-        { ok: false, error: "Database not configured" },
+        { error: "Database not configured", ok: false },
         { status: 503 }
       ),
     };
   }
-  return { ok: true, db };
+  return { db, ok: true };
 }
 
 export function heartgardenApiRejectIfPlayerBlocked(
@@ -42,12 +42,12 @@ export async function heartgardenApiReadJsonBody(
 ): Promise<{ ok: true; json: unknown } | { ok: false; response: Response }> {
   try {
     const json = await req.json();
-    return { ok: true, json };
+    return { json, ok: true };
   } catch {
     return {
       ok: false,
       response: Response.json(
-        { ok: false, error: "Invalid JSON" },
+        { error: "Invalid JSON", ok: false },
         { status: 400 }
       ),
     };

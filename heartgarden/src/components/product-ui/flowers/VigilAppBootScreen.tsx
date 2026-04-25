@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+
 import { ArchitecturalCanvasEffectsToggle } from "@/src/components/foundation/ArchitecturalStatusBar";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import {
@@ -21,6 +22,7 @@ import { Button } from "@/src/components/ui/Button";
 import { HeartgardenPinField } from "@/src/components/ui/HeartgardenPinField";
 import { HEARTGARDEN_APP_VERSION_LABEL } from "@/src/lib/app-version";
 import { cx } from "@/src/lib/cx";
+
 import styles from "./VigilAppBootScreen.module.css";
 import type { VigilBootFlowerGardenHandle } from "./VigilBootFlowerGarden";
 import {
@@ -415,10 +417,10 @@ export function VigilAppBootScreen({
     setPinError(null);
     try {
       const res = await fetch("/api/heartgarden/boot", {
-        method: "POST",
+        body: JSON.stringify({ code: pinValue }),
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: pinValue }),
+        method: "POST",
       });
       if (res.status === 204) {
         handleActivate();

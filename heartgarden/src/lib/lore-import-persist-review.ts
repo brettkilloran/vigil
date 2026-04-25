@@ -17,18 +17,18 @@ export async function replaceImportReviewQueueForPlan(
   const rows: (typeof importReviewItems.$inferInsert)[] = [];
   for (const c of plan.contradictions) {
     rows.push({
+      createdAt: now,
       importBatchId: plan.importBatchId,
-      spaceId,
-      status: "pending",
       kind: "contradiction",
       payload: {
         contradictionId: c.id,
-        noteClientId: c.noteClientId,
-        summary: c.summary,
         details: c.details,
         fileName: plan.fileName,
+        noteClientId: c.noteClientId,
+        summary: c.summary,
       },
-      createdAt: now,
+      spaceId,
+      status: "pending",
       updatedAt: now,
     });
   }
@@ -37,20 +37,20 @@ export async function replaceImportReviewQueueForPlan(
       continue;
     }
     rows.push({
+      createdAt: now,
       importBatchId: plan.importBatchId,
-      spaceId,
-      status: "pending",
       kind: `clarification_${cl.category}`,
       payload: {
-        clarificationId: cl.id,
         category: cl.category,
-        title: cl.title,
+        clarificationId: cl.id,
         context: cl.context,
-        questionKind: cl.questionKind,
-        optionLabels: cl.options.map((o) => ({ id: o.id, label: o.label })),
         fileName: plan.fileName,
+        optionLabels: cl.options.map((o) => ({ id: o.id, label: o.label })),
+        questionKind: cl.questionKind,
+        title: cl.title,
       },
-      createdAt: now,
+      spaceId,
+      status: "pending",
       updatedAt: now,
     });
   }

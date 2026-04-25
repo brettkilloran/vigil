@@ -118,10 +118,10 @@ export function escapePlainBodyToHtmlFragment(plain: string): string {
 }
 
 const HG_ARCH_DEFAULT = {
-  theme: "default",
-  tapeVariant: "clear",
   rotation: 0,
   tapeRotation: 0,
+  tapeVariant: "clear",
+  theme: "default",
 } as const;
 
 export interface BuildLoreNoteContentJsonOptions {
@@ -142,8 +142,8 @@ export function buildLoreNoteContentJson(
   const bodyHtml = `<div contenteditable="true">${pendingWrapped}</div>`;
   return {
     format: "html",
-    html: bodyHtml,
     hgArch: { ...HG_ARCH_DEFAULT },
+    html: bodyHtml,
   };
 }
 
@@ -160,8 +160,8 @@ export function buildLoreNoteContentJsonMerged(
   const bodyHtml = `<div contenteditable="true">${inner}</div>`;
   return {
     format: "html",
-    html: bodyHtml,
     hgArch: { ...HG_ARCH_DEFAULT },
+    html: bodyHtml,
   };
 }
 
@@ -260,11 +260,11 @@ function buildCharacterSlabContentJson(
   );
   return {
     format: "html",
-    html,
     hgArch: {
       ...HG_ARCH_DEFAULT,
       loreCard: { kind: "character", variant: "v11" },
     },
+    html,
   } as Record<string, unknown>;
 }
 
@@ -275,19 +275,19 @@ function buildFactionSlabContentJson(
     body.namePrimary || "__hg-faction-import__"
   );
   const html = buildFactionArchive091BodyHtml({
-    orgPrimaryInnerHtml: toPendingInline(body.namePrimary || ""),
     orgAccentInnerHtml: toPendingInline(body.nameAccent || ""),
-    recordInnerHtml: toPendingParagraphs(body.recordParagraphs),
-    railUpper: rails.upper,
+    orgPrimaryInnerHtml: toPendingInline(body.namePrimary || ""),
     railLower: rails.lower,
+    railUpper: rails.upper,
+    recordInnerHtml: toPendingParagraphs(body.recordParagraphs),
   });
   return {
     format: "html",
-    html,
     hgArch: {
       ...HG_ARCH_DEFAULT,
       loreCard: { kind: "faction", variant: "v4" },
     },
+    html,
   } as Record<string, unknown>;
 }
 
@@ -295,9 +295,9 @@ function buildLocationSlabContentJson(
   body: Extract<LoreImportStructuredBody, { kind: "location" }>
 ) {
   let html = buildLocationOrdoV7BodyHtml({
-    name: body.name || "",
     context: body.context || "",
     detail: body.detail || "",
+    name: body.name || "",
     notesInnerHtml: toPendingParagraphs(body.notesParagraphs),
   });
   html = replaceDataAttrInnerHtml(
@@ -320,11 +320,11 @@ function buildLocationSlabContentJson(
   );
   return {
     format: "html",
-    html,
     hgArch: {
       ...HG_ARCH_DEFAULT,
       loreCard: { kind: "location", variant: "v7" },
     },
+    html,
   } as Record<string, unknown>;
 }
 
@@ -339,8 +339,8 @@ function buildGenericHgDocFromParagraphs(
     requireH1: false,
   });
   return {
-    format: HG_DOC_FORMAT,
     doc,
+    format: HG_DOC_FORMAT,
     hgArch: { ...HG_ARCH_DEFAULT },
   };
 }
@@ -365,17 +365,17 @@ export function buildLoreStructuredBodyContentJson(
 ): Record<string, unknown> {
   if (!body) {
     const fallbackBody = markdownToStructuredBody(fallbackPlainBody, {
-      title: title?.trim() || "Imported note",
       requireH1: true,
+      title: title?.trim() || "Imported note",
     });
     const { doc } = structuredBodyToHgDoc(fallbackBody, {
       aiPending: true,
-      title: title?.trim() || "Imported note",
       requireH1: true,
+      title: title?.trim() || "Imported note",
     });
     return {
-      format: HG_DOC_FORMAT,
       doc,
+      format: HG_DOC_FORMAT,
       hgArch: { ...HG_ARCH_DEFAULT },
     };
   }
@@ -392,13 +392,13 @@ export function buildLoreStructuredBodyContentJson(
     { blocks: body.blocks },
     {
       aiPending: true,
-      title: title?.trim() || "Imported note",
       requireH1: true,
+      title: title?.trim() || "Imported note",
     }
   );
   return {
-    format: HG_DOC_FORMAT,
     doc,
+    format: HG_DOC_FORMAT,
     hgArch: { ...HG_ARCH_DEFAULT },
   };
 }

@@ -36,7 +36,7 @@ function normalizeRrfConfig(config: RrfFusionConfig | undefined): {
     Number.isFinite(mentionWeightRaw) && (mentionWeightRaw as number) > 0
       ? (mentionWeightRaw as number)
       : RRF_WEIGHT_MENTIONS;
-  return { k, lexicalWeight, vectorWeight, mentionWeight };
+  return { k, lexicalWeight, mentionWeight, vectorWeight };
 }
 
 export function rrfScore(rank: number | undefined, k = RRF_K): number {
@@ -108,7 +108,7 @@ export function fuseRrfFromOrderedLists(
       rrfScore(lexR, config.k) * config.lexicalWeight +
       rrfScore(vecR, config.k) * config.vectorWeight +
       rrfScore(mentionR, config.k) * config.mentionWeight;
-    return { id, rrf, lexR, vecR, mentionR };
+    return { id, lexR, mentionR, rrf, vecR };
   });
   scored.sort((a, b) => b.rrf - a.rrf);
 
@@ -117,10 +117,10 @@ export function fuseRrfFromOrderedLists(
   for (const s of scored) {
     scores.set(s.id, {
       lexRank: s.lexR,
-      vecRank: s.vecR,
       mentionRank: s.mentionR,
       rrf: s.rrf,
+      vecRank: s.vecR,
     });
   }
-  return { topIds, scores };
+  return { scores, topIds };
 }

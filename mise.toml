@@ -33,7 +33,7 @@ run = ["pnpm run db:vault-setup"]
 description = "Lints the project with ESLint"
 dir = "{{ config_root }}/heartgarden"
 depends = ["pnpm:setup"]
-run = ["pnpm run lint"]
+run = ["pnpm run check"]
 
 [tasks.format]
 description = "Auto-fixes lint/format issues with Ultracite"

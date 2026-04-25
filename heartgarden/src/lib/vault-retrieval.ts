@@ -209,15 +209,15 @@ export async function searchItemChunksByVector(
 
   const base = db
     .select({
-      itemId: itemEmbeddings.itemId,
-      chunkText: itemEmbeddings.chunkText,
-      headingPath: itemEmbeddings.headingPath,
       chunkIndex: itemEmbeddings.chunkIndex,
+      chunkText: itemEmbeddings.chunkText,
       distance: distanceExpr,
+      headingPath: itemEmbeddings.headingPath,
       item: items,
+      itemId: itemEmbeddings.itemId,
+      parentSpaceId: spaces.parentSpaceId,
       spaceId: spaces.id,
       spaceName: spaces.name,
-      parentSpaceId: spaces.parentSpaceId,
     })
     .from(itemEmbeddings)
     .innerJoin(items, eq(items.id, itemEmbeddings.itemId))
@@ -228,12 +228,12 @@ export async function searchItemChunksByVector(
     : await base.orderBy(distanceExpr).limit(limit);
 
   return rows.map((r) => ({
-    itemId: r.itemId,
-    chunkText: r.chunkText,
-    headingPath: parseHeadingPath(r.headingPath),
     chunkIndex: r.chunkIndex,
+    chunkText: r.chunkText,
     distance: r.distance,
+    headingPath: parseHeadingPath(r.headingPath),
     item: r.item,
+    itemId: r.itemId,
     space: { id: r.spaceId, name: r.spaceName, parentSpaceId: r.parentSpaceId },
   }));
 }
@@ -248,6 +248,7 @@ export interface HybridRetrieveResult {
 /**
  * Lexical (FTS + optional fuzzy) fused with vector chunk hits via RRF.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: hybrid retrieval orchestrates FTS + fuzzy + vector + RRF fusion with feature-flag branches
 export async function hybridRetrieveItems(
   db: VigilDb,
   query: string,
@@ -283,10 +284,10 @@ export async function hybridRetrieveItems(
 
   if (!q) {
     return {
-      rows: [],
-      itemIdToChunks,
       itemIdToChunkMatches,
+      itemIdToChunks,
       itemIdToFtsSnippet,
+      rows: [],
     };
   }
 
@@ -339,7 +340,7 @@ export async function hybridRetrieveItems(
     if (list.length < maxChunksPerItem) {
       list.push(h.chunkText);
       itemIdToChunks.set(h.itemId, list);
-      detailed.push({ text: h.chunkText, headingPath: h.headingPath });
+      detailed.push({ headingPath: h.headingPath, text: h.chunkText });
       itemIdToChunkMatches.set(h.itemId, detailed);
     }
   }
@@ -406,16 +407,16 @@ export async function hybridRetrieveItems(
     mentionOrderedIds = mentionRows.map((row) => row.itemId);
   }
   const { topIds, scores } = fuseRrfFromOrderedLists({
-    lexicalOrderedIds,
-    vectorOrderedIds,
-    mentionOrderedIds,
-    maxItems,
     config: {
       k: rrfK,
       lexicalWeight: rrfLexicalWeight,
-      vectorWeight: rrfVectorWeight,
       mentionWeight: rrfMentionWeight,
+      vectorWeight: rrfVectorWeight,
     },
+    lexicalOrderedIds,
+    maxItems,
+    mentionOrderedIds,
+    vectorOrderedIds,
   });
 
   const rowById = new Map<string, SearchRow>();
@@ -426,9 +427,9 @@ export async function hybridRetrieveItems(
     if (!rowById.has(h.itemId)) {
       rowById.set(h.itemId, {
         item: h.item,
-        space: h.space,
         score: undefined,
         snippet: undefined,
+        space: h.space,
       });
     }
   }
@@ -461,54 +462,54 @@ export async function hybridRetrieveItems(
   }
 
   logVaultHybridRetrieval({
-    queryPreview: q.slice(0, 240),
-    maxItems,
-    useVector,
+    filtersSummary: summarizeSearchFiltersForDebug(filters),
+    ftsHits: ftsRows.length,
     ftsLimit,
+    ftsSparseThreshold,
     fuzzyLimitWhenEmpty,
     fuzzyLimitWhenSparse,
-    ftsSparseThreshold,
+    lexicalRows: lexicalRows.length,
     maxChunksPerItem,
-    vecLimit,
+    maxItems,
+    mentionHits: mentionOrderedIds.length,
+    queryPreview: q.slice(0, 240),
     rrfK,
     rrfLexicalWeight,
-    rrfVectorWeight,
     rrfMentionWeight,
-    ftsHits: ftsRows.length,
-    lexicalRows: lexicalRows.length,
-    vectorChunkHits: vecHits.length,
-    mentionHits: mentionOrderedIds.length,
-    filtersSummary: summarizeSearchFiltersForDebug(filters),
+    rrfVectorWeight,
     top: topIds.slice(0, 12).map((id) => {
       const s = scores.get(id);
       const title = rowById.get(id)?.item.title?.trim() || "Untitled";
       return {
         id,
-        title,
         lexRank: s?.lexRank,
-        vecRank: s?.vecRank,
         mentionRank: s?.mentionRank,
         rrf: s?.rrf == null ? undefined : Number(s.rrf.toFixed(5)),
+        title,
+        vecRank: s?.vecRank,
       };
     }),
+    useVector,
+    vecLimit,
+    vectorChunkHits: vecHits.length,
   });
 
-  return { rows, itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet };
+  return { itemIdToChunkMatches, itemIdToChunks, itemIdToFtsSnippet, rows };
 }
 
 function summarizeSearchFiltersForDebug(
   f: SearchFilters
 ): Record<string, unknown> {
   return {
-    spaceId: f.spaceId ?? null,
-    spaceIdsCount: f.spaceIds?.length ?? 0,
+    entityTypes: f.entityTypes?.length ? f.entityTypes : undefined,
+    excludeLoreHistorical: f.excludeLoreHistorical,
     excludeSpaceId: f.excludeSpaceId ?? null,
     excludeSpaceIdsCount: f.excludeSpaceIds?.length ?? 0,
     itemTypes: f.itemTypes?.length ? f.itemTypes : undefined,
-    entityTypes: f.entityTypes?.length ? f.entityTypes : undefined,
-    minCampaignEpoch: f.minCampaignEpoch,
-    excludeLoreHistorical: f.excludeLoreHistorical,
     limit: f.limit,
+    minCampaignEpoch: f.minCampaignEpoch,
+    spaceId: f.spaceId ?? null,
+    spaceIdsCount: f.spaceIds?.length ?? 0,
   };
 }
 
@@ -529,12 +530,12 @@ export async function expandLinkedItems(
   const linkRowsRaw = await db
     .select({
       id: itemLinks.id,
-      sourceItemId: itemLinks.sourceItemId,
-      targetItemId: itemLinks.targetItemId,
-      meta: itemLinks.meta,
-      sourcePin: itemLinks.sourcePin,
-      targetPin: itemLinks.targetPin,
       linkType: itemLinks.linkType,
+      meta: itemLinks.meta,
+      sourceItemId: itemLinks.sourceItemId,
+      sourcePin: itemLinks.sourcePin,
+      targetItemId: itemLinks.targetItemId,
+      targetPin: itemLinks.targetPin,
       updatedAt: itemLinks.updatedAt,
     })
     .from(itemLinks)
@@ -547,14 +548,14 @@ export async function expandLinkedItems(
 
   const linkRows = dedupeLogicalItemLinkRows(
     linkRowsRaw.map((l) => ({
-      id: l.id,
-      source: l.sourceItemId,
-      target: l.targetItemId,
-      linkType: l.linkType ?? null,
-      sourcePin: l.sourcePin ?? null,
-      targetPin: l.targetPin ?? null,
       color: null,
+      id: l.id,
+      linkType: l.linkType ?? null,
       meta: l.meta,
+      source: l.sourceItemId,
+      sourcePin: l.sourcePin ?? null,
+      target: l.targetItemId,
+      targetPin: l.targetPin ?? null,
       updatedAtMs: l.updatedAt?.getTime() ?? 0,
     }))
   );
@@ -605,9 +606,9 @@ export async function expandLinkedItems(
   const found = await db
     .select({
       item: items,
+      parentSpaceId: spaces.parentSpaceId,
       spaceId: spaces.id,
       spaceName: spaces.name,
-      parentSpaceId: spaces.parentSpaceId,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))
@@ -671,9 +672,9 @@ export async function expandHgArchBindingNeighbors(
   const found = await db
     .select({
       item: items,
+      parentSpaceId: spaces.parentSpaceId,
       spaceId: spaces.id,
       spaceName: spaces.name,
-      parentSpaceId: spaces.parentSpaceId,
     })
     .from(items)
     .innerJoin(spaces, eq(spaces.id, items.spaceId))

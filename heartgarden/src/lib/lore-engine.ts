@@ -102,8 +102,8 @@ export async function retrieveLoreSources(
   const { rows, itemIdToChunks, itemIdToChunkMatches, itemIdToFtsSnippet } =
     await hybridRetrieveItems(db, q, base, {
       ...LORE_HYBRID_OPTIONS,
-      maxItems: cap,
       includeVector: true,
+      maxItems: cap,
     });
 
   const graphRows = await expandLinkedItems(
@@ -138,13 +138,13 @@ export async function retrieveLoreSources(
       primaryBudget
     );
     out.push({
+      canonicalEntityKind: readCanonicalEntityKind(row),
+      excerpt,
       itemId: row.item.id,
-      title: row.item.title?.trim() || "Untitled",
+      matchedChunks: chunks?.length ? chunks : undefined,
       spaceId: row.space.id,
       spaceName: row.space.name,
-      excerpt,
-      canonicalEntityKind: readCanonicalEntityKind(row),
-      matchedChunks: chunks?.length ? chunks : undefined,
+      title: row.item.title?.trim() || "Untitled",
     });
   }
 
@@ -158,12 +158,12 @@ export async function retrieveLoreSources(
       continue;
     }
     out.push({
+      canonicalEntityKind: readCanonicalEntityKind(row),
+      excerpt: fallbackExcerpt(row, graphBudget),
       itemId: row.item.id,
-      title: row.item.title?.trim() || "Untitled",
       spaceId: row.space.id,
       spaceName: row.space.name,
-      excerpt: fallbackExcerpt(row, graphBudget),
-      canonicalEntityKind: readCanonicalEntityKind(row),
+      title: row.item.title?.trim() || "Untitled",
       viaGraph: true,
     });
   }
@@ -176,12 +176,12 @@ export async function retrieveLoreSources(
       continue;
     }
     out.push({
+      canonicalEntityKind: readCanonicalEntityKind(row),
+      excerpt: fallbackExcerpt(row, graphBudget),
       itemId: row.item.id,
-      title: row.item.title?.trim() || "Untitled",
       spaceId: row.space.id,
       spaceName: row.space.name,
-      excerpt: fallbackExcerpt(row, graphBudget),
-      canonicalEntityKind: readCanonicalEntityKind(row),
+      title: row.item.title?.trim() || "Untitled",
       viaBinding: true,
     });
   }
@@ -230,9 +230,9 @@ export async function synthesizeLoreAnswer(
   const res = await callAnthropic(
     apiKey,
     {
+      messages: [{ content: user, role: "user" }],
       model,
       system: buildCachedSystem(LORE_SYSTEM),
-      messages: [{ role: "user", content: user }],
     },
     { label: "lore.query.answer" }
   );
@@ -250,9 +250,9 @@ export async function* synthesizeLoreAnswerStream(
   yield* callAnthropicTextStream(
     apiKey,
     {
+      messages: [{ content: user, role: "user" }],
       model,
       system: buildCachedSystem(LORE_SYSTEM),
-      messages: [{ role: "user", content: user }],
     },
     { label: "lore.query.answer" }
   );
@@ -318,11 +318,11 @@ export async function synthesizeLoreAnswerGrounded(
   const res = await callAnthropic(
     apiKey,
     {
+      messages: [{ content: user, role: "user" }],
       model,
       system: buildCachedSystem(LORE_GROUNDED_SYSTEM),
-      messages: [{ role: "user", content: user }],
     },
-    { label: "lore.query.answer", expectJson: true }
+    { expectJson: true, label: "lore.query.answer" }
   );
   const grounded = normalizeGroundedLoreAnswer(res.parsedJson, sources);
   const issue = groundedLoreAnswerContractIssue(grounded);

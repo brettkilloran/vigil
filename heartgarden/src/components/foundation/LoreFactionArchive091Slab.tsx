@@ -97,7 +97,7 @@ export function LoreFactionArchive091Slab({
   const { upper: railUpper, lower: railLower } = useMemo(
     () =>
       parsed
-        ? { upper: parsed.railUpper, lower: parsed.railLower }
+        ? { lower: parsed.railLower, upper: parsed.railUpper }
         : factionArchiveRailTextsFromObjectId(nodeId),
     [parsed, nodeId]
   );
@@ -286,11 +286,11 @@ export function LoreFactionArchive091Slab({
       } else {
         const { upper, lower } = factionArchiveRailTextsFromObjectId(nodeId);
         const seed = buildFactionArchive091BodyHtml({
-          orgPrimaryInnerHtml: "",
           orgAccentInnerHtml: "",
-          recordInnerHtml: "",
-          railUpper: upper,
+          orgPrimaryInnerHtml: "",
           railLower: lower,
+          railUpper: upper,
+          recordInnerHtml: "",
         });
         const pr = parseFactionArchive091BodyHtml(seed);
         if (pr) {
@@ -310,11 +310,11 @@ export function LoreFactionArchive091Slab({
     }) => {
       const { upper, lower } = factionArchiveRailTextsFromObjectId(nodeId);
       const html = buildFactionArchive091BodyHtml({
-        orgPrimaryInnerHtml: p.orgPrimaryInnerHtml,
         orgAccentInnerHtml: p.orgAccentInnerHtml,
-        recordInnerHtml: p.recordInnerHtml,
-        railUpper: upper,
+        orgPrimaryInnerHtml: p.orgPrimaryInnerHtml,
         railLower: lower,
+        railUpper: upper,
+        recordInnerHtml: p.recordInnerHtml,
       });
       lastPushed.current = html;
       onCommit(html);
@@ -332,8 +332,8 @@ export function LoreFactionArchive091Slab({
     setOrgAccentHtml(nextA);
     onDraftDirty?.(true);
     pushHtml({
-      orgPrimaryInnerHtml: nextP,
       orgAccentInnerHtml: nextA,
+      orgPrimaryInnerHtml: nextP,
       recordInnerHtml: hgDocToHtml(recordDoc),
     });
   }, [pushHtml, recordDoc, onDraftDirty]);
@@ -347,8 +347,8 @@ export function LoreFactionArchive091Slab({
       recordTimer.current = setTimeout(() => {
         recordTimer.current = null;
         pushHtml({
-          orgPrimaryInnerHtml: orgPrimaryHtml,
           orgAccentInnerHtml: orgAccentHtml,
+          orgPrimaryInnerHtml: orgPrimaryHtml,
           recordInnerHtml: hgDocToHtml(nextDoc),
         });
       }, 320);

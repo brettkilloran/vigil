@@ -7,35 +7,35 @@ import { ArchitecturalToolRail } from "@/src/components/foundation/Architectural
 import type { CanvasTool } from "@/src/components/foundation/architectural-types";
 
 const meta: Meta<typeof ArchitecturalToolRail> = {
-  title: "Heartgarden/Product UI/Canvas/Tool rail",
-  component: ArchitecturalToolRail,
   args: {
+    showRecenter: true,
     showSelectPan: true,
     showZoom: true,
-    showRecenter: true,
   },
   argTypes: {
+    showRecenter: { control: "boolean" },
     showSelectPan: { control: "boolean" },
     showZoom: { control: "boolean" },
-    showRecenter: { control: "boolean" },
   },
-  parameters: {
-    layout: "fullscreen",
-  },
+  component: ArchitecturalToolRail,
   decorators: [
     (Story) => (
       <div
         style={{
+          background: "var(--sem-surface-base)",
+          height: "100vh",
           position: "relative",
           width: "100vw",
-          height: "100vh",
-          background: "var(--sem-surface-base)",
         }}
       >
         <Story />
       </div>
     ),
   ],
+  parameters: {
+    layout: "fullscreen",
+  },
+  title: "Heartgarden/Product UI/Canvas/Tool rail",
 };
 
 export default meta;

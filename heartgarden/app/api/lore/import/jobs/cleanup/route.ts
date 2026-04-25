@@ -36,12 +36,12 @@ const DEFAULT_PURGE_DAYS = 30;
 const MAX_ROWS_PER_SWEEP = 5000;
 
 const bodySchema = z.object({
-  /** Days after a terminal job's `updated_at` to redact large columns. */
-  redactAfterDays: z.number().int().min(1).max(365).optional(),
-  /** Days after a terminal job's `updated_at` to delete the row entirely. */
-  purgeAfterDays: z.number().int().min(1).max(3650).optional(),
   /** When true, return what would change without writing. */
   dryRun: z.boolean().optional(),
+  /** Days after a terminal job's `updated_at` to delete the row entirely. */
+  purgeAfterDays: z.number().int().min(1).max(3650).optional(),
+  /** Days after a terminal job's `updated_at` to redact large columns. */
+  redactAfterDays: z.number().int().min(1).max(365).optional(),
 });
 
 function daysAgo(days: number): Date {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   const db = tryGetDb();
   if (!db) {
     return Response.json(
-      { ok: false, error: "Database not configured" },
+      { error: "Database not configured", ok: false },
       { status: 503 }
     );
   }
@@ -72,9 +72,9 @@ export async function POST(req: Request) {
   } catch (error) {
     return Response.json(
       {
-        ok: false,
-        error: "Invalid JSON",
         detail: error instanceof Error ? error.message : String(error),
+        error: "Invalid JSON",
+        ok: false,
       },
       { status: 400 }
     );
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
-      { ok: false, error: parsed.error.flatten() },
+      { error: parsed.error.flatten(), ok: false },
       { status: 400 }
     );
   }
@@ -92,8 +92,8 @@ export async function POST(req: Request) {
   if (redactAfterDays > purgeAfterDays) {
     return Response.json(
       {
-        ok: false,
         error: "redactAfterDays must be <= purgeAfterDays",
+        ok: false,
       },
       { status: 400 }
     );
@@ -130,12 +130,12 @@ export async function POST(req: Request) {
 
   if (dryRun) {
     return Response.json({
-      ok: true,
       dryRun: true,
-      redactAfterDays,
+      ok: true,
       purgeAfterDays,
-      redactCandidates: redactCandidates.length,
       purgeCandidates: purgeCandidates.length,
+      redactAfterDays,
+      redactCandidates: redactCandidates.length,
     });
   }
 
@@ -169,18 +169,18 @@ export async function POST(req: Request) {
   }
 
   console.info("[lore-import] jobs cleanup", {
-    redactAfterDays,
     purgeAfterDays,
-    redacted,
     purged,
+    redactAfterDays,
+    redacted,
   });
 
   return Response.json({
-    ok: true,
     dryRun: false,
-    redactAfterDays,
+    ok: true,
     purgeAfterDays,
-    redacted,
     purged,
+    redactAfterDays,
+    redacted,
   });
 }

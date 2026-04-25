@@ -205,11 +205,11 @@ export function lintAndRepairStructuredBody(
     body: { blocks },
     report: {
       autoPrependedH1,
-      demotedOrphanH3Count,
-      promotedH3ToH2Count,
-      flaggedFlatLongBody,
       collapsedDuplicateTitleParagraph,
+      demotedOrphanH3Count,
       finalHeadingCount: headingCounts,
+      flaggedFlatLongBody,
+      promotedH3ToH2Count,
     },
   };
 }

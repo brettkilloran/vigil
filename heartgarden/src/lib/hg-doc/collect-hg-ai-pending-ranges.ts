@@ -25,10 +25,10 @@ export function collectHgAiPendingRangeMetrics(
   const markType = editor.schema.marks.hgAiPending;
   if (!markType) {
     return {
-      ranges: [],
       pendingChars: 0,
-      totalTextChars: 0,
       pendingCoverage: 0,
+      ranges: [],
+      totalTextChars: 0,
     };
   }
   const doc = editor.state.doc;
@@ -74,9 +74,9 @@ export function collectHgAiPendingRangeMetrics(
   const pendingCoverage =
     totalTextChars > 0 ? pendingChars / totalTextChars : 0;
   return {
-    ranges: mergedSplits,
     pendingChars,
-    totalTextChars,
     pendingCoverage,
+    ranges: mergedSplits,
+    totalTextChars,
   };
 }

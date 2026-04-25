@@ -12,30 +12,30 @@ import styles from "./ai-pending-style-demo.module.css";
 
 /** Two hgAiPending ranges → two margin Accept buttons (matches real focus / canvas hgDoc). */
 const FOCUS_MARGIN_PREVIEW_DOC: JSONContent = {
-  type: "doc",
   content: [
     {
-      type: "paragraph",
       content: [
-        { type: "text", text: "Approved line. " },
+        { text: "Approved line. ", type: "text" },
         {
-          type: "text",
-          text: "First pending AI clause — check the right margin.",
           marks: [{ type: "hgAiPending" }],
+          text: "First pending AI clause — check the right margin.",
+          type: "text",
         },
       ],
+      type: "paragraph",
     },
     {
-      type: "paragraph",
       content: [
         {
-          type: "text",
-          text: "Second pending block in another paragraph (separate Accept).",
           marks: [{ type: "hgAiPending" }],
+          text: "Second pending block in another paragraph (separate Accept).",
+          type: "text",
         },
       ],
+      type: "paragraph",
     },
   ],
+  type: "doc",
 };
 
 /**
@@ -51,10 +51,10 @@ export function AiPendingStyleDemo() {
     <div className={styles.shell}>
       <h1
         style={{
+          color: "var(--sem-text-primary)",
           fontSize: "1.125rem",
           fontWeight: 600,
           letterSpacing: "-0.02em",
-          color: "var(--sem-text-primary)",
           margin: "0 0 8px",
         }}
       >
@@ -117,7 +117,7 @@ export function AiPendingStyleDemo() {
         </div>
         <div
           className={`${styles.focusMockBody} ${canvasStyles.focusBody}`}
-          style={{ opacity: 1, transform: "none", minHeight: "auto" }}
+          style={{ minHeight: "auto", opacity: 1, transform: "none" }}
         >
           <p style={{ marginTop: 0 }}>
             Normal focus body copy uses the default ink color.{" "}
@@ -160,7 +160,7 @@ export function AiPendingStyleDemo() {
           <h2 className={styles.sectionTitle}>Default note (light)</h2>
           <div
             className={`${canvasStyles.entityNode} ${canvasStyles.themeDefault} ${canvasStyles.a4DocumentNode} ${styles.demoCard}`}
-            style={{ width: 380, maxWidth: "100%" }}
+            style={{ maxWidth: "100%", width: 380 }}
           >
             <div
               className={canvasStyles.nodeHeader}
@@ -199,7 +199,7 @@ export function AiPendingStyleDemo() {
           <h2 className={styles.sectionTitle}>Code note (dark)</h2>
           <div
             className={`${canvasStyles.entityNode} ${canvasStyles.themeCode} ${canvasStyles.a4DocumentNode} ${styles.demoCard}`}
-            style={{ width: 380, maxWidth: "100%" }}
+            style={{ maxWidth: "100%", width: 380 }}
           >
             <div
               className={canvasStyles.nodeHeader}
@@ -234,11 +234,11 @@ export function AiPendingStyleDemo() {
           </h2>
           <p
             style={{
-              fontSize: 12,
               color: "var(--sem-text-muted)",
-              maxWidth: 380,
-              margin: 0,
+              fontSize: 12,
               lineHeight: 1.5,
+              margin: 0,
+              maxWidth: 380,
             }}
           >
             In the app, hgDoc surfaces render the <code>hgAiPending</code> mark
