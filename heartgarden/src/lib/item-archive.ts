@@ -5,10 +5,10 @@
 
 export const HG_ARCHIVE_META_KEY = "hgArchive" as const;
 
-export type HgArchiveMeta = {
+export interface HgArchiveMeta {
   archived?: boolean;
   archivedAt?: string;
-};
+}
 
 export function readHgArchive(meta: unknown): HgArchiveMeta | null {
   if (!meta || typeof meta !== "object" || Array.isArray(meta)) {

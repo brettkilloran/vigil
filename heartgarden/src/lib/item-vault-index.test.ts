@@ -66,7 +66,7 @@ describe("lore meta anthropic body + hash", () => {
     const pad = "a".repeat(LORE_META_MAX_INPUT_CHARS);
     const row = { title: "t", contentText: pad };
     const h1 = computeLoreMetaSourceHash(row, FIXED_MODEL);
-    const rowSamePrefix = { title: "t", contentText: pad + "TAIL" };
+    const rowSamePrefix = { title: "t", contentText: `${pad}TAIL` };
     const h2 = computeLoreMetaSourceHash(rowSamePrefix, FIXED_MODEL);
     expect(h1).toBe(h2);
   });

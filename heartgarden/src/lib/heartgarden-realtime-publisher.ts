@@ -6,9 +6,8 @@ import {
 } from "@/src/lib/heartgarden-realtime-config";
 import { recordHeartgardenRealtimePublishMs } from "@/src/lib/heartgarden-realtime-publish-metrics";
 
-export type HeartgardenRealtimeEvent = {
-  type: "space.invalidate";
-  spaceId: string;
+export interface HeartgardenRealtimeEvent {
+  itemId?: string;
   originSpaceId: string;
   reason:
     | "item.created"
@@ -19,10 +18,11 @@ export type HeartgardenRealtimeEvent = {
     | "space.deleted"
     | "space.moved"
     | "item-links.changed";
-  itemId?: string;
+  spaceId: string;
   spaceIds?: string[];
+  type: "space.invalidate";
   updatedAt: string;
-};
+}
 
 type HeartgardenRealtimeRedisClient = ReturnType<typeof createClient>;
 

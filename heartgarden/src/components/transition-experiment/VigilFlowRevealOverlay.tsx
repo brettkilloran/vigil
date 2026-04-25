@@ -283,14 +283,14 @@ function compileShader(
   return shader;
 }
 
-export type VigilFlowRevealOverlayProps = {
+export interface VigilFlowRevealOverlayProps {
+  /** True while default-scenario bootstrap fetch has not finished — dims the overlay. */
+  bootstrapPending?: boolean;
+  navActive: boolean;
   scenario: "default" | "corrupt";
   /** After the user activates (or non-default mount): full reveal target 1; before that, ambient ~nav idle. */
   sessionActivated: boolean;
-  navActive: boolean;
-  /** True while default-scenario bootstrap fetch has not finished — dims the overlay. */
-  bootstrapPending?: boolean;
-};
+}
 
 export function VigilFlowRevealOverlay({
   scenario,

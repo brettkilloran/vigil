@@ -82,7 +82,7 @@ describe("LoreHybridFocusEditor character identity", () => {
     nameField!.textContent = "Ada";
 
     await act(async () => {
-      nameField!.dispatchEvent(
+      nameField?.dispatchEvent(
         new InputEvent("input", { bubbles: true, cancelable: true })
       );
     });
@@ -115,12 +115,12 @@ describe("LoreHybridFocusEditor character identity", () => {
     );
     expect(nameField).toBeTruthy();
     const text = document.createTextNode("Bob");
-    nameField!.appendChild(text);
+    nameField?.appendChild(text);
 
     await act(async () => {
       const ev = new InputEvent("input", { bubbles: true, cancelable: true });
       Object.defineProperty(ev, "target", { value: text, enumerable: true });
-      nameField!.dispatchEvent(ev);
+      nameField?.dispatchEvent(ev);
     });
 
     expect(onChangeFocusHtml).toHaveBeenCalled();

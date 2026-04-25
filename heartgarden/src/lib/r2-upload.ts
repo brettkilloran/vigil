@@ -1,14 +1,14 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export type R2Env = {
-  accountId: string;
+export interface R2Env {
   accessKeyId: string;
-  secretAccessKey: string;
+  accountId: string;
   bucket: string;
   /** Public origin for GET (no trailing slash), e.g. https://pub-xxxx.r2.dev */
   publicBaseUrl: string;
-};
+  secretAccessKey: string;
+}
 
 export function readR2Env(): R2Env | null {
   const accountId = process.env.R2_ACCOUNT_ID?.trim() ?? "";

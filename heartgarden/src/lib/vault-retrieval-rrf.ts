@@ -4,12 +4,12 @@ export const RRF_WEIGHT_LEXICAL = 1;
 export const RRF_WEIGHT_VECTOR = 1;
 export const RRF_WEIGHT_MENTIONS = 0.5;
 
-export type RrfFusionConfig = {
+export interface RrfFusionConfig {
   k?: number;
   lexicalWeight?: number;
-  vectorWeight?: number;
   mentionWeight?: number;
-};
+  vectorWeight?: number;
+}
 
 function normalizeRrfConfig(config: RrfFusionConfig | undefined): {
   k: number;
@@ -46,28 +46,28 @@ export function rrfScore(rank: number | undefined, k = RRF_K): number {
   return 1 / (k + rank + 1);
 }
 
-export type RrfFusionInput = {
+export interface RrfFusionInput {
+  config?: RrfFusionConfig;
   /** Item ids in lexical relevance order (first = best). */
   lexicalOrderedIds: string[];
-  /** Item ids in vector relevance order (first chunk per item defines rank). */
-  vectorOrderedIds: string[];
+  maxItems: number;
   /** Item ids in mention relevance order (first = densest mention hit). */
   mentionOrderedIds?: string[];
-  maxItems: number;
-  config?: RrfFusionConfig;
-};
+  /** Item ids in vector relevance order (first chunk per item defines rank). */
+  vectorOrderedIds: string[];
+}
 
-export type RrfFusionScore = {
+export interface RrfFusionScore {
   lexRank?: number;
-  vecRank?: number;
   mentionRank?: number;
   rrf: number;
-};
+  vecRank?: number;
+}
 
-export type RrfFusionResult = {
-  topIds: string[];
+export interface RrfFusionResult {
   scores: Map<string, RrfFusionScore>;
-};
+  topIds: string[];
+}
 
 /**
  * Pure RRF over two ordered id lists (deduped per list by first occurrence).

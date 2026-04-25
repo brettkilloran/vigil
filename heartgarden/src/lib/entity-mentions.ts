@@ -205,14 +205,14 @@ function mentionCountFromDistance(distance: number): number {
  * semantic-neighbor pass. Cleanup of stale rows is also scoped to the same
  * term set so unrelated mentions are preserved.
  */
-export type EntityMentionRescanOptions = {
+export interface EntityMentionRescanOptions {
   /**
    * Normalized (lowercased, trimmed) vocabulary terms whose mention rows may
    * have changed. When omitted, the rescan is full (term + semantic, cleanup
    * across all terms).
    */
   restrictToTerms?: readonly string[];
-};
+}
 
 export async function rescanItemEntityMentions(
   db: VigilDb,
@@ -262,14 +262,14 @@ export async function rescanItemEntityMentions(
   // `DELETE`) at the end of the rescan. The previous per-row UPDATE/INSERT
   // pattern wrote N+1 statements per item × matched-term × target — at a
   // 1k-vocab brane that's thousands of round-trips per rescan.
-  type MentionUpsertRow = {
-    targetItemId: string;
+  interface MentionUpsertRow {
+    headingPath: string | null;
     matchedTerm: string;
-    sourceKind: MentionSourceKind;
     mentionCount: number;
     snippet: string | null;
-    headingPath: string | null;
-  };
+    sourceKind: MentionSourceKind;
+    targetItemId: string;
+  }
   const pendingUpserts: MentionUpsertRow[] = [];
 
   const applyMentionRow = (args: {
@@ -297,12 +297,12 @@ export async function rescanItemEntityMentions(
   // REVIEW_2026-04-25_1730 H3: precompute matched vocab entries and
   // batch-load all referenced target spaces in one query (was N+1: one
   // SELECT per target).
-  type MatchedTermEntry = {
-    term: string;
-    itemIds: readonly string[];
+  interface MatchedTermEntry {
     count: number;
+    itemIds: readonly string[];
     snippet: string | null;
-  };
+    term: string;
+  }
   const matchedTerms: MatchedTermEntry[] = [];
   const targetItemIds = new Set<string>();
   for (const entry of vocab.terms) {
@@ -460,9 +460,9 @@ export async function rescanItemEntityMentions(
  * REVIEW_2026-04-25_1730 H3: enables incremental "one title changed" rescans
  * instead of brane-wide N+1 rebuilds.
  */
-export type ScheduleBraneEntityMentionRescanOptions = {
+export interface ScheduleBraneEntityMentionRescanOptions {
   affectedTerms?: readonly string[];
-};
+}
 
 export function scheduleBraneEntityMentionRescanAfterResponse(
   db: VigilDb,

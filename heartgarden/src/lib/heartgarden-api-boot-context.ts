@@ -45,7 +45,9 @@ export type HeartgardenApiBootContext =
   /** Boot gate on and no `hg_boot` cookie (middleware should block `/api/*` first). */
   | { role: "unauthenticated" };
 
-type CookieJar = { get: (name: string) => { value?: string } | undefined };
+interface CookieJar {
+  get: (name: string) => { value?: string } | undefined;
+}
 
 /** Neon space UUID hidden from GM workspace when set (Players-only space). */
 export function heartgardenPlayerSpaceIdExcludedFromGm(): string | undefined {

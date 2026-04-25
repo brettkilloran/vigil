@@ -5,13 +5,13 @@ import { useCallback, useEffect, useState } from "react";
 import type { WorkspaceBootTierTag } from "@/src/lib/workspace-view-cache";
 
 /** Folder entities the user has opened (entered child space), for Cmd+K quick access. */
-export type RecentPaletteFolder = {
+export interface RecentPaletteFolder {
   id: string;
-  title: string;
   parentSpaceId: string;
   parentSpaceName: string;
+  title: string;
   updatedAt: number;
-};
+}
 
 const MAX_RECENT_FOLDERS = 20;
 

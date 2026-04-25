@@ -60,7 +60,7 @@ function fanoutStats() {
       : arr[Math.min(arr.length - 1, Math.floor(q * (arr.length - 1)))];
   return {
     count: arr.length,
-    lastMs: arr.length ? arr[arr.length - 1]! : null,
+    lastMs: arr.length ? arr.at(-1)! : null,
     p50Ms: p(0.5),
     p95Ms: p(0.95),
   };
@@ -98,10 +98,10 @@ subscriber.on("error", () => {
   // Keep process alive; reconnect behavior is handled by the Redis client.
 });
 
-type RoomState = {
+interface RoomState {
   sockets: Set<WebSocket>;
   subscribed: boolean;
-};
+}
 
 const roomMap = new Map<string, RoomState>();
 

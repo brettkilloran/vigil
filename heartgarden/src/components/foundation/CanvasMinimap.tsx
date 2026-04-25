@@ -14,32 +14,32 @@ import { cx } from "@/src/lib/cx";
 
 import styles from "./CanvasMinimap.module.css";
 
-type CanvasMinimapProps = {
+interface CanvasMinimapProps {
+  activeSpaceId: string;
+  collapsedStacks: readonly CollapsedStackInfo[];
   graph: CanvasGraph;
   /** Output of `minimapLayoutSignature(graph, activeSpaceId)` — throttles work when `graph` ref churns (collab). */
   layoutSignature: string;
-  activeSpaceId: string;
-  collapsedStacks: readonly CollapsedStackInfo[];
-  translateX: number;
-  translateY: number;
-  scale: number;
-  viewportWidth: number;
-  viewportHeight: number;
-  selectedNodeIds: readonly string[];
-  minZoom: number;
   maxZoom: number;
-  /** Pan camera when viewport handle is dragged (`dw`/`dh` in world units matching minimap viewBox). */
-  onPanWorldDelta: (dw: number, dh: number) => void;
+  /** Stretch to host width (metrics cluster strip above minimap). */
+  metricsDockWidth?: boolean;
+  minZoom: number;
   /** Center viewport on a world point at current zoom. */
   onCenterOnWorld: (wx: number, wy: number) => void;
   onFitAll: () => void;
+  /** Pan camera when viewport handle is dragged (`dw`/`dh` in world units matching minimap viewBox). */
+  onPanWorldDelta: (dw: number, dh: number) => void;
   /** Live placement sizes from DOM (`offsetWidth`/`offsetHeight`) keyed by entity id. */
   placementSizes?: ReadonlyMap<string, MinimapPlacementSize> | null;
+  scale: number;
+  selectedNodeIds: readonly string[];
   /** Compact chrome for embedding in the bottom-right viewport metrics dock row. */
   toolbarEmbed?: boolean;
-  /** Stretch to host width (metrics cluster strip above minimap). */
-  metricsDockWidth?: boolean;
-};
+  translateX: number;
+  translateY: number;
+  viewportHeight: number;
+  viewportWidth: number;
+}
 
 function padBounds(
   b: { minX: number; minY: number; maxX: number; maxY: number },

@@ -67,10 +67,10 @@ describe("lore import round-trip guards", () => {
           canonicalEntityKind: "item" as const,
           summary: "",
           folderClientId: null,
-          sourceChunkIds: [chunks[0]!.id],
+          sourceChunkIds: [chunks[0]?.id],
           sourcePassages: [
             {
-              chunkId: chunks[0]!.id,
+              chunkId: chunks[0]?.id,
               quote:
                 "The Obsidian Shard emitted a pulse visible to all divers.",
             },
@@ -91,10 +91,10 @@ describe("lore import round-trip guards", () => {
           canonicalEntityKind: "other" as const,
           summary: "",
           folderClientId: null,
-          sourceChunkIds: [chunks[0]!.id],
+          sourceChunkIds: [chunks[0]?.id],
           sourcePassages: [
             {
-              chunkId: chunks[0]!.id,
+              chunkId: chunks[0]?.id,
               quote:
                 "The Obsidian Shard emitted a pulse visible to all divers.",
             },

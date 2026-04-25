@@ -10,16 +10,16 @@ export type HeartgardenSpaceSyncRunSource =
   | "initial"
   | "visibility";
 
-type Snapshot = {
-  spaceSyncRuns: Record<HeartgardenSpaceSyncRunSource, number>;
+interface Snapshot {
+  bootstrapRepairAttempts: number;
+  itemPatchConflict: number;
+  itemPatchOk: number;
+  pollContractFailures: number;
+  realtimeMessagesReceived: number;
   realtimeWsConnects: number;
   realtimeWsDisconnects: number;
-  realtimeMessagesReceived: number;
-  pollContractFailures: number;
-  bootstrapRepairAttempts: number;
-  itemPatchOk: number;
-  itemPatchConflict: number;
-};
+  spaceSyncRuns: Record<HeartgardenSpaceSyncRunSource, number>;
+}
 
 const spaceSyncRuns: Record<HeartgardenSpaceSyncRunSource, number> = {
   poll_interval: 0,

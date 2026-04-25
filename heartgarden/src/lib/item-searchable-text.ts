@@ -12,17 +12,17 @@ import {
   readHgDocFromContentJson,
 } from "@/src/lib/hg-doc/serialize";
 
-export type ItemSearchableSource = {
-  title?: string | null;
-  contentText?: string | null;
+export interface ItemSearchableSource {
   contentJson?: unknown;
-  entityType?: string | null;
+  contentText?: string | null;
   entityMeta?: unknown;
-  imageUrl?: string | null;
+  entityType?: string | null;
   imageMeta?: unknown;
-  loreSummary?: string | null;
+  imageUrl?: string | null;
   loreAliases?: string[] | null;
-};
+  loreSummary?: string | null;
+  title?: string | null;
+}
 
 /** Narrow row shape for callers that have a full `items` row. */
 export type ItemSearchableRowPick = Pick<

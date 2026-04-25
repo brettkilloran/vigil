@@ -28,20 +28,23 @@ export const CONNECTION_KINDS_IN_ORDER = [
 
 export type ConnectionKind = (typeof CONNECTION_KINDS_IN_ORDER)[number];
 
-export type ConnectionKindMeta = {
-  kind: ConnectionKind;
-  /** `item_links.link_type` value written to the data layer. */
-  linkType: string;
-  /** Label shown next to the swatch in the picker. */
-  label: string;
-  /** One-line caption for tooltips / aria. */
-  hint: string;
-  /** Folder color scheme id (shared with folder tints for visual continuity). */
-  scheme: FolderColorSchemeId;
-  /** Resolved OKLCH swatch string used as `CanvasPinConnection.color`. */
-  swatch: string;
+export interface ConnectionKindMeta {
+  /**
+   * Tokens for AI retrieval/generation hints. Keep terse and domain-agnostic;
+   * prompts can expand these into richer prose guidance.
+   */
+  autopopulationKeywords: readonly string[];
   /** Lighter / neon rim color for selected states and ring accents. */
   border: string;
+  /** One-line caption for tooltips / aria. */
+  hint: string;
+  kind: ConnectionKind;
+  /** Label shown next to the swatch in the picker. */
+  label: string;
+  /** `item_links.link_type` value written to the data layer. */
+  linkType: string;
+  /** Folder color scheme id (shared with folder tints for visual continuity). */
+  scheme: FolderColorSchemeId;
   /** Stable semantic family for ranking, prompts, and future field hints. */
   semanticFamily:
     | "default"
@@ -50,12 +53,9 @@ export type ConnectionKindMeta = {
     | "operational"
     | "adversarial"
     | "historical";
-  /**
-   * Tokens for AI retrieval/generation hints. Keep terse and domain-agnostic;
-   * prompts can expand these into richer prose guidance.
-   */
-  autopopulationKeywords: readonly string[];
-};
+  /** Resolved OKLCH swatch string used as `CanvasPinConnection.color`. */
+  swatch: string;
+}
 
 function schemeMeta(id: FolderColorSchemeId): FolderColorSchemeMeta {
   const found = FOLDER_COLOR_SCHEMES.find((s) => s.id === id);
@@ -322,10 +322,10 @@ export function canonicalKindForConnection(params: {
   return snapColorToConnectionKind(params.color);
 }
 
-export type CanonicalConnectionPair = {
+export interface CanonicalConnectionPair {
   color: string;
   linkType: string;
-};
+}
 
 export function canonicalPairForKind(
   kind: ConnectionKind

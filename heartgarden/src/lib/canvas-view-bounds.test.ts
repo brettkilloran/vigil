@@ -92,17 +92,17 @@ describe("computeSpaceContentBounds", () => {
     const g = graphWith([content("a", 10, 20)]);
     const b = computeSpaceContentBounds(g, SPACE, []);
     expect(b).not.toBeNull();
-    expect(b!.minX).toBeCloseTo(10);
-    expect(b!.minY).toBeCloseTo(20);
-    expect(b!.maxX).toBeCloseTo(10 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH);
-    expect(b!.maxY).toBeCloseTo(20 + CANVAS_BOUNDS_CONTENT_HEIGHT);
+    expect(b?.minX).toBeCloseTo(10);
+    expect(b?.minY).toBeCloseTo(20);
+    expect(b?.maxX).toBeCloseTo(10 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH);
+    expect(b?.maxY).toBeCloseTo(20 + CANVAS_BOUNDS_CONTENT_HEIGHT);
   });
 
   it("uses folder default dimensions", () => {
     const g = graphWith([folder("f", 0, 0)]);
     const b = computeSpaceContentBounds(g, SPACE, []);
-    expect(b!.maxX - b!.minX).toBeCloseTo(CANVAS_BOUNDS_FOLDER_WIDTH);
-    expect(b!.maxY - b!.minY).toBeCloseTo(CANVAS_BOUNDS_FOLDER_HEIGHT);
+    expect(b?.maxX - b?.minX).toBeCloseTo(CANVAS_BOUNDS_FOLDER_WIDTH);
+    expect(b?.maxY - b?.minY).toBeCloseTo(CANVAS_BOUNDS_FOLDER_HEIGHT);
   });
 
   it("treats multi-card stack as one footprint at stack slot", () => {
@@ -114,8 +114,8 @@ describe("computeSpaceContentBounds", () => {
     expect(stacks).toHaveLength(1);
     const solo = computeSpaceContentBounds(g, SPACE, []);
     const withStacks = computeSpaceContentBounds(g, SPACE, stacks);
-    expect(withStacks!.maxX).toBeGreaterThan(solo!.maxX);
-    expect(withStacks!.maxX).toBeCloseTo(
+    expect(withStacks?.maxX).toBeGreaterThan(solo?.maxX);
+    expect(withStacks?.maxX).toBeCloseTo(
       100 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH + 6
     );
   });
@@ -125,10 +125,10 @@ describe("computeSpaceContentBounds", () => {
     const graphOnly = computeSpaceContentBounds(g, SPACE, []);
     const measured = new Map([["a", { width: 340, height: 900 }]]);
     const withDom = computeSpaceContentBounds(g, SPACE, [], measured);
-    expect(withDom!.maxY - withDom!.minY).toBeGreaterThan(
-      graphOnly!.maxY - graphOnly!.minY
+    expect(withDom?.maxY - withDom?.minY).toBeGreaterThan(
+      graphOnly?.maxY - graphOnly?.minY
     );
-    expect(withDom!.maxY).toBeCloseTo(20 + 900);
+    expect(withDom?.maxY).toBeCloseTo(20 + 900);
   });
 });
 
@@ -195,16 +195,16 @@ describe("computeBoundsForEntitySubset", () => {
     const stacks = buildCollapsedStacksList(g, SPACE);
     const b = computeBoundsForEntitySubset(g, SPACE, stacks, ["bottom"]);
     expect(b).not.toBeNull();
-    expect(b!.minX).toBeLessThanOrEqual(500);
-    expect(b!.maxX).toBeGreaterThanOrEqual(
+    expect(b?.minX).toBeLessThanOrEqual(500);
+    expect(b?.maxX).toBeGreaterThanOrEqual(
       500 + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH
     );
     const b2 = computeBoundsForEntitySubset(g, SPACE, stacks, ["a", "bottom"]);
-    expect(b2!.minX).toBeCloseTo(0);
-    expect(b!.minX).toBeCloseTo(500);
-    expect(b2!.maxX).toBeCloseTo(b!.maxX);
-    expect(b2!.maxX).toBeGreaterThan(
-      b2!.minX + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH
+    expect(b2?.minX).toBeCloseTo(0);
+    expect(b?.minX).toBeCloseTo(500);
+    expect(b2?.maxX).toBeCloseTo(b?.maxX);
+    expect(b2?.maxX).toBeGreaterThan(
+      b2?.minX + CANVAS_BOUNDS_UNIFIED_NODE_WIDTH
     );
   });
 
@@ -238,25 +238,25 @@ describe("listMinimapAtomRects", () => {
     const g = graphWith([content("a", 100, 200, { rotation: 25 })]);
     const atoms = listMinimapAtomRects(g, SPACE, [], new Set());
     expect(atoms).toHaveLength(1);
-    expect(atoms[0]!.x).toBe(100);
-    expect(atoms[0]!.y).toBe(200);
-    expect(atoms[0]!.width).toBe(CANVAS_BOUNDS_UNIFIED_NODE_WIDTH);
-    expect(atoms[0]!.height).toBe(CANVAS_BOUNDS_CONTENT_HEIGHT);
-    expect(atoms[0]!.rotationDeg).toBe(25);
+    expect(atoms[0]?.x).toBe(100);
+    expect(atoms[0]?.y).toBe(200);
+    expect(atoms[0]?.width).toBe(CANVAS_BOUNDS_UNIFIED_NODE_WIDTH);
+    expect(atoms[0]?.height).toBe(CANVAS_BOUNDS_CONTENT_HEIGHT);
+    expect(atoms[0]?.rotationDeg).toBe(25);
   });
 
   it("uses entity height when set", () => {
     const g = graphWith([content("tall", 0, 0, { height: 420 })]);
     const atoms = listMinimapAtomRects(g, SPACE, [], new Set());
-    expect(atoms[0]!.height).toBe(420);
+    expect(atoms[0]?.height).toBe(420);
   });
 
   it("prefers placementSizes over stale graph height for minimap rect", () => {
     const g = graphWith([content("doc", 0, 0, { height: 280 })]);
     const measured = new Map([["doc", { width: 340, height: 720 }]]);
     const atoms = listMinimapAtomRects(g, SPACE, [], new Set(), measured);
-    expect(atoms[0]!.height).toBe(720);
-    expect(atoms[0]!.width).toBe(340);
+    expect(atoms[0]?.height).toBe(720);
+    expect(atoms[0]?.width).toBe(340);
   });
 
   it("positions collapsed stack atom like top layer fan (offset + fan angle)", () => {
@@ -268,9 +268,9 @@ describe("listMinimapAtomRects", () => {
     const atoms = listMinimapAtomRects(g, SPACE, stacks, new Set());
     const stackAtom = atoms.find((a) => a.key.startsWith("s:"));
     expect(stackAtom).toBeDefined();
-    expect(stackAtom!.x).toBe(500 + 6);
-    expect(stackAtom!.y).toBe(500 + 6);
-    expect(stackAtom!.rotationDeg).toBeCloseTo(0.8);
+    expect(stackAtom?.x).toBe(500 + 6);
+    expect(stackAtom?.y).toBe(500 + 6);
+    expect(stackAtom?.rotationDeg).toBeCloseTo(0.8);
   });
 });
 

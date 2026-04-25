@@ -433,38 +433,38 @@ export async function listItemsForSpaceSubtree(
 
 export type SearchSort = "relevance" | "updated" | "created" | "title";
 
-export type SearchFilters = {
-  spaceId?: string;
-  /** When set, restrict to these spaces (e.g. player root + all folders under it). Mutually exclusive with `spaceId` in practice. */
-  spaceIds?: string[];
-  /** Exclude items in this space (GM global search vs Players space). */
-  excludeSpaceId?: string;
-  /** Exclude items in any of these spaces (full player-world subtree for GM). */
-  excludeSpaceIds?: string[];
-  itemTypes?: string[];
-  entityTypes?: string[];
-  updatedAfter?: Date;
-  hasLinks?: boolean;
-  inStack?: boolean;
-  sort?: SearchSort;
-  limit?: number;
-  /** Items with `entityMeta.campaignEpoch` null or >= this value are included. */
-  minCampaignEpoch?: number;
-  /** When true, exclude items with `entityMeta.loreHistorical === true`. */
-  excludeLoreHistorical?: boolean;
+export interface SearchFilters {
   /**
    * When set, restrict to items whose `entityMeta.canonicalEntityKind`
    * matches one of these lore-engine kinds (e.g. `npc`, `location`).
    */
   canonicalEntityKinds?: string[];
-};
+  entityTypes?: string[];
+  /** When true, exclude items with `entityMeta.loreHistorical === true`. */
+  excludeLoreHistorical?: boolean;
+  /** Exclude items in this space (GM global search vs Players space). */
+  excludeSpaceId?: string;
+  /** Exclude items in any of these spaces (full player-world subtree for GM). */
+  excludeSpaceIds?: string[];
+  hasLinks?: boolean;
+  inStack?: boolean;
+  itemTypes?: string[];
+  limit?: number;
+  /** Items with `entityMeta.campaignEpoch` null or >= this value are included. */
+  minCampaignEpoch?: number;
+  sort?: SearchSort;
+  spaceId?: string;
+  /** When set, restrict to these spaces (e.g. player root + all folders under it). Mutually exclusive with `spaceId` in practice. */
+  spaceIds?: string[];
+  updatedAfter?: Date;
+}
 
-export type SearchRow = {
+export interface SearchRow {
   item: typeof items.$inferSelect;
-  space: Pick<typeof spaces.$inferSelect, "id" | "name" | "parentSpaceId">;
   score?: number;
   snippet?: string;
-};
+  space: Pick<typeof spaces.$inferSelect, "id" | "name" | "parentSpaceId">;
+}
 
 function normalizeLimit(
   limit: number | undefined,
@@ -817,25 +817,25 @@ export async function listLinksForItem(db: VigilDb, itemId: string) {
     );
 }
 
-export type LinkEndpoint = {
+export interface LinkEndpoint {
   id: string;
-  title: string;
   itemType: string;
-};
+  title: string;
+}
 
-export type ResolvedLinkOut = {
+export interface ResolvedLinkOut {
+  label: string | null;
   linkId: string;
   linkType: string;
-  label: string | null;
   to: LinkEndpoint;
-};
+}
 
-export type ResolvedLinkIn = {
+export interface ResolvedLinkIn {
+  from: LinkEndpoint;
+  label: string | null;
   linkId: string;
   linkType: string;
-  label: string | null;
-  from: LinkEndpoint;
-};
+}
 
 export async function getItemLinksResolved(
   db: VigilDb,

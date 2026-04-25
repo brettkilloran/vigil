@@ -12,11 +12,11 @@ import {
 
 import styles from "./ArchitecturalRemotePresenceLayer.module.css";
 
-type Props = {
+interface Props {
+  nameplateEnabled?: boolean;
   peers: SpacePresencePeer[];
   prefersReducedMotion: boolean;
-  nameplateEnabled?: boolean;
-};
+}
 
 export function ArchitecturalRemotePresenceCursors({
   peers,

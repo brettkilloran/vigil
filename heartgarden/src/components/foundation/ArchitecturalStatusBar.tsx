@@ -348,7 +348,7 @@ function SaveAndVersionPopover({
     }
     const id = requestAnimationFrame(() => reposition());
     return () => cancelAnimationFrame(id);
-  }, [open, reposition, showWarningIcon]);
+  }, [open, reposition]);
 
   useEffect(() => {
     if (!open) {
@@ -605,7 +605,7 @@ function SaveAndVersionPopover({
             {sync.lastError ? (
               <div className={styles.syncPopoverCopyRow}>
                 {detailPasteText ? (
-                  <pre className={styles.syncPopoverDiagnostic} tabIndex={0}>
+                  <pre className={styles.syncPopoverDiagnostic}>
                     {detailPasteText}
                   </pre>
                 ) : null}
@@ -986,18 +986,18 @@ function VaultIndexStatusInline() {
   );
 }
 
-export type CollabPeerPresenceChip = {
+export interface CollabPeerPresenceChip {
+  ariaLabel: string;
   clientId: string;
-  kind?: "peer" | "overflow";
+  displayName?: string;
   emoji?: string;
   initials?: string;
-  displayName?: string;
-  sigilLabel?: string;
-  title: string;
-  ariaLabel: string;
+  kind?: "peer" | "overflow";
   muted?: boolean;
   onFollow: () => void;
-};
+  sigilLabel?: string;
+  title: string;
+}
 
 export function ArchitecturalStatusBar({
   envLabel = "波途画電",

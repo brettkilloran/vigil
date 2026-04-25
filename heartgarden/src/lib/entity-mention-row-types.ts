@@ -10,15 +10,15 @@
  * needs only one edit.
  */
 
-export type AltMentionRow = {
+export interface AltMentionRow {
   itemId: string;
-  title: string;
   mentionCount: number;
   snippet?: string | null;
-};
+  title: string;
+}
 
-export type AltSearchRow = {
+export interface AltSearchRow {
   id: string;
-  title?: string | null;
   itemType?: string | null;
-};
+  title?: string | null;
+}

@@ -38,15 +38,15 @@ const IMPORT_LINK_TYPE_LIST = CANONICAL_RELATIONSHIP_LINK_TYPES.join(", ");
 const IMPORT_LINK_TYPE_GLOSSARY = connectionKindsPromptGlossary();
 const LORE_IMPORT_RESPONSE_SNIPPET_MAX = 2000;
 
-export type LoreImportLlmCallEvent = {
-  label: string;
-  model: string;
+export interface LoreImportLlmCallEvent {
   durationMs?: number;
   inputTokens?: number | null;
+  label: string;
+  model: string;
   outputTokens?: number | null;
-  stopReason?: string | null;
   responseSnippet?: string;
-};
+  stopReason?: string | null;
+}
 
 type LoreImportLlmCallReporter = (
   event: LoreImportLlmCallEvent
@@ -225,11 +225,17 @@ export function extractJsonObject(raw: string): string | null {
   return t.slice(start, end + 1);
 }
 
-export type OutlineLlmResult = {
+export interface OutlineLlmResult {
   folders: {
     clientId: string;
     title: string;
     parentClientId: string | null;
+  }[];
+  links: {
+    fromClientId: string;
+    toClientId: string;
+    linkType?: string;
+    linkIntent?: "association" | "binding_hint";
   }[];
   notes: {
     clientId: string;
@@ -244,13 +250,7 @@ export type OutlineLlmResult = {
     campaignEpoch?: number;
     loreHistorical?: boolean;
   }[];
-  links: {
-    fromClientId: string;
-    toClientId: string;
-    linkType?: string;
-    linkIntent?: "association" | "binding_hint";
-  }[];
-};
+}
 
 /** Shrink per-chunk excerpts until the full chunk id list fits in the outline prompt. */
 export function buildOutlineChunkListPayload(
@@ -609,18 +609,18 @@ export async function runLoreImportOutlineLlm(
   }
 }
 
-export type ChunkAssignmentDiagnostics = {
-  /** Chunks not referenced by any note's sourceChunkIds (valid id + unassigned). */
-  unassignedChunkIds: string[];
-  /** Note clientIds that resolved zero valid chunks. */
-  noteClientIdsWithoutChunks: string[];
+export interface ChunkAssignmentDiagnostics {
   /** chunkId -> list of note clientIds that claim it when >1. */
   duplicateAssignments: { chunkId: string; noteClientIds: string[] }[];
-  /** Note bodies whose quoted grounding passages all failed verification. */
-  noteClientIdsWithoutGrounding: string[];
   /** Duplicate quoted passages across notes (normalized text). */
   duplicateQuotePassages: { quote: string; noteClientIds: string[] }[];
-};
+  /** Note clientIds that resolved zero valid chunks. */
+  noteClientIdsWithoutChunks: string[];
+  /** Note bodies whose quoted grounding passages all failed verification. */
+  noteClientIdsWithoutGrounding: string[];
+  /** Chunks not referenced by any note's sourceChunkIds (valid id + unassigned). */
+  unassignedChunkIds: string[];
+}
 
 function buildFallbackBodyFromChunks(
   sourceChunkIds: string[],
@@ -851,24 +851,24 @@ export function fillNoteBodiesFromChunks(
   return attachBodiesToOutline({ folders: [], notes, links: [] }, chunks);
 }
 
-export type CandidateRow = {
+export interface CandidateRow {
+  entityType?: string | null;
   itemId: string;
-  title: string;
+  itemType?: string;
+  snippet?: string;
   spaceId?: string;
   spaceName: string;
-  snippet?: string;
-  itemType?: string;
-  entityType?: string | null;
-};
+  title: string;
+}
 
-export type SpaceCandidateRow = {
+export interface SpaceCandidateRow {
+  path?: string;
+  reason?: string;
+  score?: number;
   spaceId: string;
   spaceTitle: string;
-  path?: string;
-  score?: number;
-  reason?: string;
   topTitles?: string[];
-};
+}
 
 export async function runLoreImportMergeLlm(
   apiKey: string,
@@ -1124,20 +1124,18 @@ export async function runLoreImportMergeLlmBatched(
   return { mergeProposals, contradictions, targetSpaces };
 }
 
-export type LoreImportClarifyContext = {
+export interface LoreImportClarifyContext {
+  chunks: { id: string; heading: string; excerpt: string }[];
+  contradictions: {
+    id: string;
+    noteClientId?: string;
+    summary: string;
+    details?: string;
+  }[];
   folders: {
     clientId: string;
     title: string;
     parentClientId: string | null | undefined;
-  }[];
-  notes: {
-    clientId: string;
-    title: string;
-    summary: string;
-    folderClientId: string | null;
-    canonicalEntityKind?: string;
-    ingestionSignals?: IngestionSignals;
-    loreHistorical?: boolean;
   }[];
   links: {
     fromClientId: string;
@@ -1153,14 +1151,16 @@ export type LoreImportClarifyContext = {
     strategy: string;
     rationale?: string;
   }[];
-  contradictions: {
-    id: string;
-    noteClientId?: string;
+  notes: {
+    clientId: string;
+    title: string;
     summary: string;
-    details?: string;
+    folderClientId: string | null;
+    canonicalEntityKind?: string;
+    ingestionSignals?: IngestionSignals;
+    loreHistorical?: boolean;
   }[];
-  chunks: { id: string; heading: string; excerpt: string }[];
-};
+}
 
 export async function runLoreImportClarifyLlm(
   apiKey: string,
@@ -1210,7 +1210,7 @@ export function ensureOutlineHasFallbackNote(
   }
   outline.notes.push({
     clientId: "n_fallback",
-    title: chunks[0]!.heading.slice(0, 255) || "Imported document",
+    title: chunks[0]?.heading.slice(0, 255) || "Imported document",
     canonicalEntityKind: "lore",
     summary: "Auto-generated from source chunks.",
     folderClientId: null,
@@ -1228,7 +1228,7 @@ export function ensureOutlineHasFallbackNote(
           )
           .join("\n\n"),
         {
-          title: chunks[0]!.heading.slice(0, 255) || "Imported document",
+          title: chunks[0]?.heading.slice(0, 255) || "Imported document",
           requireH1: true,
         }
       ).blocks,

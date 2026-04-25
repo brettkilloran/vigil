@@ -110,10 +110,10 @@ describe("evaluateFactionRosterThreadLink", () => {
     if (r.kind !== "connect_and_patch") {
       return;
     }
-    const nextF = r.patch.entityUpdates[fId]!(
+    const nextF = r.patch.entityUpdates[fId]?.(
       entities[fId] as CanvasContentEntity
     );
-    const nextC = r.patch.entityUpdates[cId]!(
+    const nextC = r.patch.entityUpdates[cId]?.(
       entities[cId] as CanvasContentEntity
     );
     expect(nextF.factionRoster?.[0]?.kind).toBe("character");
@@ -135,10 +135,10 @@ describe("evaluateLocationCharacterThreadLink", () => {
     if (r.kind !== "connect_and_patch") {
       return;
     }
-    const nextC = r.patch.entityUpdates[cId]!(
+    const nextC = r.patch.entityUpdates[cId]?.(
       entities[cId] as CanvasContentEntity
     );
-    const nextL = r.patch.entityUpdates[lId]!(
+    const nextL = r.patch.entityUpdates[lId]?.(
       entities[lId] as CanvasContentEntity
     );
     expect(nextC.loreThreadAnchors?.primaryLocationItemId).toBe(lId);

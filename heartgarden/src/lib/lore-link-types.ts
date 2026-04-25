@@ -18,14 +18,14 @@ export const LINK_TYPE_GROUP_HEADINGS: Record<LinkTypeGroup, string> = {
   relationship: "Relationships",
 };
 
-export type LoreLinkTypeOption = {
-  value: string;
+export interface LoreLinkTypeOption {
+  group: LinkTypeGroup;
   /** Short label (datalist, compact UIs). */
   label: string;
-  group: LinkTypeGroup;
   /** Primary label for menus and pickers. */
   menuLabel: string;
-};
+  value: string;
+}
 
 /**
  * Values stored in `item_links.link_type` for the canonical canvas relationship

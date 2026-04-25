@@ -12,11 +12,11 @@ export const HEARTGARDEN_BOOT_COOKIE_NAME = "hg_boot";
 /** Signed cookie payload tier. Legacy cookies may still store `"visitor"`; verify normalizes to `"player"`. */
 export type HeartgardenBootTier = "access" | "player" | "demo";
 
-export type HeartgardenBootPayload = {
-  tier: HeartgardenBootTier;
+export interface HeartgardenBootPayload {
   /** Unix seconds */
   exp: number;
-};
+  tier: HeartgardenBootTier;
+}
 
 const DUMMY_DIGEST_A = createHash("sha256")
   .update("\0hg_boot_unset_a", "utf8")

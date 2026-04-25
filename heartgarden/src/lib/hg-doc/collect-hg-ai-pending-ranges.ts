@@ -5,12 +5,12 @@ import {
   HG_AI_PENDING_SPLIT_GAP_MAX,
 } from "@/src/lib/hg-doc/hg-ai-pending-mark";
 
-export type HgAiPendingRangeMetrics = {
-  ranges: { from: number; to: number }[];
+export interface HgAiPendingRangeMetrics {
   pendingChars: number;
-  totalTextChars: number;
   pendingCoverage: number;
-};
+  ranges: { from: number; to: number }[];
+  totalTextChars: number;
+}
 
 /** Contiguous PM ranges covered by the `hgAiPending` mark (merged across text-node splits). */
 export function collectHgAiPendingRanges(
@@ -50,7 +50,7 @@ export function collectHgAiPendingRangeMetrics(
   raw.sort((a, b) => a.from - b.from);
   const merged: { from: number; to: number }[] = [];
   for (const r of raw) {
-    const last = merged[merged.length - 1];
+    const last = merged.at(-1);
     if (last && r.from <= last.to) {
       last.to = Math.max(last.to, r.to);
     } else {
@@ -59,7 +59,7 @@ export function collectHgAiPendingRangeMetrics(
   }
   const mergedSplits: { from: number; to: number }[] = [];
   for (const r of merged) {
-    const last = mergedSplits[mergedSplits.length - 1];
+    const last = mergedSplits.at(-1);
     if (
       last &&
       r.from > last.to &&

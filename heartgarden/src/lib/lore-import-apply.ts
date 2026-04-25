@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import type { InferSelectModel } from "drizzle-orm";
 import { and, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -101,10 +101,10 @@ async function bulkInsertItems(
   return out;
 }
 
-type SourceCardDraft = {
-  title: string;
+interface SourceCardDraft {
   text: string;
-};
+  title: string;
+}
 
 export function splitIntoSourceParts(text: string): string[] {
   const trimmed = text.trim();
@@ -960,10 +960,10 @@ export async function applyLoreImportPlan(
       zIndexCursor.set(body.spaceId, zRoot);
     }
 
-    type NoteInsertPlan = {
+    interface NoteInsertPlan {
       clientId: string;
       values: Parameters<typeof bulkInsertItems>[1][number];
-    };
+    }
     const notePlans: NoteInsertPlan[] = notesToCreate.map((note) => {
       const targetSpaceId =
         orgMode === "folders" && note.folderClientId

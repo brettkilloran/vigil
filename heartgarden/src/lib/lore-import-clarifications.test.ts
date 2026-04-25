@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -274,7 +274,7 @@ describe("applyClarificationPatches", () => {
         selectedOptionIds: ["to_f2"],
       },
     ]);
-    expect(next.notes[0]!.folderClientId).toBe("f2");
+    expect(next.notes[0]?.folderClientId).toBe("f2");
   });
 
   it("discards merge proposal", () => {

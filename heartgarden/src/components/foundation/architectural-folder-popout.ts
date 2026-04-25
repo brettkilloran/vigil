@@ -1,23 +1,23 @@
 import type { CanvasGraph } from "@/src/components/foundation/architectural-types";
 
-export type FolderPopOutEntityMove = {
+export interface FolderPopOutEntityMove {
   entityId: string;
   fromSpaceId: string;
-  toSpaceId: string;
   newSlot: { x: number; y: number };
-};
+  toSpaceId: string;
+}
 
-export type FolderPopOutSpaceReparent = {
-  spaceId: string;
+export interface FolderPopOutSpaceReparent {
   newParentId: string;
-};
+  spaceId: string;
+}
 
-export type FolderPopOutPlan = {
-  entityMoves: FolderPopOutEntityMove[];
-  spaceReparents: FolderPopOutSpaceReparent[];
-  folderEntityIds: string[];
+export interface FolderPopOutPlan {
   emptiedSpaceIds: string[];
-};
+  entityMoves: FolderPopOutEntityMove[];
+  folderEntityIds: string[];
+  spaceReparents: FolderPopOutSpaceReparent[];
+}
 
 function findContainingSpaceId(
   graph: CanvasGraph,

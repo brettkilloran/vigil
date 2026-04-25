@@ -36,7 +36,12 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
-type CameraEntry = { x: number; y: number; zoom: number; lastSeenAt: number };
+interface CameraEntry {
+  lastSeenAt: number;
+  x: number;
+  y: number;
+  zoom: number;
+}
 
 export function readSpaceCamera(spaceId: string): CameraState | null {
   if (typeof window === "undefined") {

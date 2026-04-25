@@ -6,7 +6,7 @@ import type {
   ReactElement,
   ReactNode,
 } from "react";
-import { cloneElement, forwardRef, isValidElement } from "react";
+import { cloneElement, isValidElement } from "react";
 
 import { cx } from "@/src/lib/cx";
 
@@ -87,97 +87,93 @@ function sharedProps({
   };
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  function Button(
-    {
-      variant = "default",
-      size = "md",
-      tone = "glass",
-      isActive = false,
-      isLoading = false,
-      leadingIcon,
-      trailingIcon,
-      iconOnly = false,
-      asChild = false,
-      forceState = "default",
-      className,
-      children,
-      disabled,
-      ...buttonProps
-    },
-    ref
-  ) {
-    const mergedDisabled = disabled || isLoading;
-    const aiBindAttr = buttonProps["data-hg-ai-bind"];
-    const isAiBind = aiBindAttr === true || aiBindAttr === "true";
+export const Button = function Button({
+  variant = "default",
+  size = "md",
+  tone = "glass",
+  isActive = false,
+  isLoading = false,
+  leadingIcon,
+  trailingIcon,
+  iconOnly = false,
+  asChild = false,
+  forceState = "default",
+  className,
+  children,
+  disabled,
+  ref,
+  ...buttonProps
+}: ButtonProps & { ref?: RefObject<HTMLButtonElement | null> }) {
+  const mergedDisabled = disabled || isLoading;
+  const aiBindAttr = buttonProps["data-hg-ai-bind"];
+  const isAiBind = aiBindAttr === true || aiBindAttr === "true";
 
-    if (iconOnly && !buttonProps["aria-label"]) {
-      throw new Error("Icon-only buttons must include aria-label.");
-    }
-
-    if (asChild) {
-      if (!isValidElement(children)) {
-        throw new Error(
-          "Button with asChild must receive exactly one valid element."
-        );
-      }
-      const child = children as ReactElement<
-        HTMLAttributes<HTMLElement> & {
-          className?: string;
-          children?: ReactNode;
-        }
-      >;
-      return cloneElement(child, {
-        ...sharedProps({
-          className: cx(child.props.className, className),
-          variant,
-          size,
-          tone,
-          isActive,
-          isLoading,
-          iconOnly,
-          forceState,
-          disabled: mergedDisabled,
-        }),
-        "aria-busy": isLoading || undefined,
-        children: (
-          <>
-            {leadingIcon}
-            {isAiBind ? (
-              <span>{child.props.children}</span>
-            ) : (
-              child.props.children
-            )}
-            {trailingIcon}
-          </>
-        ),
-      });
-    }
-
-    return (
-      /* eslint-disable-next-line no-restricted-syntax -- Base shared Button must render the native control. */
-      <button
-        aria-busy={isLoading || undefined}
-        disabled={mergedDisabled}
-        ref={ref}
-        type="button"
-        {...sharedProps({
-          className,
-          variant,
-          size,
-          tone,
-          isActive,
-          isLoading,
-          iconOnly,
-          forceState,
-          disabled: mergedDisabled,
-        })}
-        {...buttonProps}
-      >
-        {leadingIcon}
-        {isAiBind ? <span>{children}</span> : children}
-        {trailingIcon}
-      </button>
-    );
+  if (iconOnly && !buttonProps["aria-label"]) {
+    throw new Error("Icon-only buttons must include aria-label.");
   }
-);
+
+  if (asChild) {
+    if (!isValidElement(children)) {
+      throw new Error(
+        "Button with asChild must receive exactly one valid element."
+      );
+    }
+    const child = children as ReactElement<
+      HTMLAttributes<HTMLElement> & {
+        className?: string;
+        children?: ReactNode;
+      }
+    >;
+    return cloneElement(child, {
+      ...sharedProps({
+        className: cx(child.props.className, className),
+        variant,
+        size,
+        tone,
+        isActive,
+        isLoading,
+        iconOnly,
+        forceState,
+        disabled: mergedDisabled,
+      }),
+      "aria-busy": isLoading || undefined,
+      children: (
+        <>
+          {leadingIcon}
+          {isAiBind ? (
+            <span>{child.props.children}</span>
+          ) : (
+            child.props.children
+          )}
+          {trailingIcon}
+        </>
+      ),
+    });
+  }
+
+  return (
+    /* eslint-disable-next-line no-restricted-syntax -- Base shared Button must render the native control. */
+    <button
+      aria-busy={isLoading || undefined}
+      disabled={mergedDisabled}
+      ref={ref}
+      type="button"
+      {...sharedProps({
+        className,
+        variant,
+        size,
+        tone,
+        isActive,
+        isLoading,
+        iconOnly,
+        forceState,
+        disabled: mergedDisabled,
+      })}
+      {...buttonProps}
+    >
+      {leadingIcon}
+      {isAiBind ? <span>{children}</span> : children}
+      {trailingIcon}
+    </button>
+  );
+};

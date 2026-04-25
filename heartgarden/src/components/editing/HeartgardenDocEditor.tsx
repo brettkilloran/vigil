@@ -33,30 +33,29 @@ function docJsonKey(doc: JSONContent): string {
 
 export type HeartgardenDocChromeRole = "focus" | "canvas";
 
-export type HeartgardenDocEditorProps = {
-  surfaceKey: string;
-
+export interface HeartgardenDocEditorProps {
   chromeRole: HeartgardenDocChromeRole;
 
-  value: JSONContent;
-
-  onChange?: (doc: JSONContent) => void;
-
-  editable?: boolean;
-
-  placeholder?: string | null;
-
   className?: string;
-
-  /** Block reorder grip — **focus / document sheet only**; ignored when `chromeRole="canvas"`. */
-  enableDragHandle?: boolean;
 
   /** Syntax token colors tuned for dark code panels (snippet focus + canvas code cards). */
   codeSyntaxDark?: boolean;
 
+  editable?: boolean;
+
+  /** Block reorder grip — **focus / document sheet only**; ignored when `chromeRole="canvas"`. */
+  enableDragHandle?: boolean;
+
+  onChange?: (doc: JSONContent) => void;
+
+  placeholder?: string | null;
+
   /** Right margin: one Bind control per pending AI span (hgAiPending mark). Default true. */
   showAiPendingGutter?: boolean;
-};
+  surfaceKey: string;
+
+  value: JSONContent;
+}
 
 export function HeartgardenDocEditor({
   surfaceKey,

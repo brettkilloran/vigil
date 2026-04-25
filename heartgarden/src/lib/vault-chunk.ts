@@ -26,11 +26,11 @@ export function vaultMaxChunksPerItem(): number {
   return Math.min(512, Math.max(1, Math.floor(parsed)));
 }
 
-export type VaultChunk = {
-  headingPath: string[];
+export interface VaultChunk {
   breadcrumb: string;
   chunkText: string;
-};
+  headingPath: string[];
+}
 
 function normalizeWhitespace(s: string): string {
   return s.replace(/\s+/g, " ").trim();
@@ -188,7 +188,7 @@ function applyOverlap(pieces: string[]): string[] {
   }
   const out: string[] = [pieces[0]!];
   for (let i = 1; i < pieces.length; i++) {
-    const prev = out[out.length - 1]!;
+    const prev = out.at(-1)!;
     const cur = pieces[i]!;
     if (VAULT_CHUNK_OVERLAP_CHARS <= 0) {
       out.push(cur);

@@ -141,9 +141,7 @@ export function presenceInitialsFromName(name: string): string {
   const tokens = name.trim().split(/\s+/).filter(Boolean);
   const first = tokens[0]?.[0] ?? "";
   const last =
-    tokens.length > 1
-      ? (tokens[tokens.length - 1]?.[0] ?? "")
-      : (tokens[0]?.[1] ?? "");
+    tokens.length > 1 ? (tokens.at(-1)?.[0] ?? "") : (tokens[0]?.[1] ?? "");
   const out = `${first}${last}`.trim().toUpperCase();
   return out.length > 0 ? out.slice(0, 2) : "??";
 }

@@ -1,13 +1,13 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
-export type SourceTextChunk = {
-  id: string;
+export interface SourceTextChunk {
+  body: string;
+  charEnd: number;
+  charStart: number;
   /** Best-effort section title from markdown heading or first line. */
   heading: string;
-  body: string;
-  charStart: number;
-  charEnd: number;
-};
+  id: string;
+}
 
 const MAX_BODY_CHARS = 2000;
 const HEADINGLESS_TARGET_CHARS = 1200;
@@ -54,7 +54,7 @@ export function chunkSourceText(fullText: string): SourceTextChunk[] {
     const m = /^(#{1,6})\s+(.+)$/.exec(line);
     if (m) {
       flush();
-      currentHeading = m[2]!.trim().slice(0, 200) || "Section";
+      currentHeading = m[2]?.trim().slice(0, 200) || "Section";
       currentStart = lineStart;
       buf.push(line);
     } else {
@@ -80,7 +80,11 @@ export function chunkSourceText(fullText: string): SourceTextChunk[] {
   return out;
 }
 
-type ParagraphSlice = { text: string; start: number; end: number };
+interface ParagraphSlice {
+  end: number;
+  start: number;
+  text: string;
+}
 
 function headingFromParagraph(para: string): string {
   const line = para.split("\n")[0]?.trim() ?? "";
@@ -135,11 +139,11 @@ function buildHeadinglessChunks(text: string): SourceTextChunk[] {
     if (active.length === 0) {
       return;
     }
-    const start = active[0]!.start;
-    const end = active[active.length - 1]!.end;
+    const start = active[0]?.start;
+    const end = active.at(-1)?.end;
     const body = active.map((p) => p.text).join("\n\n");
     out.push(
-      ...subdivideChunk(headingFromParagraph(active[0]!.text), body, start, end)
+      ...subdivideChunk(headingFromParagraph(active[0]?.text), body, start, end)
     );
     active = [];
   };

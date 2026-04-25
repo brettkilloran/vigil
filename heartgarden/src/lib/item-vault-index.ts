@@ -138,12 +138,12 @@ export function scheduleItemEmbeddingRefresh(db: VigilDb, row: ItemRow): void {
   });
 }
 
-export type ReindexItemVaultResult = {
-  ok: boolean;
+export interface ReindexItemVaultResult {
   chunks: number;
   loreMetaUpdated: boolean;
+  ok: boolean;
   skipped?: string;
-};
+}
 
 function assertLoreMetaHashInvariant(
   loreMetaUpdated: boolean,

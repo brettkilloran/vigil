@@ -81,7 +81,7 @@ function plainBodyToStructuredHtmlFragment(plainBody: string): string {
     }
     const heading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
     if (heading) {
-      const level = Math.min(6, heading[1]!.length);
+      const level = Math.min(6, heading[1]?.length);
       blocks.push(
         `<h${level}>${inlinePlainToHtmlWithWikiLinks(heading[2] ?? "")}</h${level}>`
       );
@@ -124,10 +124,10 @@ const HG_ARCH_DEFAULT = {
   tapeRotation: 0,
 } as const;
 
-export type BuildLoreNoteContentJsonOptions = {
+export interface BuildLoreNoteContentJsonOptions {
   /** When true, entire body is LLM/import output pending review. */
   aiPending?: boolean;
-};
+}
 
 /** Matches `buildContentJsonForContentEntity` defaults for a simple note card. */
 export function buildLoreNoteContentJson(

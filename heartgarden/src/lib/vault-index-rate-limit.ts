@@ -16,7 +16,10 @@ export const vaultIndexRateLimitMeta = {
   retry_after_seconds: Math.ceil(WINDOW_MS / 1000),
 } as const;
 
-type Bucket = { windowStart: number; count: number };
+interface Bucket {
+  count: number;
+  windowStart: number;
+}
 
 const indexBuckets = new Map<string, Bucket>();
 const reindexBuckets = new Map<string, Bucket>();

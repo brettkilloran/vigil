@@ -28,21 +28,7 @@ import {
   VigilBootFlowerGarden,
 } from "./VigilBootFlowerGarden";
 
-export type VigilAppBootScreenProps = {
-  /** Bootstrap + fonts / surface prep — enables the entry CTA. */
-  technicalReady: boolean;
-  /** Fires on click (starts flow transition in parent); boot fade runs in parallel. */
-  onActivate: () => void;
-  /** After boot tear-down (overlay opacity first; may wait for ambient audio fade to finish). */
-  onExitComplete: () => void;
-  /**
-   * Dedicated host inside `.viewport` (see `ArchitecturalCanvasApp` `.bootFlowerPortalHost`) — blooms sit
-   * **below** `VigilFlowRevealOverlay` (z ~92); boot copy/tools stay on the high overlay stack.
-   */
-  flowerPortalContainer: HTMLElement | null;
-  /** Same state as post-boot bottom-left effects switch (main in-viewport chrome hidden until Enter). */
-  canvasEffectsEnabled: boolean;
-  onCanvasEffectsEnabledChange: (next: boolean) => void;
+export interface VigilAppBootScreenProps {
   /** Increments when returning to auth (e.g. log out) so layered ambient remounts and restarts. */
   bootAmbientEpoch?: number;
   /** Parent calls ref.current() after log-out flushSync (same gesture as click) to satisfy autoplay policy. */
@@ -51,9 +37,23 @@ export type VigilAppBootScreenProps = {
   bootGateEnabled?: boolean;
   /** False until GET /api/heartgarden/boot has completed (disables CTA until known). */
   bootGateStatusReady?: boolean;
+  /** Same state as post-boot bottom-left effects switch (main in-viewport chrome hidden until Enter). */
+  canvasEffectsEnabled: boolean;
+  /**
+   * Dedicated host inside `.viewport` (see `ArchitecturalCanvasApp` `.bootFlowerPortalHost`) — blooms sit
+   * **below** `VigilFlowRevealOverlay` (z ~92); boot copy/tools stay on the high overlay stack.
+   */
+  flowerPortalContainer: HTMLElement | null;
+  /** Fires on click (starts flow transition in parent); boot fade runs in parallel. */
+  onActivate: () => void;
+  onCanvasEffectsEnabledChange: (next: boolean) => void;
+  /** After boot tear-down (overlay opacity first; may wait for ambient audio fade to finish). */
+  onExitComplete: () => void;
   /** Server misconfiguration (e.g. Players PIN without `HEARTGARDEN_PLAYER_SPACE_ID`). */
   serverConfigurationError?: string | null;
-};
+  /** Bootstrap + fonts / surface prep — enables the entry CTA. */
+  technicalReady: boolean;
+}
 
 /**
  * “Click to enter” gate: ambient copy + **Enter the garden.** Does not auto-dismiss when technical work finishes.

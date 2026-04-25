@@ -32,7 +32,7 @@ describe("chunkSourceText", () => {
   });
 
   it("subdivides oversized heading sections at the 2k cap", () => {
-    const huge = "# Incident\n" + "A".repeat(5500);
+    const huge = `# Incident\n${"A".repeat(5500)}`;
     const chunks = chunkSourceText(huge);
     expect(chunks.length).toBeGreaterThan(2);
     expect(chunks.every((c) => c.body.length <= 2000)).toBe(true);

@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 import type {
   ClarificationAnswer,
@@ -24,14 +24,14 @@ export function withoutLinkSemanticsClarifications(
   return items.filter((c) => c.category !== "link_semantics");
 }
 
-export type ClarificationFollowUpPrompt = {
+export interface ClarificationFollowUpPrompt {
   clarificationId: string;
-  title: string;
-  question: string;
-  options: { id: string; label: string; recommended?: boolean }[];
   confidence: number;
+  options: { id: string; label: string; recommended?: boolean }[];
   otherText: string;
-};
+  question: string;
+  title: string;
+}
 
 function tokenizeLoose(input: string): string[] {
   return input
@@ -63,10 +63,10 @@ function scoreOptionForOtherText(label: string, otherText: string): number {
 function bestJudgementOptionIds(c: LoreImportClarificationItem): string[] {
   if (c.questionKind === "multi_select") {
     const recommended = c.options.filter((o) => o.recommended).map((o) => o.id);
-    return recommended.length > 0 ? recommended : [c.options[0]!.id];
+    return recommended.length > 0 ? recommended : [c.options[0]?.id];
   }
   const recommended = c.options.find((o) => o.recommended);
-  return [recommended?.id ?? c.options[0]!.id];
+  return [recommended?.id ?? c.options[0]?.id];
 }
 
 function clonePlan(plan: LoreImportPlan): LoreImportPlan {
@@ -87,7 +87,7 @@ function rebuildNoteBodyText(
   const bodies: string[] = [];
   for (const cid of ids) {
     const ch = byId.get(cid);
-    if (!(ch && ch.body)) {
+    if (!ch?.body) {
       continue;
     }
     bodies.push(`## ${ch.heading}\n\n${ch.body}`);

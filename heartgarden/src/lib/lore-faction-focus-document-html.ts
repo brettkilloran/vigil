@@ -39,11 +39,11 @@ function takeInnerHtml(
   return h || fallback;
 }
 
-export type FactionFocusParts = {
-  orgPrimaryHtml: string;
+export interface FactionFocusParts {
   orgAccentHtml: string;
+  orgPrimaryHtml: string;
   recordHtml: string;
-};
+}
 
 function buildFactionFocusMetaBlockHtml(parts: FactionFocusParts): string {
   return `<div data-hg-faction-focus-meta="true" contenteditable="false">
@@ -120,7 +120,7 @@ export function parseFactionFocusDocumentHtml(
   html: string
 ): FactionFocusParts | null {
   const root = parseWrapped(html);
-  if (!(root && root.querySelector("[data-hg-faction-focus-record]"))) {
+  if (!root?.querySelector("[data-hg-faction-focus-record]")) {
     return null;
   }
   return {

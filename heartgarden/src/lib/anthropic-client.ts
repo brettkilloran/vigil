@@ -14,28 +14,28 @@ type AnthropicMessage = Anthropic.Message;
 
 type CacheTtl = "5m" | "1h";
 
-type CallAnthropicOptions = {
-  label: string;
+interface CallAnthropicOptions {
+  deadlineMs?: number;
   expectJson?: boolean;
-  deadlineMs?: number;
-  maxOutputTokens?: number;
-  thinkingBudget?: number | "off";
-};
-
-type CallAnthropicStreamOptions = {
   label: string;
-  deadlineMs?: number;
   maxOutputTokens?: number;
   thinkingBudget?: number | "off";
-};
+}
 
-type RunCompletionResult = {
-  message: AnthropicMessage;
-  text: string;
-  stopReason: string | null;
+interface CallAnthropicStreamOptions {
+  deadlineMs?: number;
+  label: string;
+  maxOutputTokens?: number;
+  thinkingBudget?: number | "off";
+}
+
+interface RunCompletionResult {
   continuationCount: number;
+  message: AnthropicMessage;
   retryCount: number;
-};
+  stopReason: string | null;
+  text: string;
+}
 
 export type CallAnthropicResult = RunCompletionResult & {
   jsonText: string | null;

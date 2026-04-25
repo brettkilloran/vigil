@@ -88,9 +88,9 @@ function BloomTile({
   );
 }
 
-export type VigilBootFlowerCatalogProps = {
+export interface VigilBootFlowerCatalogProps {
   kind?: VigilBootBloomKind;
-};
+}
 
 /**
  * Storybook / dev catalog: every bloom shape × every species palette (full or mini cluster).

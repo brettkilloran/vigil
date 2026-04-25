@@ -7,30 +7,33 @@ import { Button } from "@/src/components/ui/Button";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
-export type LoreAskSource = {
+export interface LoreAskSource {
+  excerpt: string;
   itemId: string;
-  title: string;
+  matchedChunks?: Array<{ text: string; headingPath: string[] }>;
   spaceId: string;
   spaceName: string;
-  excerpt: string;
-  matchedChunks?: Array<{ text: string; headingPath: string[] }>;
+  title: string;
   viaGraph?: boolean;
-};
+}
 
-type LoreResponse = {
-  ok?: boolean;
+interface LoreResponse {
   answer?: string | null;
-  sources?: LoreAskSource[];
-  model?: string | null;
   error?: unknown;
-};
-
-type LoreStreamMeta = { sources?: LoreAskSource[]; model?: string | null };
-type LoreStreamDone = {
-  answer?: string;
-  sources?: LoreAskSource[];
   model?: string | null;
-};
+  ok?: boolean;
+  sources?: LoreAskSource[];
+}
+
+interface LoreStreamMeta {
+  model?: string | null;
+  sources?: LoreAskSource[];
+}
+interface LoreStreamDone {
+  answer?: string;
+  model?: string | null;
+  sources?: LoreAskSource[];
+}
 
 function loreScrollableAncestorWithin(
   el: Node | null,

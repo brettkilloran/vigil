@@ -19,9 +19,8 @@ const LORE_IMPORT_EVENT_CAP = 500;
 const LORE_IMPORT_EVENT_FLUSH_BATCH = 6;
 const LORE_IMPORT_RESPONSE_SNIPPET_MAX = 2000;
 
-export type LoreImportJobEvent = {
-  ts?: string;
-  phase?: string;
+export interface LoreImportJobEvent {
+  durationMs?: number;
   kind:
     | "phase_start"
     | "phase_end"
@@ -29,15 +28,16 @@ export type LoreImportJobEvent = {
     | "vault_search"
     | "warning"
     | "note";
-  durationMs?: number;
   model?: string;
+  phase?: string;
+  ref?: string;
+  responseSnippet?: string;
+  stopReason?: string | null;
+  text?: string;
   tokensIn?: number | null;
   tokensOut?: number | null;
-  stopReason?: string | null;
-  responseSnippet?: string;
-  text?: string;
-  ref?: string;
-};
+  ts?: string;
+}
 
 class LoreImportJobCancelledError extends Error {
   code = LORE_IMPORT_JOB_CANCELLED_CODE;

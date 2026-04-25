@@ -17,16 +17,16 @@ export type FolderColorSchemeId =
   | "white"
   | "gray";
 
-export type FolderColorSchemeMeta = {
-  id: FolderColorSchemeId;
-  label: string;
-  /** Short line for thread picker catalog + tooltips — how to *use* the color, not only its name. */
-  usageHint: string;
-  /** Folder face + palette dot (same color so picker matches canvas). */
-  swatch: string;
+export interface FolderColorSchemeMeta {
   /** Neon edge / HUD ring on clip-path and flap. */
   border: string;
-};
+  id: FolderColorSchemeId;
+  label: string;
+  /** Folder face + palette dot (same color so picker matches canvas). */
+  swatch: string;
+  /** Short line for thread picker catalog + tooltips — how to *use* the color, not only its name. */
+  usageHint: string;
+}
 
 /** Parse `oklch(L C H)` / `oklch(L C H / a)` from our scheme strings. */
 function parseOklch(swatch: string): { L: number; C: number } | null {

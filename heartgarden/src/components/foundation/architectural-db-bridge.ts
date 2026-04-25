@@ -50,34 +50,34 @@ const LORE_CHARACTER_MIN_GEOMETRY_HEIGHT = 520;
 const LORE_LOCATION_ORDO_MIN_GEOMETRY_HEIGHT = 360;
 const DEFAULT_NOTE_HTML = `<div contenteditable="true">Start typing...</div>`;
 
-export type BootstrapSpaceRow = {
+export interface BootstrapSpaceRow {
   id: string;
   name: string;
   parentSpaceId: string | null;
   updatedAt: string;
-};
+}
 
-export type BootstrapResponse = {
-  ok: boolean;
-  demo?: boolean;
-  spaceId: string | null;
+export interface BootstrapResponse {
   braneId?: string | null;
-  spaces: BootstrapSpaceRow[];
-  items: CanvasItem[];
   camera: CameraState;
-};
+  demo?: boolean;
+  items: CanvasItem[];
+  ok: boolean;
+  spaceId: string | null;
+  spaces: BootstrapSpaceRow[];
+}
 
 /** Stored in `items.content_json` alongside TipTap/HTML payload. */
-export type HgArchPayload = {
-  theme?: ContentTheme;
-  tapeVariant?: TapeVariant;
-  rotation?: number;
-  tapeRotation?: number;
+export interface HgArchPayload {
+  factionRoster?: FactionRosterEntry[];
   folderColorScheme?: string;
   loreCard?: LoreCard;
-  factionRoster?: FactionRosterEntry[];
   loreThreadAnchors?: LoreCanvasThreadAnchors;
-};
+  rotation?: number;
+  tapeRotation?: number;
+  tapeVariant?: TapeVariant;
+  theme?: ContentTheme;
+}
 
 export function htmlToPlainText(html: string): string {
   if (typeof document !== "undefined") {
@@ -686,11 +686,11 @@ export function mergeRemoteItemPatches(
   };
 }
 
-export type RemoteSpaceChangeRow = {
+export interface RemoteSpaceChangeRow {
   id: string;
   name: string;
   parentSpaceId: string | null;
-};
+}
 
 /**
  * Apply `spaces` row updates from delta sync (e.g. folder reparent → `parent_space_id`).

@@ -69,14 +69,14 @@ export async function finalizeHeartgardenSearchFiltersForDb(
       .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
       .from(spaces);
     next.spaceIds = [...collectDescendantSpaceIds(ctx.playerSpaceId, slim)];
-    delete next.spaceId;
+    next.spaceId = undefined;
     return next;
   }
 
   if (ctx.role === "gm" && filters.excludeSpaceId) {
     const root = filters.excludeSpaceId;
     const next: SearchFilters = { ...filters };
-    delete next.excludeSpaceId;
+    next.excludeSpaceId = undefined;
     const slim = await db
       .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
       .from(spaces);

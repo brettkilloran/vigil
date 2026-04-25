@@ -27,7 +27,7 @@ export function stripHgAiPendingFromHgDocJson(doc: JSONContent): JSONContent {
     if (Array.isArray(node.marks)) {
       const filtered = node.marks.filter((m) => m.type !== "hgAiPending");
       if (filtered.length === 0) {
-        delete next.marks;
+        next.marks = undefined;
       } else {
         next.marks = filtered;
       }

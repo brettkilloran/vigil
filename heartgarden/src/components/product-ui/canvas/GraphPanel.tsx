@@ -4,42 +4,42 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/src/components/ui/Button";
 
-type BraneGraphNode = {
-  id: string;
-  title: string;
-  itemType: string;
-  entityType: string | null;
-  spaceId: string;
+interface BraneGraphNode {
   depth: number;
-};
-
-type BraneGraphEdge = {
+  entityType: string | null;
   id: string;
+  itemType: string;
+  spaceId: string;
+  title: string;
+}
+
+interface BraneGraphEdge {
+  edgeKind: "explicit" | "implicit";
+  id: string;
+  linkType?: string | null;
+  matchedTerm?: string | null;
   source: string;
   target: string;
-  edgeKind: "explicit" | "implicit";
-  matchedTerm?: string | null;
-  linkType?: string | null;
-};
+}
 
-type GraphResponse = {
-  ok?: boolean;
-  mode?: "full" | "neighborhood";
-  seedItemId?: string | null;
-  maxDepth?: number;
-  nodes?: BraneGraphNode[];
+interface GraphResponse {
   edges?: BraneGraphEdge[];
-  truncated?: boolean;
   frontierTruncated?: boolean;
-  totals?: { nodes: number; edges: number };
   limit?: number;
-};
+  maxDepth?: number;
+  mode?: "full" | "neighborhood";
+  nodes?: BraneGraphNode[];
+  ok?: boolean;
+  seedItemId?: string | null;
+  totals?: { nodes: number; edges: number };
+  truncated?: boolean;
+}
 
-type SeedSearchHit = {
+interface SeedSearchHit {
   id: string;
-  title: string | null;
   itemType: string | null;
-};
+  title: string | null;
+}
 
 const NEIGHBORHOOD_LIMIT = 250;
 const FULL_MODE_LIMIT = 250;
@@ -104,7 +104,7 @@ export function GraphPanel({
     setMode("neighborhood");
     setMaxDepth(1);
     etagRef.current = null;
-  }, [braneId]);
+  }, []);
 
   // Debounced seed search.
   useEffect(() => {

@@ -14,20 +14,21 @@ import { loreImportPlanSchema } from "@/src/lib/lore-import-plan-types";
 
 export const runtime = "nodejs";
 
-type RouteCtx = { params: Promise<{ jobId: string }> };
+interface RouteCtx {
+  params: Promise<{ jobId: string }>;
+}
 
-type LoreImportJobProgressPayload = {
+interface LoreImportJobProgressPayload {
+  message?: string;
+  meta?: Record<string, unknown>;
   phase?: string;
   step?: number;
   total?: number;
-  message?: string;
-  meta?: Record<string, unknown>;
   updatedAt?: string;
-};
+}
 
-type LoreImportJobEventPayload = {
-  ts?: string;
-  phase?: string;
+interface LoreImportJobEventPayload {
+  durationMs?: number;
   kind:
     | "phase_start"
     | "phase_end"
@@ -35,31 +36,32 @@ type LoreImportJobEventPayload = {
     | "vault_search"
     | "warning"
     | "note";
-  durationMs?: number;
   model?: string;
+  phase?: string;
+  ref?: string;
+  responseSnippet?: string;
+  stopReason?: string;
+  text?: string;
   tokensIn?: number;
   tokensOut?: number;
-  stopReason?: string;
-  responseSnippet?: string;
-  text?: string;
-  ref?: string;
-};
+  ts?: string;
+}
 
-type LoreImportJobView = {
-  id: string;
-  spaceId: string;
-  status: string;
-  plan: unknown;
+interface LoreImportJobView {
   error: string | null;
-  updatedAt: Date | null;
+  id: string;
+  lastProgressAt?: Date | null;
+  plan: unknown;
+  progressEvents?: unknown[] | null;
+  progressMessage?: string | null;
+  progressMeta?: Record<string, unknown> | null;
   progressPhase?: string | null;
   progressStep?: number | null;
   progressTotal?: number | null;
-  progressMessage?: string | null;
-  progressMeta?: Record<string, unknown> | null;
-  progressEvents?: unknown[] | null;
-  lastProgressAt?: Date | null;
-};
+  spaceId: string;
+  status: string;
+  updatedAt: Date | null;
+}
 
 const LORE_IMPORT_PROGRESS_EVENTS_LIMIT = 500;
 
@@ -83,7 +85,7 @@ function normalizeProgressMeta(
   const m = { ...(meta as Record<string, unknown>) };
   const p = coerceOptionalInt(m.pipelinePercent);
   if (p === null) {
-    delete m.pipelinePercent;
+    m.pipelinePercent = undefined;
   } else {
     m.pipelinePercent = Math.max(0, Math.min(100, p));
   }

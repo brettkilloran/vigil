@@ -1,16 +1,16 @@
-export type LoreImportEntityDraft = {
-  name: string;
+export interface LoreImportEntityDraft {
   kind: string;
+  name: string;
   summary: string;
-};
+}
 
-export type LoreImportLinkDraft = {
+export interface LoreImportLinkDraft {
   fromName: string;
-  toName: string;
   linkType?: string;
-};
+  toName: string;
+}
 
-export type LoreImportExtractResult = {
+export interface LoreImportExtractResult {
   entities: LoreImportEntityDraft[];
   suggestedLinks: LoreImportLinkDraft[];
-};
+}

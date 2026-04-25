@@ -16,7 +16,7 @@ describe("callAnthropicTextStream", () => {
   });
 
   it("continues automatically when stream stops at max_tokens", async () => {
-    const requestBodies: Array<Record<string, unknown>> = [];
+    const requestBodies: Record<string, unknown>[] = [];
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async (_input, init) => {

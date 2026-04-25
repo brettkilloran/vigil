@@ -80,17 +80,17 @@ function locationTopFieldFromEl(
   return null;
 }
 
-export type LoreHybridFocusEditorProps = {
-  variant: "character" | "location" | "faction";
-  focusHtml: string;
-  onChangeFocusHtml: (next: string) => void;
-  factionRoster?: FactionRosterEntry[];
-  onFactionRosterChange?: (next: FactionRosterEntry[]) => void;
+export interface LoreHybridFocusEditorProps {
   className?: string;
-  notesSurfaceKey?: string;
+  factionRoster?: FactionRosterEntry[];
   /** When this changes (e.g. active node id), identity row HTML is re-injected once; same key avoids wiping contenteditable while typing. */
   focusDocumentKey?: string | null;
-};
+  focusHtml: string;
+  notesSurfaceKey?: string;
+  onChangeFocusHtml: (next: string) => void;
+  onFactionRosterChange?: (next: FactionRosterEntry[]) => void;
+  variant: "character" | "location" | "faction";
+}
 
 export function LoreHybridFocusEditor({
   variant,
@@ -379,7 +379,7 @@ export function LoreHybridFocusEditor({
       host.removeEventListener("input", onMaybeIdentityEdit, true);
       host.removeEventListener("compositionend", onMaybeIdentityEdit, true);
     };
-  }, [variant, hasCharacterShell, emitCharacter, focusDocumentKey]);
+  }, [variant, hasCharacterShell, emitCharacter]);
 
   useEffect(() => {
     if (variant !== "location" || !hasLocationShell) {
@@ -478,7 +478,7 @@ export function LoreHybridFocusEditor({
       host.removeEventListener("input", onMaybeMetaEdit, true);
       host.removeEventListener("compositionend", onMaybeMetaEdit, true);
     };
-  }, [variant, hasLocationShell, emitLocation, focusDocumentKey]);
+  }, [variant, hasLocationShell, emitLocation]);
 
   useEffect(() => {
     if (variant !== "faction" || !hasFactionShell) {
@@ -519,7 +519,7 @@ export function LoreHybridFocusEditor({
       host.removeEventListener("input", onMaybeMetaEdit, true);
       host.removeEventListener("compositionend", onMaybeMetaEdit, true);
     };
-  }, [variant, hasFactionShell, emitFaction, focusDocumentKey]);
+  }, [variant, hasFactionShell, emitFaction]);
 
   const onNotesChange = useCallback(
     (doc: JSONContent) => {

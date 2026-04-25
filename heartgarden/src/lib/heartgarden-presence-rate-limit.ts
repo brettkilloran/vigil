@@ -1,6 +1,9 @@
 import { isPlaywrightE2E } from "@/src/lib/heartgarden-boot-session";
 
-type Bucket = { count: number; windowStart: number };
+interface Bucket {
+  count: number;
+  windowStart: number;
+}
 
 const buckets = new Map<string, Bucket>();
 let pruneCounter = 0;

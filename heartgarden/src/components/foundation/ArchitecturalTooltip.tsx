@@ -220,7 +220,7 @@ export function ArchitecturalTooltip({
       return;
     }
     updatePosition();
-  }, [open, content, updatePosition]);
+  }, [open, updatePosition]);
 
   useLayoutEffect(() => {
     if (!(open && paintOpen)) {

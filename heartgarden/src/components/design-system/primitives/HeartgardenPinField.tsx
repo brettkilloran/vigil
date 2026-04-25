@@ -22,25 +22,25 @@ import styles from "./HeartgardenPinField.module.css";
 
 const SLOTS = HEARTGARDEN_BOOT_PIN_LENGTH;
 
-export type HeartgardenPinFieldProps = {
+export interface HeartgardenPinFieldProps {
+  /** Focus first cell on mount (e.g. when console opens) */
+  autoFocus?: boolean;
+  className?: string;
+  disabled?: boolean;
+  errorMessage?: string | null;
   /** Optional prefix for stable ids in tests */
   id?: string;
   /** Accessible name; visually hidden via `.legend` */
   legend: string;
-  /** Shown above the PIN row (legend stays screen-reader-only unless you rely on this for sighted users). */
-  visibleCaption?: string;
-  value: string;
-  onValueChange: (next: string) => void;
-  onSubmit: () => void;
-  disabled?: boolean;
-  submitting?: boolean;
-  errorMessage?: string | null;
-  /** Focus first cell on mount (e.g. when console opens) */
-  autoFocus?: boolean;
   /** When focus leaves this control and `value` is still empty (e.g. dismiss boot access console). */
   onEmptyBlur?: () => void;
-  className?: string;
-};
+  onSubmit: () => void;
+  onValueChange: (next: string) => void;
+  submitting?: boolean;
+  value: string;
+  /** Shown above the PIN row (legend stays screen-reader-only unless you rely on this for sighted users). */
+  visibleCaption?: string;
+}
 
 function clampPin(raw: string): string {
   return raw.replace(/\s+/gu, "").slice(0, SLOTS);

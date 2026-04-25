@@ -9,12 +9,12 @@
  * superset is exposed via {@link readLoreImportJobInsertDiagnostic}. Schema-lag
  * detection is single-source via {@link isLoreImportJobSchemaLagError}.
  */
-export type LoreImportJobInsertErrorDiag = {
-  message?: string;
+export interface LoreImportJobInsertErrorDiag {
   code?: string;
   column?: string;
   detail?: string;
-};
+  message?: string;
+}
 
 export type LoreImportJobInsertDiagnostic = LoreImportJobInsertErrorDiag & {
   hint?: string;

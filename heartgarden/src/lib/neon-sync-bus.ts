@@ -5,17 +5,17 @@ import {
 
 export type NeonSyncFailureInput = string | SyncFailureDetail;
 
-export type NeonSyncSnapshot = {
+export interface NeonSyncSnapshot {
   /** True when `NEON_DATABASE_URL` bootstrap succeeded (not demo seed). */
   cloudEnabled: boolean;
-  /** Debounced writes not yet sent (e.g. note body waiting for idle). */
-  pending: number;
   /** In-flight HTTP mutations to Neon. */
   inFlight: number;
   lastError: string | null;
   /** Last successful mutation completion (ms epoch). */
   lastSavedAt: number | null;
-};
+  /** Debounced writes not yet sent (e.g. note body waiting for idle). */
+  pending: number;
+}
 
 let cloudEnabled = false;
 let pending = 0;

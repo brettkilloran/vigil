@@ -5,10 +5,10 @@ import type {
 import { BINDING_SLOT_BY_ID } from "@/src/lib/bindings-catalog";
 import { LINK_SEMANTICS_STRUCTURED_MIRROR } from "@/src/lib/item-link-meta";
 
-export type ItemEntityTypeRow = {
-  id: string;
+export interface ItemEntityTypeRow {
   entityType: string | null;
-};
+  id: string;
+}
 
 function readLinkSemantics(
   meta: Record<string, unknown> | null | undefined

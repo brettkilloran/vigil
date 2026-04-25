@@ -71,8 +71,8 @@ describe("useEditorSession", () => {
 
     expect(session).not.toBeNull();
     act(() => {
-      session!.beginEditing();
-      session!.onDraftChange("  Beta  ");
+      session?.beginEditing();
+      session?.onDraftChange("  Beta  ");
       vi.advanceTimersByTime(99);
     });
     expect(commits).toHaveLength(0);
@@ -102,13 +102,13 @@ describe("useEditorSession", () => {
     });
 
     act(() => {
-      session!.beginEditing();
-      session!.onDraftChange("Changed");
-      session!.cancelEditing();
+      session?.beginEditing();
+      session?.onDraftChange("Changed");
+      session?.cancelEditing();
       vi.advanceTimersByTime(100);
     });
 
     expect(commits).toHaveLength(0);
-    expect(session!.draft).toBe("Original");
+    expect(session?.draft).toBe("Original");
   });
 });

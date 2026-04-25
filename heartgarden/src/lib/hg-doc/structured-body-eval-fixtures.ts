@@ -1,15 +1,15 @@
 import type { HgStructuredBody } from "@/src/lib/hg-doc/structured-body";
 
-export type StructuredBodyEvalFixture = {
-  name: string;
-  title: string;
-  input: HgStructuredBody;
+export interface StructuredBodyEvalFixture {
   expect: {
     minH1: number;
     minH2: number;
     minH3: number;
   };
-};
+  input: HgStructuredBody;
+  name: string;
+  title: string;
+}
 
 export const STRUCTURED_BODY_EVAL_FIXTURES: StructuredBodyEvalFixture[] = [
   {

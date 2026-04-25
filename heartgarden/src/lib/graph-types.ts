@@ -1,28 +1,28 @@
-export type GraphNode = {
-  id: string;
-  title: string;
-  itemType: string;
+export interface GraphNode {
   entityType: string | null;
   external?: boolean;
   foreignSpaceId?: string | null;
-};
-
-export type GraphEdge = {
   id: string;
-  source: string;
-  target: string;
+  itemType: string;
+  title: string;
+}
+
+export interface GraphEdge {
   color: string | null;
-  sourcePin: string | null;
-  targetPin: string | null;
+  id: string;
   linkType: string | null;
   /** From `item_links.meta.slackMultiplier` when present (rope taut/loose). */
   slackMultiplier?: number | null;
-};
+  source: string;
+  sourcePin: string | null;
+  target: string;
+  targetPin: string | null;
+}
 
-export type SpaceGraphResponse = {
-  ok?: boolean;
-  nodes?: GraphNode[];
+export interface SpaceGraphResponse {
   edges?: GraphEdge[];
-  itemLinksRevision?: string;
   error?: string;
-};
+  itemLinksRevision?: string;
+  nodes?: GraphNode[];
+  ok?: boolean;
+}

@@ -8,14 +8,17 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 
-export type GraphLayoutNode = {
-  id: string;
-  title: string;
-  itemType: string;
+export interface GraphLayoutNode {
   entityType: string | null;
-};
+  id: string;
+  itemType: string;
+  title: string;
+}
 
-export type GraphLayoutEdge = { source: string; target: string };
+export interface GraphLayoutEdge {
+  source: string;
+  target: string;
+}
 
 type SimNode = GraphLayoutNode & SimulationNodeDatum;
 type SimLink = SimulationLinkDatum<SimNode>;
@@ -39,8 +42,8 @@ export function computeForceLayout(
     return out;
   }
   if (nodes.length === 1) {
-    const s = seed?.get(nodes[0]!.id);
-    out.set(nodes[0]!.id, { x: s?.x ?? cx, y: s?.y ?? cy });
+    const s = seed?.get(nodes[0]?.id);
+    out.set(nodes[0]?.id, { x: s?.x ?? cx, y: s?.y ?? cy });
     return out;
   }
 

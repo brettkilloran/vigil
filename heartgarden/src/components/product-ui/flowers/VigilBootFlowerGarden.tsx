@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  forwardRef,
   useCallback,
   useEffect,
   useId,
@@ -101,11 +100,11 @@ function mixOklch(a: string, b: string, ap: number): string {
   return `color-mix(in oklch, ${a} ${ap}%, ${b})`;
 }
 
-export type VigilBootFlowerGardenHandle = {
-  spawnAt: (clientX: number, clientY: number) => void;
-  cutAt: (clientX: number, clientY: number) => void;
+export interface VigilBootFlowerGardenHandle {
   clearAll: () => void;
-};
+  cutAt: (clientX: number, clientY: number) => void;
+  spawnAt: (clientX: number, clientY: number) => void;
+}
 
 const DEAD_CELL_COLORS = [
   "#2a1810",
@@ -121,16 +120,16 @@ const CUT_HALO_CHEBYSHEV = 5;
 /** Remove growth particles if they sit this close (cells) to any cut pixel. */
 const PARTICLE_CULL_MARGIN = 3;
 
-type WitherCell = {
-  r0: number;
-  g0: number;
+interface WitherCell {
   b0: number;
-  r1: number;
-  g1: number;
   b1: number;
-  startMs: number;
   durationMs: number;
-};
+  g0: number;
+  g1: number;
+  r0: number;
+  r1: number;
+  startMs: number;
+}
 
 /** Resolve any canvas-accepted CSS color to sRGB via a 1×1 readback (OKLCH, hex, etc.). */
 function sampleCssColorToRgb(cssColor: string): {
@@ -371,7 +370,9 @@ export const BLOOM_SHAPES: BloomShape[] = [
   "Sorrow Weep",
 ];
 
-type GardenRng = { s: number };
+interface GardenRng {
+  s: number;
+}
 
 function gardenRandU01(state: GardenRng): number {
   let x = state.s | 0;
@@ -410,29 +411,29 @@ function shuffleBloomShapeOrderMutable(
   }
 }
 
-export type Species = {
-  /** Variety label for catalog / Storybook (plain color-forward names). */
-  name: string;
-  stem: string;
-  leaf: string;
+export interface Species {
   /** Main petal ring */
   bloom: string;
   /** Hot center (overwrites stem at tip) */
   bloomCore: string;
   /** Outer soft halo */
   bloomHalo: string;
-  energyMin: number;
+  branchEnergyFrac: number;
+  branchEnergyMin: number;
+  branchGate: number;
   energyMax: number;
-  wander: number;
-  upJitter: number;
+  energyMin: number;
+  lateralRun: number;
+  leaf: string;
+  /** Variety label for catalog / Storybook (plain color-forward names). */
+  name: string;
   sinAmp: number;
   sinFreq: number;
-  branchGate: number;
-  branchEnergyMin: number;
-  branchEnergyFrac: number;
-  lateralRun: number;
   spike: string | null;
-};
+  stem: string;
+  upJitter: number;
+  wander: number;
+}
 
 export const SPECIES: Species[] = [
   {
@@ -741,20 +742,20 @@ function rollBootFlowerSpeciesIndex(rng: GardenRng): number {
   return Math.min(commonN - 1, Math.floor(u2 * commonN));
 }
 
-type Particle = {
-  x: number;
-  y: number;
-  energy: number;
-  species: number;
-  rnd: number[];
+interface Particle {
   age: number;
-  dir: number;
   bloomShape: BloomShape;
+  dir: number;
+  energy: number;
+  rnd: number[];
+  species: number;
   /** Rare: extra foliage pixels along the stem while growing */
   vineLeafy: boolean;
   /** Rare: thorn pixels along the stem */
   vineThorny: boolean;
-};
+  x: number;
+  y: number;
+}
 
 /** Rare stem traits — rolled once per new root spawn, copied to branches. */
 const VINE_LEAFY_CHANCE = 0.072;
@@ -1389,7 +1390,7 @@ function paintShapeZigzag(
   cx: number,
   cy: number,
   spec: Species,
-  rnd: number[],
+  _rnd: number[],
   mini: boolean
 ) {
   const steps: [number, number][] = mini
@@ -1424,7 +1425,7 @@ function paintShapeHeart(
   cx: number,
   cy: number,
   spec: Species,
-  rnd: number[],
+  _rnd: number[],
   mini: boolean
 ) {
   if (mini) {
@@ -1721,7 +1722,7 @@ function paintShapeTriskel(
               : mixOklch(spec.bloomCore, spec.bloom, 52);
       paint(cx + dx, cy + dy, c);
     }
-    const [ex, ey] = segs[segs.length - 1]!;
+    const [ex, ey] = segs.at(-1)!;
     paint(cx + ex, cy + ey, mixOklch(alienBeacon(spec), spec.leaf, 50));
   }
 }
@@ -2581,14 +2582,16 @@ export function drawVigilBootOccupiedOnCanvas(
   });
 }
 
-type VigilBootFlowerGardenProps = {
+interface VigilBootFlowerGardenProps {
   active: boolean;
-};
+}
 
-export const VigilBootFlowerGarden = forwardRef<
-  VigilBootFlowerGardenHandle,
-  VigilBootFlowerGardenProps
->(function VigilBootFlowerGarden({ active }, ref) {
+export const VigilBootFlowerGarden = function VigilBootFlowerGarden({
+  active,
+  ref,
+}: VigilBootFlowerGardenProps & {
+  ref?: RefObject<VigilBootFlowerGardenHandle | null>;
+}) {
   const filterId = useId().replace(/:/g, "");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -3091,4 +3094,4 @@ export const VigilBootFlowerGarden = forwardRef<
       </div>
     </div>
   );
-});
+};

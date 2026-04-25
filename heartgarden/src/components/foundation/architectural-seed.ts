@@ -30,16 +30,16 @@ import {
   tapeVariantForLoreCard,
 } from "@/src/lib/lore-node-seed-html";
 
-type StyleTokens = {
-  taskItem: string;
+interface StyleTokens {
   done: string;
-  taskCheckbox: string;
-  taskText: string;
   mediaFrame: string;
   mediaImage: string;
   mediaImageActions: string;
   mediaUploadBtn: string;
-};
+  taskCheckbox: string;
+  taskItem: string;
+  taskText: string;
+}
 
 /**
  * World-space offsets so the onboarding cluster sits around **world (0,0)** — matches how a

@@ -1,9 +1,9 @@
 import { RICH_EDITOR_SURFACE_SELECTOR } from "@/src/lib/rich-editor-surface";
 
-export type WordUnderPointer = {
-  word: string;
+export interface WordUnderPointer {
   rect: DOMRect;
-};
+  word: string;
+}
 
 export function readWordUnderPointer(
   clientX: number,

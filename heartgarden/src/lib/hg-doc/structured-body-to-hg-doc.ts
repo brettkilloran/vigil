@@ -12,10 +12,10 @@ import {
   type StructureReport,
 } from "@/src/lib/hg-doc/structured-body-heuristics";
 
-type ParseOptions = {
-  title?: string;
+interface ParseOptions {
   requireH1?: boolean;
-};
+  title?: string;
+}
 
 type BuildOptions = ParseOptions & {
   aiPending?: boolean;

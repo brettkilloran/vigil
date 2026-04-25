@@ -25,12 +25,12 @@ const PIPELINE_WEIGHT: Record<string, number> = {
 
 const PIPELINE_SUM = PIPELINE_ORDER.reduce((a, k) => a + PIPELINE_WEIGHT[k], 0);
 
-export type LoreImportPipelineFractionOpts = {
-  step?: number;
-  total?: number;
+export interface LoreImportPipelineFractionOpts {
   /** 0–1 position inside the current phase when there is no step/total. */
   phaseFraction?: number;
-};
+  step?: number;
+  total?: number;
+}
 
 export function computeLoreImportPipelinePercent(
   phase: string,

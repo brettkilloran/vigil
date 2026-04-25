@@ -12,21 +12,21 @@ import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 import { HEARTGARDEN_CHROME_ICON } from "@/src/lib/vigil-ui-classes";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
-export type VaultReviewDraft = {
-  title: string;
+export interface VaultReviewDraft {
   bodyText: string;
   excludeItemId?: string;
   /** Short label for the header (e.g. note title). */
   targetLabel: string;
-};
+  title: string;
+}
 
-export type VaultReviewIssue = {
-  summary: string;
-  severity: string;
-  details?: string;
+export interface VaultReviewIssue {
   candidateItemId?: string;
+  details?: string;
   handlingHint?: string;
-};
+  severity: string;
+  summary: string;
+}
 
 const PRESET_TAGS: { id: string; label: string; hint: string }[] = [
   {
@@ -102,7 +102,7 @@ export function ArchitecturalLoreReviewPanel({
 
   useEffect(() => {
     setDismissed(new Set());
-  }, [issues]);
+  }, []);
 
   const { attentionIndices, infoIndices } = useMemo(() => {
     const attention: number[] = [];

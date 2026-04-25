@@ -28,16 +28,16 @@ import {
   structuredBodyToHgDoc,
 } from "@/src/lib/hg-doc/structured-body-to-hg-doc";
 
-export type HeartgardenMcpServerConfig = {
+export interface HeartgardenMcpServerConfig {
   baseUrl: string;
   defaultSpaceId: string;
-  writeKey: string;
-  serviceKey: string;
-  playerSpaceExcluded: string;
   gmBreakGlass: boolean;
+  playerSpaceExcluded: string;
   /** When true, write tools return a clear error (set HEARTGARDEN_MCP_READ_ONLY=1 on the MCP process). */
   readOnly: boolean;
-};
+  serviceKey: string;
+  writeKey: string;
+}
 
 /** Max characters accepted for content_text on create/patch before calling the API (fails fast with a clear MCP error). */
 export const MCP_MAX_CONTENT_TEXT_CHARS = 2_000_000;
@@ -1201,7 +1201,7 @@ export function createHeartgardenMcpServer(
             index === 0
               ? 1
               : ((Math.min(3, section.headingPath.length) || 1) as 1 | 2 | 3),
-          text: section.headingPath[section.headingPath.length - 1] ?? title,
+          text: section.headingPath.at(-1) ?? title,
           charCount: section.text.length,
         }));
       } else {

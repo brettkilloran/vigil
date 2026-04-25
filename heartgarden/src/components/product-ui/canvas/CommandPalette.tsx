@@ -26,30 +26,30 @@ import type { RecentPaletteFolder } from "@/src/hooks/use-recent-folders";
 import type { RecentPaletteItem } from "@/src/hooks/use-recent-items";
 import { getVigilPortalRoot } from "@/src/lib/dom-portal-root";
 
-export type PaletteItem = {
+export interface PaletteItem {
+  entityType?: string | null;
   id: string;
-  title: string;
   itemType: string;
+  snippet?: string;
   spaceId: string;
   spaceName: string;
-  entityType?: string | null;
-  snippet?: string;
+  title: string;
   updatedAt?: string | number | Date | null;
-};
+}
 
-export type PaletteSpace = {
+export interface PaletteSpace {
   id: string;
   name: string;
   pathLabel?: string;
-};
+}
 
-export type PaletteAction = {
-  id: string;
-  label: string;
-  icon?: ReactNode;
+export interface PaletteAction {
   hint?: string;
+  icon?: ReactNode;
+  id: string;
   keywords?: string[];
-};
+  label: string;
+}
 
 const iconCls = "size-4 shrink-0 opacity-60";
 
@@ -417,7 +417,7 @@ export function CommandPalette({
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [qq, totalRows, open]);
+  }, []);
 
   useEffect(() => {
     if (!open || totalRows === 0) {

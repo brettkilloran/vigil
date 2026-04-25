@@ -2,11 +2,11 @@ import type { JSONContent } from "@tiptap/core";
 
 import { hgDocToPlainText } from "@/src/lib/hg-doc/serialize";
 
-export type HgDocSection = {
+export interface HgDocSection {
+  charRange: [number, number];
   headingPath: string[];
   text: string;
-  charRange: [number, number];
-};
+}
 
 function nodeText(node: JSONContent | null | undefined): string {
   if (!node) {
@@ -30,10 +30,10 @@ function nodeText(node: JSONContent | null | undefined): string {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-type TempSection = {
+interface TempSection {
   headingPath: string[];
   text: string;
-};
+}
 
 function trimHeadingPath(path: string[]): string[] {
   const out = path.map((p) => p.trim()).filter(Boolean);

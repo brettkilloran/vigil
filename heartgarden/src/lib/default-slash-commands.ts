@@ -1,11 +1,11 @@
-export type SlashCommandItem = {
-  id: string;
-  label: string;
-  hint?: string;
+export interface SlashCommandItem {
   command: string;
-  value?: string;
+  hint?: string;
+  id: string;
   keywords?: string[];
-};
+  label: string;
+  value?: string;
+}
 
 /** Default `/` menu — commands match `ArchitecturalCanvasApp` `runFormat`. */
 export const DEFAULT_SLASH_COMMAND_ITEMS: SlashCommandItem[] = [

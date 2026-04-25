@@ -9,11 +9,11 @@ export {
   heartgardenRealtimeTokenFromProtocolsHeader,
 } from "@/src/lib/heartgarden-realtime-protocol";
 
-type HeartgardenRealtimeTokenPayload = {
-  spaceId: string;
+interface HeartgardenRealtimeTokenPayload {
   exp: number;
   role: "gm" | "player";
-};
+  spaceId: string;
+}
 
 function toBase64Url(buf: Buffer): string {
   return buf

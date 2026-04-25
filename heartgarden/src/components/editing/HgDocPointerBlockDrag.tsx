@@ -18,16 +18,16 @@ import {
   nthTopLevelRange,
 } from "@/src/lib/hg-doc/move-top-level-block";
 
-type HitBase = {
-  index: number;
-  top: number;
-  left: number;
-  height: number;
-  /** Y (viewport px) for the six-dot grip — first line of the block (Notion-style), not vertical mid of tall blocks. */
-  gripAnchorY: number;
+interface HitBase {
   /** DOM used for Y hit-test; lift uses this so we do not re-resolve via `topLevelChildDom` (can fail when `children.length !== doc.childCount`). */
   blockEl: HTMLElement;
-};
+  /** Y (viewport px) for the six-dot grip — first line of the block (Notion-style), not vertical mid of tall blocks. */
+  gripAnchorY: number;
+  height: number;
+  index: number;
+  left: number;
+  top: number;
+}
 
 type Hit = HitBase & { tone: ButtonTone };
 
@@ -336,7 +336,7 @@ function clearDragSlotDims(proseRoot: HTMLElement) {
 
 function reapplyDragSlotDim(view: Editor["view"], index: number) {
   const el = topLevelChildDom(view, index);
-  if (el && el.isConnected) {
+  if (el?.isConnected) {
     dimDragSlot(el);
   }
 }
@@ -433,10 +433,9 @@ export function HgDocPointerBlockDrag({
     const view = editor.view;
     const session = dragSessionRef.current;
     const idx = session.index;
-    const block: HTMLElement | null =
-      session.blockEl && session.blockEl.isConnected
-        ? session.blockEl
-        : topLevelChildDom(view, idx);
+    const block: HTMLElement | null = session.blockEl?.isConnected
+      ? session.blockEl
+      : topLevelChildDom(view, idx);
     if (!block) {
       dragActiveRef.current = false;
       dragSessionRef.current = null;

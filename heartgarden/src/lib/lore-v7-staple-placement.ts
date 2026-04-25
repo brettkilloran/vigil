@@ -1,13 +1,13 @@
 import type { CSSProperties } from "react";
 
-export type OrdoV7StaplePlacementOptions = {
+export interface OrdoV7StaplePlacementOptions {
   /** Full span of hashed extra tilt in degrees (default 14 → ±7° from center). */
   extraDegRangeDeg?: number;
   /** Horizontal jitter span in px (default 50 → ±25px). */
   offsetXPx?: number;
   /** Vertical jitter span in px (default 22 → ±11px). */
   offsetYPx?: number;
-};
+}
 
 /**
  * Per-card staple / nail position + tilt: stable from seed (SSR-safe), independent of tape-only ±3°.

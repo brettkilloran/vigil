@@ -12,17 +12,17 @@ export function normalizeImportItemLinkType(raw: string | undefined): string {
   return t === "pin" ? "history" : t;
 }
 
-type NoteFolderSlot = {
+interface NoteFolderSlot {
   clientId: string;
   folderClientId: string | null | undefined;
-};
+}
 
-type PlanLinkDraft = {
+interface PlanLinkDraft {
   fromClientId: string;
-  toClientId: string;
-  linkType?: string;
   linkIntent?: "association" | "binding_hint";
-};
+  linkType?: string;
+  toClientId: string;
+}
 
 /**
  * Global brane links are allowed, so import links no longer require same-folder filtering.

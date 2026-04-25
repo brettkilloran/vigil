@@ -91,25 +91,25 @@ export function mergeLatestIsoCursor(
   return serverCursor;
 }
 
-export type SpaceChangePayloadRow = {
+export interface SpaceChangePayloadRow {
   id: string;
   name: string;
   parentSpaceId: string | null;
   updatedAt?: string;
-};
+}
 
 /** Parsed/validated shape for `GET /api/spaces/:id/changes` JSON (successful body). */
-export type ParsedSpaceChangesResponse = {
-  ok: true;
-  items: CanvasItem[];
-  spaces: SpaceChangePayloadRow[];
-  itemIds?: string[];
+export interface ParsedSpaceChangesResponse {
   cursor?: string;
-  /** Present on current API; when absent, clients should fall back to refreshing the graph each poll. */
-  itemLinksRevision?: string;
   /** Server has additional pages; advance `since` to `cursor` and fetch again. */
   hasMore?: boolean;
-};
+  itemIds?: string[];
+  /** Present on current API; when absent, clients should fall back to refreshing the graph each poll. */
+  itemLinksRevision?: string;
+  items: CanvasItem[];
+  ok: true;
+  spaces: SpaceChangePayloadRow[];
+}
 
 const CANVAS_ITEM_TYPES = new Set([
   "note",

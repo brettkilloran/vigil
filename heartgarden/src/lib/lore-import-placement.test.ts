@@ -50,7 +50,7 @@ describe("placeImportCards", () => {
     expect(result.source?.y).toBe(20);
     const rect = result.entities.a!;
     expect(rect.y).toBeGreaterThanOrEqual(
-      result.source!.y + result.source!.height
+      result.source?.y + result.source?.height
     );
   });
 

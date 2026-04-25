@@ -6,18 +6,18 @@ import { Button } from "@/src/components/ui/Button";
 
 export type ContextMenuPosition = { x: number; y: number } | null;
 
-export type ContextMenuHeadingItem = {
+export interface ContextMenuHeadingItem {
+  label: string;
   type: "heading";
-  label: string;
-};
+}
 
-export type ContextMenuActionItem = {
-  type?: "item";
-  label: string;
-  icon?: ReactNode;
-  onSelect: () => void;
+export interface ContextMenuActionItem {
   disabled?: boolean;
-};
+  icon?: ReactNode;
+  label: string;
+  onSelect: () => void;
+  type?: "item";
+}
 
 export type ContextMenuItem = ContextMenuHeadingItem | ContextMenuActionItem;
 

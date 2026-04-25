@@ -24,7 +24,7 @@ export function applyAllowedSpaceIdsToFilters(
   }
   if (next.spaceId) {
     next.spaceIds = allowedSpaceIds.has(next.spaceId) ? [next.spaceId] : [];
-    delete next.spaceId;
+    next.spaceId = undefined;
     return next;
   }
   next.spaceIds = [...allowedSpaceIds];

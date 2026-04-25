@@ -18,13 +18,13 @@ import styles from "./smart-import-questions-demo.module.css";
  * Open: /dev/smart-import-questions
  */
 
-type OtherFollowUp = {
+interface OtherFollowUp {
   clarificationId: string;
-  title: string;
-  question: string;
-  otherText: string;
   options: { id: string; label: string; recommended?: boolean }[];
-};
+  otherText: string;
+  question: string;
+  title: string;
+}
 
 function upsertAnswer(
   prev: ClarificationAnswer[],
@@ -144,14 +144,14 @@ type ScenarioKey =
   | "otherFollowUp"
   | "allDone";
 
-type Scenario = {
-  key: ScenarioKey;
-  label: string;
-  description: string;
+interface Scenario {
   clarifications: LoreImportClarificationItem[];
+  description: string;
   initialAnswers?: ClarificationAnswer[];
   initialOtherFollowUp?: OtherFollowUp | null;
-};
+  key: ScenarioKey;
+  label: string;
+}
 
 const SCENARIOS: Scenario[] = [
   {
@@ -227,17 +227,17 @@ const SCENARIOS: Scenario[] = [
 
 /* ------------------------------------ UI ------------------------------------ */
 
-type WizardProps = {
+interface WizardProps {
   scenario: Scenario;
-};
+}
 
-type MockPlanStats = {
+interface MockPlanStats {
   folders: number;
-  notes: number;
-  merges: number;
   links: number;
+  merges: number;
+  notes: number;
   reviewFlags: number;
-};
+}
 
 const MOCK_STATS: MockPlanStats = {
   folders: 4,
@@ -294,7 +294,7 @@ function WizardPreview({ scenario }: WizardProps) {
       ordered.map((c) => ({
         clarificationId: c.id,
         resolution: "answered" as const,
-        selectedOptionIds: [recommendedOptionId(c) ?? c.options[0]!.id],
+        selectedOptionIds: [recommendedOptionId(c) ?? c.options[0]?.id],
       }))
     );
     setOtherFollowUp(null);

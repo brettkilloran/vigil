@@ -101,19 +101,11 @@ const defaultRrfMentionWeightFromEnv = envNumberInRange(
 /**
  * Options for `hybridRetrieveItems`. Omitted fields use defaults matching pre-tuning behavior.
  */
-export type HybridRetrieveOptions = {
-  maxItems?: number;
-  vectorChunkLimit?: number;
-  includeVector?: boolean;
+export interface HybridRetrieveOptions {
   ftsLimit?: number;
+  ftsSparseThreshold?: number;
   fuzzyLimitWhenEmpty?: number;
   fuzzyLimitWhenSparse?: number;
-  ftsSparseThreshold?: number;
-  maxChunksPerItem?: number;
-  rrfK?: number;
-  rrfLexicalWeight?: number;
-  rrfVectorWeight?: number;
-  rrfMentionWeight?: number;
   /**
    * When false, skip `ts_headline` snippet generation in the lexical leg.
    * Default: true (back-compat with lore-engine / lore-import-plan-build / lore-consistency-check
@@ -121,7 +113,15 @@ export type HybridRetrieveOptions = {
    * can pass `false` to avoid expensive headline computation. (`REVIEW_2026-04-25_1835` M5.)
    */
   includeSnippets?: boolean;
-};
+  includeVector?: boolean;
+  maxChunksPerItem?: number;
+  maxItems?: number;
+  rrfK?: number;
+  rrfLexicalWeight?: number;
+  rrfMentionWeight?: number;
+  rrfVectorWeight?: number;
+  vectorChunkLimit?: number;
+}
 
 function tokenizeMentionQuery(query: string): string[] {
   return query
@@ -142,20 +142,20 @@ function vectorSqlLiteral(embedding: number[]): string {
   return `'[${embedding.join(",")}]'::vector`;
 }
 
-export type VectorChunkHit = {
-  itemId: string;
-  chunkText: string;
-  headingPath: string[];
+export interface VectorChunkHit {
   chunkIndex: number;
+  chunkText: string;
   distance: number;
-  item: typeof items.$inferSelect;
-  space: { id: string; name: string; parentSpaceId: string | null };
-};
-
-export type VectorChunkMatch = {
-  text: string;
   headingPath: string[];
-};
+  item: typeof items.$inferSelect;
+  itemId: string;
+  space: { id: string; name: string; parentSpaceId: string | null };
+}
+
+export interface VectorChunkMatch {
+  headingPath: string[];
+  text: string;
+}
 
 function parseHeadingPath(raw: unknown): string[] {
   if (Array.isArray(raw)) {
@@ -238,12 +238,12 @@ export async function searchItemChunksByVector(
   }));
 }
 
-export type HybridRetrieveResult = {
-  rows: SearchRow[];
-  itemIdToChunks: Map<string, string[]>;
+export interface HybridRetrieveResult {
   itemIdToChunkMatches: Map<string, VectorChunkMatch[]>;
+  itemIdToChunks: Map<string, string[]>;
   itemIdToFtsSnippet: Map<string, string>;
-};
+  rows: SearchRow[];
+}
 
 /**
  * Lexical (FTS + optional fuzzy) fused with vector chunk hits via RRF.
@@ -701,7 +701,7 @@ export function excerptForLore(
     parts.push(`Search match: ${headline}`);
   }
   if (chunks.length) {
-    parts.push("Relevant excerpts (semantic):\n" + chunks.join("\n---\n"));
+    parts.push(`Relevant excerpts (semantic):\n${chunks.join("\n---\n")}`);
   } else {
     const corpus = buildItemVaultCorpus(itemSearchableSourceFromRow(row.item));
     const body = corpus.trim() || (row.item.contentText?.trim() ?? "");

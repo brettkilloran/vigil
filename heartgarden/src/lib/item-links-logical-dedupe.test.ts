@@ -29,7 +29,7 @@ describe("dedupeLogicalItemLinkRows", () => {
       },
     ]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.id).toBe("b");
+    expect(rows[0]?.id).toBe("b");
   });
 
   it("treats undirected pair as one logical edge", () => {
@@ -58,6 +58,6 @@ describe("dedupeLogicalItemLinkRows", () => {
       },
     ]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.id).toBe("b");
+    expect(rows[0]?.id).toBe("b");
   });
 });

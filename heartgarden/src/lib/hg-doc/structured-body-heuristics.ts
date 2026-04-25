@@ -11,19 +11,19 @@ export const HG_HEADING_GUIDANCE_PROMPT = [
   "Do not skip heading levels.",
 ].join(" ");
 
-export type StructureReport = {
+export interface StructureReport {
   autoPrependedH1: boolean;
-  demotedOrphanH3Count: number;
-  promotedH3ToH2Count: number;
-  flaggedFlatLongBody: boolean;
   collapsedDuplicateTitleParagraph: boolean;
+  demotedOrphanH3Count: number;
   finalHeadingCount: { h1: number; h2: number; h3: number };
-};
+  flaggedFlatLongBody: boolean;
+  promotedH3ToH2Count: number;
+}
 
-type LintOptions = {
-  title?: string;
+interface LintOptions {
   requireH1?: boolean;
-};
+  title?: string;
+}
 
 function normalizeTitleLikeText(s: string): string {
   return s

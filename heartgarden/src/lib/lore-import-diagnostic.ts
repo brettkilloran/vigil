@@ -7,28 +7,28 @@ export type LoreImportStage =
   | "timeout"
   | "unknown";
 
-export type LoreImportFailureDetail = {
+export interface LoreImportFailureDetail {
   attemptId: string;
-  stage: LoreImportStage;
-  operation: string;
-  message: string;
-  responseSnippet?: string;
-  httpStatus?: number;
-  jobId?: string;
-  phase?: string;
-  errorCode?: string;
-  serverDetail?: string;
-  serverHint?: string;
   dbCode?: string;
-  dbTable?: string;
   dbColumn?: string;
   dbConstraint?: string;
-  retryable?: boolean;
+  dbTable?: string;
+  errorCode?: string;
   fileName?: string;
-  spaceId?: string;
-  recommendedAction?: string;
+  httpStatus?: number;
+  jobId?: string;
+  message: string;
   occurredAtIso: string;
-};
+  operation: string;
+  phase?: string;
+  recommendedAction?: string;
+  responseSnippet?: string;
+  retryable?: boolean;
+  serverDetail?: string;
+  serverHint?: string;
+  spaceId?: string;
+  stage: LoreImportStage;
+}
 
 function pageOrigin(): string {
   if (typeof window === "undefined" || !window.location?.origin) {

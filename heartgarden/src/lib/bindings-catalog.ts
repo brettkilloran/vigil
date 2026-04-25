@@ -32,18 +32,18 @@ export type BindingSlotId =
 /** Canvas connection (`item_links`) semantic bucket for recall / MCP copy — not a second source of truth for card slots. */
 export type CanvasConnectionKind = "pin" | "relationship";
 
-export type BindingSlotDefinition = {
-  id: BindingSlotId;
-  shell: LoreBindingShell;
-  label: string;
+export interface BindingSlotDefinition {
   cardinality: "0-1" | "0-n";
-  /** `items.entity_type` values allowed as targets when slot stores item ids. */
-  targetEntityTypes: string[];
+  id: BindingSlotId;
+  label: string;
   /** Whether a successful bind typically also creates a mirrored `item_links` row for the rope. */
   mirrorCanvasConnection: boolean;
+  shell: LoreBindingShell;
+  /** `items.entity_type` values allowed as targets when slot stores item ids. */
+  targetEntityTypes: string[];
   /** User actions that write this slot (see catalog doc for reconciliation). */
   writtenBy: string[];
-};
+}
 
 export const BINDING_SLOT_DEFINITIONS: readonly BindingSlotDefinition[] = [
   {
@@ -161,20 +161,20 @@ export type CanvasThreadSemanticEffect =
 
 export type CanvasThreadSemanticPhase = "roster_target" | "default";
 
-export type CanvasThreadSemanticRule = {
-  id: string;
-  phase: CanvasThreadSemanticPhase;
-  /** Lower runs first within the same phase. */
-  priority: number;
+export interface CanvasThreadSemanticRule {
+  effect: CanvasThreadSemanticEffect;
   /**
    * Sorted pair of endpoint shells (order-independent match).
    * Both nodes must be `content` entities with this `loreCard.kind`.
    */
   endpointShells: readonly [ThreadDrawShell, ThreadDrawShell];
+  id: string;
+  phase: CanvasThreadSemanticPhase;
+  /** Lower runs first within the same phase. */
+  priority: number;
   /** hgArch slots this rule mutates when it applies — traceability to `BINDING_SLOT_DEFINITIONS`. */
   touchesSlots: readonly BindingSlotId[];
-  effect: CanvasThreadSemanticEffect;
-};
+}
 
 /**
  * Rules for `runSemanticThreadLinkEvaluation`.

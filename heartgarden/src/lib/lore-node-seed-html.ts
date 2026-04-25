@@ -314,12 +314,12 @@ function locationV3(stripIndex: number): string {
 </div>`;
 }
 
-export type LoreNodeSeedOptions = {
-  /** Stable id (or uuid) → one of eight thin gradient strips on location v3. */
-  locationStripSeed?: string;
+export interface LoreNodeSeedOptions {
   /** Optional seed for faction Archive-091 rail text split (defaults when omitted). */
   factionRailSeed?: string;
-};
+  /** Stable id (or uuid) → one of eight thin gradient strips on location v3. */
+  locationStripSeed?: string;
+}
 
 export function getLoreNodeSeedBodyHtml(
   kind: LoreCardKind,

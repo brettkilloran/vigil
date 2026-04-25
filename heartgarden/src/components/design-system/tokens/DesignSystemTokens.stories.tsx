@@ -4,10 +4,10 @@ import type { Meta, StoryObj } from "@storybook/nextjs";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
-type TokenRow = {
+interface TokenRow {
   name: string;
   value: string;
-};
+}
 
 const TOKEN_PREFIXES = [
   "--sys-",

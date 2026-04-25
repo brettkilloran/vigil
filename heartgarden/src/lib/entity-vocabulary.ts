@@ -40,22 +40,22 @@ const STOPWORDS = new Set([
   "just",
 ]);
 
-export type EntityVocabularyEntry = {
-  term: string;
+export interface EntityVocabularyEntry {
   itemIds: string[];
   originalTerm: string;
-};
+  term: string;
+}
 
-export type EntityVocabularyPayload = {
+export interface EntityVocabularyPayload {
   etag: string;
-  terms: EntityVocabularyEntry[];
   itemTitles: Record<string, string>;
-};
+  terms: EntityVocabularyEntry[];
+}
 
-type CacheEntry = {
+interface CacheEntry {
   expiresAt: number;
   payload: EntityVocabularyPayload;
-};
+}
 
 const vocabularyCache = new Map<string, CacheEntry>();
 

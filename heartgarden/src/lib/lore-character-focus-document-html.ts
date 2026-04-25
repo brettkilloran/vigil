@@ -158,7 +158,7 @@ export function normalizeCharacterV11BodyHtmlForCurrentBuild(
   const notes =
     findLoreFieldByPlaceholder(root, "Notes") ??
     firstLoreField(root, (el) => el.querySelector("p") != null) ??
-    allFields[allFields.length - 1] ??
+    allFields.at(-1) ??
     null;
 
   const claimed = new Set<HTMLElement>();
@@ -485,19 +485,19 @@ export function withCharacterV11ObjectIdInHeader(
 }
 
 /** Parsed character focus shell (`characterV11BodyToFocusDocumentHtml` shape) for hgDoc migration. */
-export type CharacterFocusParts = {
-  portraitSrc: string;
-  portraitAlt: string;
-  portraitClass: string;
-  portraitUploadClass: string;
-  portraitUploadLabel: string;
-  portraitIsPlaceholder: boolean;
-  displayName: string;
-  role: string;
+export interface CharacterFocusParts {
   affiliation: string;
+  displayName: string;
   nationality: string;
   notesHtml: string;
-};
+  portraitAlt: string;
+  portraitClass: string;
+  portraitIsPlaceholder: boolean;
+  portraitSrc: string;
+  portraitUploadClass: string;
+  portraitUploadLabel: string;
+  role: string;
+}
 
 function parseFocusShellRoot(html: string): HTMLElement | null {
   if (typeof document === "undefined") {
@@ -517,7 +517,7 @@ export function parseCharacterFocusDocumentHtml(
   html: string
 ): CharacterFocusParts | null {
   const root = parseFocusShellRoot(html);
-  if (!(root && root.querySelector("[data-hg-character-focus-notes]"))) {
+  if (!root?.querySelector("[data-hg-character-focus-notes]")) {
     return null;
   }
 

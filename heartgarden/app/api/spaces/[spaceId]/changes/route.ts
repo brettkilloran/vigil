@@ -58,7 +58,7 @@ async function fetchAdditionalBoundaryRows<
   changed: Row[],
   overflowRow: Row
 ): Promise<{ rows: Row[]; saturated: boolean }> {
-  const lastChanged = changed[changed.length - 1];
+  const lastChanged = changed.at(-1);
   if (!(lastChanged && lastChanged.updatedAt instanceof Date)) {
     return { rows: changed, saturated: false };
   }

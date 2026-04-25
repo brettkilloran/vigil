@@ -119,13 +119,13 @@ export function bodyHtmlImpliesFactionArchive091(html: string): boolean {
   return html.includes('data-hg-lore-faction-variant="archive091"');
 }
 
-export type FactionArchive091Parsed = {
-  orgPrimaryInnerHtml: string;
+export interface FactionArchive091Parsed {
   orgAccentInnerHtml: string;
-  recordInnerHtml: string;
-  railUpper: string;
+  orgPrimaryInnerHtml: string;
   railLower: string;
-};
+  railUpper: string;
+  recordInnerHtml: string;
+}
 
 export function parseFactionArchive091BodyHtml(
   html: string

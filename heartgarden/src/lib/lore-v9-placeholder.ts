@@ -18,7 +18,7 @@ export function placeCaretAfterLorePlaceholderReplace(
     const paragraphs = field.querySelectorAll("p");
     const last =
       paragraphs.length > 0
-        ? paragraphs[paragraphs.length - 1]!
+        ? paragraphs.at(-1)!
         : (() => {
             const p = document.createElement("p");
             field.appendChild(p);

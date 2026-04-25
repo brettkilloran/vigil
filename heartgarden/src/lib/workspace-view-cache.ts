@@ -8,14 +8,14 @@ export const WORKSPACE_VIEW_CACHE_STORAGE_KEY = "heartgarden-workspace-view-v2";
 
 export type WorkspaceBootTierTag = "access" | "player" | "open";
 
-export type WorkspaceViewCachePayload = {
-  v: 2;
-  savedAt: number;
-  maxZIndex: number;
+export interface WorkspaceViewCachePayload {
+  bootstrap: BootstrapResponse;
   /** Session tier when cached (`open` = gate off / legacy). */
   bootTier: WorkspaceBootTierTag;
-  bootstrap: BootstrapResponse;
-};
+  maxZIndex: number;
+  savedAt: number;
+  v: 2;
+}
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);

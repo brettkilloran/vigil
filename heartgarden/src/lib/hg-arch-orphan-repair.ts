@@ -120,7 +120,7 @@ export function stripHgArchReferencesToItem(
         (scrubbed?.linkedCharacterItemIds?.length ?? 0)
       );
       if (empty) {
-        delete hg.loreThreadAnchors;
+        hg.loreThreadAnchors = undefined;
       } else {
         hg.loreThreadAnchors = scrubbed;
       }

@@ -143,11 +143,8 @@ function targetVolumes(): number[] {
   return VIGIL_BOOT_AMBIENT_LAYERS.map((l) => l.gain);
 }
 
-export type VigilBootAmbientAudioProps = {
-  suspended: boolean;
-  reduceMotion?: boolean;
+export interface VigilBootAmbientAudioProps {
   className?: string;
-  style?: CSSProperties;
   /** Omit outer glass panel — render only the mute control for a shared chrome row (e.g. boot dock). */
   embedInChromeRow?: boolean;
   /**
@@ -155,7 +152,10 @@ export type VigilBootAmbientAudioProps = {
    * synchronously after `flushSync`, inside the user-gesture stack).
    */
   primePlaybackFromGestureRef?: MutableRefObject<(() => void) | null>;
-};
+  reduceMotion?: boolean;
+  style?: CSSProperties;
+  suspended: boolean;
+}
 
 export function VigilBootAmbientAudio({
   suspended,

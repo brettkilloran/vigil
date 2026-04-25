@@ -6,14 +6,14 @@ import { HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME } from "@/src/lib/heartgard
 import { resolveHeartgardenPlayerSpaceIdFromEnv } from "@/src/lib/heartgarden-player-layer-env";
 import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 
-export type SeverPlayerGmWorldsReport = {
-  playerRootIdsPreserved: string[];
-  playerSpaceIds: string[];
+export interface SeverPlayerGmWorldsReport {
+  deletedChildSpaces: number;
   deletedCrossWorldLinks: number;
   deletedItems: number;
-  deletedChildSpaces: number;
   dryRun: boolean;
-};
+  playerRootIdsPreserved: string[];
+  playerSpaceIds: string[];
+}
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 

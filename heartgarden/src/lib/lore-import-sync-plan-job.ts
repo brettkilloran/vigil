@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 
 import { loreImportJobs } from "@/src/db/schema";

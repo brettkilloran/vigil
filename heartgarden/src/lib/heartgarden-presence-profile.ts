@@ -10,10 +10,10 @@ const NAME_STORAGE_SLOT = "heartgarden-presence-display-name-v1";
 const SIGIL_STORAGE_SLOT = "heartgarden-presence-sigil-v1";
 const NAME_PROMPTED_STORAGE_SLOT = "heartgarden-presence-name-prompted-v1";
 
-export type PresenceProfile = {
+export interface PresenceProfile {
   displayName: string | null;
   sigil: PresenceSigilVariant;
-};
+}
 
 function safeLocalStorageGet(key: string): string | null {
   try {

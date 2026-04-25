@@ -9,18 +9,21 @@ export type ContentTheme = "default" | "code" | "task" | "media";
 export type LoreCardKind = "character" | "faction" | "location";
 /** Faction: v4 Archive-091 (canonical). Location: v2–v3 (legacy), v7 ORDO slab. Character: v11 only. */
 export type LoreCardVariant = "v1" | "v2" | "v3" | "v4" | "v7" | "v11";
-export type LoreCard = { kind: LoreCardKind; variant: LoreCardVariant };
+export interface LoreCard {
+  kind: LoreCardKind;
+  variant: LoreCardVariant;
+}
 
 /**
  * Semantic canvas thread anchors persisted under `content_json.hgArch.loreThreadAnchors`.
  * Character cards use primary* fields; location cards use `linkedCharacterItemIds`.
  */
-export type LoreCanvasThreadAnchors = {
-  primaryLocationItemId?: string;
+export interface LoreCanvasThreadAnchors {
+  linkedCharacterItemIds?: string[];
   primaryFactionItemId?: string;
   primaryFactionRosterEntryId?: string;
-  linkedCharacterItemIds?: string[];
-};
+  primaryLocationItemId?: string;
+}
 
 export type NodeTheme = ContentTheme | "folder" | LoreCardKind;
 
@@ -28,16 +31,16 @@ export type { FolderColorSchemeId };
 export type CanvasTool = "select" | "pan";
 export type TapeVariant = "clear" | "masking" | "dark";
 
-export type EntitySpatialSlot = {
+export interface EntitySpatialSlot {
   x: number;
   y: number;
-};
+}
 
-export type CanvasConnectionPin = {
+export interface CanvasConnectionPin {
   anchor: "topLeftInset";
   insetX: number;
   insetY: number;
-};
+}
 
 export type CanvasConnectionSyncState =
   | "local-only"
@@ -45,22 +48,22 @@ export type CanvasConnectionSyncState =
   | "synced"
   | "error";
 
-export type CanvasEntityBase = {
-  id: string;
-  title: string;
-  rotation: number;
-  width?: number;
-  /** Rendered card height in world px when known (DB `items.height` or measured layout). */
-  height?: number;
-  tapeRotation: number;
-  slots: Record<string, EntitySpatialSlot>;
-  /** Optional DB item id used for dual-write link persistence. */
-  persistedItemId?: string | null;
-  stackId?: string | null;
-  stackOrder?: number | null;
+export interface CanvasEntityBase {
   /** Mirrors `items.entity_meta` (import signals, AI review flags, etc.). */
   entityMeta?: Record<string, unknown> | null;
-};
+  /** Rendered card height in world px when known (DB `items.height` or measured layout). */
+  height?: number;
+  id: string;
+  /** Optional DB item id used for dual-write link persistence. */
+  persistedItemId?: string | null;
+  rotation: number;
+  slots: Record<string, EntitySpatialSlot>;
+  stackId?: string | null;
+  stackOrder?: number | null;
+  tapeRotation: number;
+  title: string;
+  width?: number;
+}
 
 export type CanvasContentEntity = CanvasEntityBase & {
   kind: "content";
@@ -90,37 +93,37 @@ export type CanvasFolderEntity = CanvasEntityBase & {
 
 export type CanvasEntity = CanvasContentEntity | CanvasFolderEntity;
 
-export type CanvasSpace = {
+export interface CanvasSpace {
+  entityIds: string[];
   id: string;
   name: string;
   parentSpaceId: string | null;
-  entityIds: string[];
-};
+}
 
-export type CanvasPinConnection = {
-  id: string;
-  sourceEntityId: string;
-  targetEntityId: string;
-  sourcePin: CanvasConnectionPin;
-  targetPin: CanvasConnectionPin;
+export interface CanvasPinConnection {
   color: string;
-  /** Rope slack multiplier. 1.0 = taut, higher = looser. Stored in `item_links.meta.slackMultiplier`; default constant in `item-link-meta.ts`. */
-  slackMultiplier?: number;
   createdAt: number;
-  updatedAt: number;
   dbLinkId?: string | null;
-  syncState?: CanvasConnectionSyncState;
-  syncError?: string | null;
+  id: string;
   /** Mirrors `item_links.link_type` (pin, ally, quest, …). */
   linkType?: string;
-};
+  /** Rope slack multiplier. 1.0 = taut, higher = looser. Stored in `item_links.meta.slackMultiplier`; default constant in `item-link-meta.ts`. */
+  slackMultiplier?: number;
+  sourceEntityId: string;
+  sourcePin: CanvasConnectionPin;
+  syncError?: string | null;
+  syncState?: CanvasConnectionSyncState;
+  targetEntityId: string;
+  targetPin: CanvasConnectionPin;
+  updatedAt: number;
+}
 
-export type CanvasGraph = {
+export interface CanvasGraph {
+  connections: Record<string, CanvasPinConnection>;
+  entities: Record<string, CanvasEntity>;
   rootSpaceId: string;
   spaces: Record<string, CanvasSpace>;
-  entities: Record<string, CanvasEntity>;
-  connections: Record<string, CanvasPinConnection>;
-};
+}
 
 /** UI label for the graph root in breadcrumbs, command palette paths, etc. */
 export const ROOT_SPACE_DISPLAY_NAME = "Root";
@@ -131,20 +134,20 @@ export type CanvasNode = Omit<CanvasContentEntity, "kind" | "slots"> & {
   y: number;
 };
 
-export type DockFormatAction = {
+export interface DockFormatAction {
+  active?: boolean;
+  command: string;
+  disabled?: boolean;
   id: string;
   label: string;
-  command: string;
   value?: string;
-  active?: boolean;
-  disabled?: boolean;
-};
+}
 
-export type DockCreateAction = {
+export interface DockCreateAction {
   id: string;
   label: string;
   nodeType: NodeTheme;
-};
+}
 
 /** Inline canvas body commits — HTML lore/code/media vs hgDoc default/task. */
 export type CanvasBodyCommitPayload =

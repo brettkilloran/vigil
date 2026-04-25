@@ -3,19 +3,19 @@ import { eq, inArray } from "drizzle-orm";
 import { items, spaces } from "@/src/db/schema";
 import type { VigilDb } from "@/src/lib/spaces";
 
-type ValidationError = {
+interface ValidationError {
+  error: string;
   ok: false;
   status: number;
-  error: string;
-};
+}
 
-type ValidationSuccess = {
+interface ValidationSuccess {
   ok: true;
-  sourceSpaceId: string;
   sourceBraneId: string | null;
-  targetSpaceIds: string[];
+  sourceSpaceId: string;
   targetIds: string[];
-};
+  targetSpaceIds: string[];
+}
 
 export type LinkTargetValidationResult = ValidationError | ValidationSuccess;
 

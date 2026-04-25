@@ -3,14 +3,14 @@ export const SYNC_ERROR_DIAGNOSTIC_SEP = "\n---\n";
 
 export type SyncFailureCause = "http" | "network" | "client";
 
-export type SyncFailureDetail = {
-  operation: string;
+export interface SyncFailureDetail {
+  cause: SyncFailureCause;
   /** HTTP status, or omit / 0 when no response (network failure). */
   httpStatus?: number;
   message: string;
+  operation: string;
   responseSnippet?: string;
-  cause: SyncFailureCause;
-};
+}
 
 function pageOrigin(): string {
   if (typeof window === "undefined" || !window.location?.origin) {

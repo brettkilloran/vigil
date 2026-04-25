@@ -110,7 +110,7 @@ function contiguousTaskItemsFrom(
   }
   const out: HTMLElement[] = [];
   let el: HTMLElement | null = first;
-  while (el && el.matches(sel)) {
+  while (el?.matches(sel)) {
     out.push(el);
     el = el.nextElementSibling as HTMLElement | null;
   }
@@ -307,7 +307,10 @@ function placeCaretInTaskTextFromPoint(
   placeCaretAtEnd(taskText);
 }
 
-type WikiCandidate = { id: string; title: string };
+interface WikiCandidate {
+  id: string;
+  title: string;
+}
 
 /** Plain text from start of `root` up to the caret (collapsed selection). */
 function plainTextToCaret(root: HTMLElement): string {
@@ -376,47 +379,47 @@ function rangeForPlainTextOffsets(
  * `wikiLinkAssist` prop on `BufferedContentEditable` are now no-ops kept only so existing
  * call sites keep compiling; both will be removed in a future cleanup pass.
  */
-export type WikiLinkAssistConfig = {
+export interface WikiLinkAssistConfig {
   enabled: boolean;
-  getLocalItems: () => WikiCandidate[];
+  excludeEntityId?: string;
   fetchRemoteSuggest?: (
     q: string,
     signal: AbortSignal
   ) => Promise<WikiCandidate[]>;
-  excludeEntityId?: string;
-};
+  getLocalItems: () => WikiCandidate[];
+}
 
-export type ChecklistDeletionClassNames = {
+export interface ChecklistDeletionClassNames {
+  taskCheckbox: string;
   taskItem: string;
   taskText: string;
-  taskCheckbox: string;
-};
+}
 
-type BufferedContentEditableProps = {
-  value: string;
-  editable?: boolean;
-  spellCheck?: boolean;
-  className?: string;
-  debounceMs?: number;
-  plainText?: boolean;
-  normalizeOnCommit?: (value: string) => string;
-  onCommit: (value: string, reason: EditorCommitReason) => void;
-  onDraftDirtyChange?: (dirty: boolean) => void;
-  onEscape?: () => void;
-  onEnter?: () => void;
-  dataAttribute?: string;
-  /** @deprecated No-op since the wiki-link typing assist was removed. See `WikiLinkAssistConfig`. */
-  wikiLinkAssist?: WikiLinkAssistConfig | null;
+interface BufferedContentEditableProps {
   /**
    * When set: (1) Backspace at the start of an empty checklist text cell removes the whole task row.
    * (2) Pointer hits on the row outside the text cell (e.g. beside the checkbox) move the caret into the text.
    */
   checklistDeletion?: ChecklistDeletionClassNames | null;
-  /** `/` slash menu — same commands as the format dock (`runFormat` in shell). */
-  richDocCommand?: (command: string, value?: string) => void;
+  className?: string;
+  dataAttribute?: string;
+  debounceMs?: number;
+  editable?: boolean;
   /** Shown when the document body is empty (Paper-style hint). */
   emptyPlaceholder?: string | null;
-};
+  normalizeOnCommit?: (value: string) => string;
+  onCommit: (value: string, reason: EditorCommitReason) => void;
+  onDraftDirtyChange?: (dirty: boolean) => void;
+  onEnter?: () => void;
+  onEscape?: () => void;
+  plainText?: boolean;
+  /** `/` slash menu — same commands as the format dock (`runFormat` in shell). */
+  richDocCommand?: (command: string, value?: string) => void;
+  spellCheck?: boolean;
+  value: string;
+  /** @deprecated No-op since the wiki-link typing assist was removed. See `WikiLinkAssistConfig`. */
+  wikiLinkAssist?: WikiLinkAssistConfig | null;
+}
 
 /**
  * Legacy rich-text editor surface.
@@ -555,7 +558,7 @@ export function BufferedContentEditable({
       syncCharSkDisplayNameStack(el);
     }
     syncLoreV9RedactedPlaceholderState(el);
-  }, [draft, plainText, spellCheck]);
+  }, [plainText, spellCheck]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -847,7 +850,7 @@ export function BufferedContentEditable({
                         taskItem,
                         checklistDeletion.taskItem
                       );
-                      const last = group[group.length - 1]!;
+                      const last = group.at(-1)!;
                       const p = document.createElement("p");
                       p.appendChild(document.createElement("br"));
                       last.insertAdjacentElement("afterend", p);
@@ -922,7 +925,7 @@ export function BufferedContentEditable({
           ) {
             const root = ref.current;
             const sel = window.getSelection();
-            if (root && sel && sel.isCollapsed && sel.rangeCount > 0) {
+            if (root && sel?.isCollapsed && sel.rangeCount > 0) {
               const range = sel.getRangeAt(0);
               let anchor: Node | null = range.startContainer;
               if (anchor.nodeType === Node.TEXT_NODE) {
@@ -1005,20 +1008,17 @@ export function BufferedContentEditable({
                     if (!r?.isConnected) {
                       return;
                     }
-                    if (prevLi && prevLi.matches("li")) {
+                    if (prevLi?.matches("li")) {
                       r.focus({ preventScroll: true });
                       placeCaretAtEnd(prevLi);
                       return;
                     }
-                    if (nextLi && nextLi.matches("li")) {
+                    if (nextLi?.matches("li")) {
                       r.focus({ preventScroll: true });
                       placeCaretAtStart(nextLi);
                       return;
                     }
-                    if (
-                      listNext &&
-                      listNext.matches("p,h1,h2,h3,blockquote,pre")
-                    ) {
+                    if (listNext?.matches("p,h1,h2,h3,blockquote,pre")) {
                       r.focus({ preventScroll: true });
                       placeCaretAtStart(listNext);
                       return;
@@ -1074,12 +1074,12 @@ export function BufferedContentEditable({
                     placeCaretAtStart(nextTaskText);
                     return;
                   }
-                  if (prev && prev.matches("p,h1,h2,h3,blockquote,pre")) {
+                  if (prev?.matches("p,h1,h2,h3,blockquote,pre")) {
                     r.focus({ preventScroll: true });
                     placeCaretAtEnd(prev);
                     return;
                   }
-                  if (next && next.matches("p,h1,h2,h3,blockquote,pre")) {
+                  if (next?.matches("p,h1,h2,h3,blockquote,pre")) {
                     r.focus({ preventScroll: true });
                     placeCaretAtStart(next);
                     return;

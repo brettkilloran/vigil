@@ -108,10 +108,10 @@ describe("location hybrid meta shell", () => {
     const parts = readLocationFocusPartsFromMetaHost(meta!, "<p><br></p>");
     const full = parseLocationFocusDocumentHtml(focus);
     expect(full).not.toBeNull();
-    expect(parts.name).toBe(full!.name);
-    expect(parts.context).toBe(full!.context);
-    expect(parts.detail).toBe(full!.detail);
-    expect(parts.hasRef).toBe(full!.hasRef);
+    expect(parts.name).toBe(full?.name);
+    expect(parts.context).toBe(full?.context);
+    expect(parts.detail).toBe(full?.detail);
+    expect(parts.hasRef).toBe(full?.hasRef);
   });
 });
 
@@ -146,12 +146,12 @@ describe("location focus projection round-trip", () => {
     const doc = new DOMParser().parseFromString(wrapped, "text/html");
     const host = doc.getElementById("__hg_rt");
     expect(host).not.toBeNull();
-    const notesEl = host!.querySelector<HTMLElement>(
+    const notesEl = host?.querySelector<HTMLElement>(
       '[data-hg-lore-location-focus-notes="true"]'
     );
     expect(notesEl).not.toBeNull();
     notesEl!.innerHTML = "<p>Smoke note</p>";
-    const editedFocus = host!.innerHTML;
+    const editedFocus = host?.innerHTML;
     const merged = focusDocumentHtmlToLocationBody(editedFocus, canonical);
     expect(merged).toContain('data-hg-canvas-role="lore-location"');
     expect(merged).toContain("Smoke note");
@@ -167,7 +167,7 @@ describe("location focus projection round-trip", () => {
     const merged = focusDocumentHtmlToLocationBody(focus, canonical);
     const stripMatch = canonical.match(/data-loc-strip="(\d)"/);
     expect(stripMatch).not.toBeNull();
-    expect(merged).toContain(`data-loc-strip="${stripMatch![1]}"`);
+    expect(merged).toContain(`data-loc-strip="${stripMatch?.[1]}"`);
   });
 
   it("round-trips minimal legacy body without canvas role", () => {

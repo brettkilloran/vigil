@@ -77,14 +77,14 @@ function linkTypeAcceptsEndpoints(
   }
 }
 
-export type CoerceImportLinkTypeResult = {
-  /** Canonical link type safe to persist. */
-  linkType: CanonicalImportLinkType;
+export interface CoerceImportLinkTypeResult {
   /** True when the requested type was changed to fit the endpoint shapes. */
   coerced: boolean;
+  /** Canonical link type safe to persist. */
+  linkType: CanonicalImportLinkType;
   /** Human-readable trace for `importPlanWarnings`; undefined when `coerced === false`. */
   reason?: string;
-};
+}
 
 /**
  * Coerce a requested link type into one the endpoint shapes can accept.

@@ -19,12 +19,12 @@ type SimNode = GraphLayoutNode &
   };
 type SimLink = SimulationLinkDatum<SimNode>;
 
-export type StableLayoutOptions = {
-  width?: number;
+export interface StableLayoutOptions {
   height?: number;
-  seed?: Map<string, { x: number; y: number }>;
   pinned?: Map<string, { x: number; y: number }>;
-};
+  seed?: Map<string, { x: number; y: number }>;
+  width?: number;
+}
 
 function hashFnv1a(input: string): number {
   let hash = 0x81_1c_9d_c5;

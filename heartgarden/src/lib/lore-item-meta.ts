@@ -16,7 +16,10 @@ Rules:
 - aliases: other ways someone might search for this note; empty array if none.
 - If text is empty, return {"summary":"","aliases":[]}.`;
 
-export type LoreItemMeta = { summary: string; aliases: string[] };
+export interface LoreItemMeta {
+  aliases: string[];
+  summary: string;
+}
 
 export async function extractLoreItemMeta(
   apiKey: string,

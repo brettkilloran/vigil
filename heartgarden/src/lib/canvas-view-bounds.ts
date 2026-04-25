@@ -15,18 +15,18 @@ const MAX_STACK_SPREAD_EXTRA = 240;
 /** Matches `--stack-r` step in `.stackLayer` (index − (n−1)/2) × this value. */
 const STACK_FAN_ROT_STEP_DEG = 1.6;
 
-export type WorldBounds = {
-  minX: number;
-  minY: number;
+export interface WorldBounds {
   maxX: number;
   maxY: number;
-};
+  minX: number;
+  minY: number;
+}
 
-export type CollapsedStackInfo = {
-  stackId: string;
+export interface CollapsedStackInfo {
   entities: CanvasEntity[];
+  stackId: string;
   top: CanvasEntity;
-};
+}
 
 /** Same grouping as `collapsedStacks` in ArchitecturalCanvasApp (multi-card stacks only). */
 export function buildCollapsedStacksList(
@@ -52,7 +52,7 @@ export function buildCollapsedStacksList(
     const sorted = [...entities].sort(
       (a, b) => (a.stackOrder ?? 0) - (b.stackOrder ?? 0)
     );
-    out.push({ stackId, entities: sorted, top: sorted[sorted.length - 1]! });
+    out.push({ stackId, entities: sorted, top: sorted.at(-1)! });
   });
   return out;
 }
@@ -170,7 +170,10 @@ function entityLocalSize(entity: CanvasEntity): { w: number; h: number } {
 }
 
 /** Live DOM size for a node (px in canvas layout space ≈ world units). */
-export type MinimapPlacementSize = { width: number; height: number };
+export interface MinimapPlacementSize {
+  height: number;
+  width: number;
+}
 
 /** Avoid minimap subtree re-renders when DOM remeasure yields identical dimensions. */
 export function minimapPlacementMapsEqual(
@@ -350,14 +353,14 @@ export function computeBoundsForEntitySubset(
   return acc;
 }
 
-export type FitCameraParams = {
+export interface FitCameraParams {
   bounds: WorldBounds;
-  viewportWidth: number;
-  viewportHeight: number;
-  paddingPx: number;
-  minZoom: number;
   maxZoom: number;
-};
+  minZoom: number;
+  paddingPx: number;
+  viewportHeight: number;
+  viewportWidth: number;
+}
 
 export function fitCameraToActiveSpaceContent(
   graph: CanvasGraph,
@@ -481,18 +484,18 @@ export function isContentMostlyOffScreen(
   return ratio < minRatio;
 }
 
-export type MinimapAtomRect = {
-  key: string;
+export interface MinimapAtomRect {
   /** Axis-aligned bounds (union of rotated rect); used for content bounds / padding. */
   bounds: WorldBounds;
+  height: number;
+  key: string;
+  rotationDeg: number;
   selected: boolean;
+  width: number;
   /** Unrotated local rect in world space — matches canvas `nodePlacement` (top-left + size + CSS rotate). */
   x: number;
   y: number;
-  width: number;
-  height: number;
-  rotationDeg: number;
-};
+}
 
 /**
  * One rect per standalone node or collapsed stack for minimap drawing.

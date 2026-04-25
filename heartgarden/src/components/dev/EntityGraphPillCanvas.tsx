@@ -7,11 +7,11 @@ import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 
 type LayoutMap = Map<string, { x: number; y: number }>;
 
-type CameraTransform = {
+interface CameraTransform {
+  scale: number;
   x: number;
   y: number;
-  scale: number;
-};
+}
 
 type VelocityMap = Map<string, { x: number; y: number }>;
 
@@ -283,7 +283,7 @@ export function EntityGraphPillCanvas({
     setCamera(initialCamera(viewport.width, viewport.height));
     const timer = window.setTimeout(() => setAnimatedCamera(false), 760);
     return () => window.clearTimeout(timer);
-  }, [cameraResetKey, viewport.height, viewport.width]);
+  }, [viewport.height, viewport.width]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -386,7 +386,7 @@ export function EntityGraphPillCanvas({
       onLayoutChange?.(next);
       setDisplayLayout((prev) => {
         const updated = new Map(prev);
-        updated.set(nodeDragRef.current!.nodeId, nextPos);
+        updated.set(nodeDragRef.current?.nodeId, nextPos);
         displayLayoutRef.current = updated;
         return updated;
       });

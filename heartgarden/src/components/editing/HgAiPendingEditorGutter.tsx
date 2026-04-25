@@ -55,19 +55,19 @@ function clearHoverClasses(root: HTMLElement) {
     .forEach((el) => el.classList.remove(HOVER_CLASS));
 }
 
-export type HgAiPendingEditorGutterProps = {
+export interface HgAiPendingEditorGutterProps {
   editor: Editor;
   /** Row that contains the editor column + this rail (for `top` positioning). */
   wrapRef: RefObject<HTMLElement | null>;
-};
+}
 
 export function HgAiPendingEditorGutter({
   editor,
   wrapRef,
 }: HgAiPendingEditorGutterProps) {
   const railRef = useRef<HTMLDivElement | null>(null);
-  const [docVersion, setDocVersion] = useState(0);
-  const [layoutTick, setLayoutTick] = useState(0);
+  const [_docVersion, setDocVersion] = useState(0);
+  const [_layoutTick, setLayoutTick] = useState(0);
   const [tops, setTops] = useState<number[]>([]);
   const [hovered, setHovered] = useState<number | null>(null);
 
@@ -75,7 +75,7 @@ export function HgAiPendingEditorGutter({
     () => collectHgAiPendingRangeMetrics(editor),
     // docVersion bumps on TipTap update/selectionUpdate; editor ref is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- docVersion
-    [editor, docVersion]
+    [editor]
   );
   const ranges = pending.ranges;
   const hideRangeBinds =
@@ -95,7 +95,7 @@ export function HgAiPendingEditorGutter({
   useEffect(() => {
     const id = requestAnimationFrame(() => setDocVersion((v) => v + 1));
     return () => cancelAnimationFrame(id);
-  }, [editor]);
+  }, []);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -143,7 +143,7 @@ export function HgAiPendingEditorGutter({
       next[i] = top;
     }
     setTops(next);
-  }, [editor, ranges, layoutTick, wrapRef]);
+  }, [editor, ranges, wrapRef]);
 
   const safeHovered =
     hovered !== null && hovered < ranges.length && hovered >= 0

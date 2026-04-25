@@ -204,14 +204,14 @@ export function loreVariantChoiceLabel(
 }
 
 export type ConnectionDockMode = "move" | "draw" | "cut";
-export type ConnectionToolbarProps = {
-  mode: ConnectionDockMode;
-  onSetMode: (next: ConnectionDockMode) => void;
+export interface ConnectionToolbarProps {
   connectionKind: ConnectionKind;
-  onSetConnectionKind: (next: ConnectionKind) => void;
   disabled?: boolean;
+  mode: ConnectionDockMode;
+  onSetConnectionKind: (next: ConnectionKind) => void;
+  onSetMode: (next: ConnectionDockMode) => void;
   variant?: "canvas" | "editor";
-};
+}
 
 export function ArchitecturalFormatToolbar({
   insertDocActions = DEFAULT_DOC_INSERT_ACTIONS,
@@ -495,7 +495,7 @@ export function ArchitecturalFolderColorStrip({
       window.removeEventListener("scroll", position, true);
       window.removeEventListener("resize", position);
     };
-  }, [menuOpen, isSpool, threadCatalog]);
+  }, [menuOpen, isSpool]);
 
   useEffect(() => {
     if (!menuOpen) {

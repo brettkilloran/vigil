@@ -3,17 +3,17 @@
  * (e.g. null pins vs canvas pins) to one edge for graph hydration / inspector.
  */
 
-export type ItemLinkLogicalEdge = {
-  id: string;
-  source: string;
-  target: string;
-  linkType: string | null;
-  sourcePin: string | null;
-  targetPin: string | null;
+export interface ItemLinkLogicalEdge {
   color: string | null;
+  id: string;
+  linkType: string | null;
   meta: unknown;
+  source: string;
+  sourcePin: string | null;
+  target: string;
+  targetPin: string | null;
   updatedAtMs: number;
-};
+}
 
 function undirectedKey(
   source: string,

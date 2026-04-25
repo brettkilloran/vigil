@@ -12,7 +12,11 @@ import { menuLabelForLinkType } from "@/src/lib/lore-link-types";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Endpoint = { id: string; title: string; itemType: string };
+interface Endpoint {
+  id: string;
+  itemType: string;
+  title: string;
+}
 
 type CloudLoaded =
   | {
@@ -102,7 +106,7 @@ export function ArchitecturalLinksPanel({
     return () => {
       cancelled = true;
     };
-  }, [cloudEnabled, itemIdForCloud, itemLinksRevision]);
+  }, [cloudEnabled, itemIdForCloud]);
 
   useEffect(() => {
     if (!(itemIdForCloud && cloudEnabled)) {

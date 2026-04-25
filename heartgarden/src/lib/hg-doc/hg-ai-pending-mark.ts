@@ -53,7 +53,7 @@ export function expandHgAiPendingRangeBeforeEdit(
   raw.sort((a, b) => a.from - b.from);
   const merged: { from: number; to: number }[] = [];
   for (const r of raw) {
-    const last = merged[merged.length - 1];
+    const last = merged.at(-1);
     if (last && r.from <= last.to) {
       last.to = Math.max(last.to, r.to);
     } else {

@@ -13,13 +13,13 @@ import {
   HEARTGARDEN_METADATA_LABEL,
 } from "@/src/lib/vigil-ui-classes";
 
-type GraphScenario = {
+interface GraphScenario {
+  edges: GraphEdge[];
   key: string;
   label: string;
-  summary: string;
   nodes: GraphNode[];
-  edges: GraphEdge[];
-};
+  summary: string;
+}
 
 const SCENARIOS: GraphScenario[] = [
   {

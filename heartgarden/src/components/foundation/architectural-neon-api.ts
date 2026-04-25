@@ -317,24 +317,24 @@ export async function fetchBootstrap(
 
 export type { SpaceChangePayloadRow };
 
-export type SpaceChangesSuccess = {
-  ok: true;
-  items?: CanvasItem[];
-  /** Subtree `spaces` rows updated since `since` (e.g. reparent / rename). */
-  spaces?: SpaceChangePayloadRow[];
-  itemIds?: string[];
+export interface SpaceChangesSuccess {
   cursor?: string;
-  itemLinksRevision?: string;
   /** More rows exist after `cursor`; caller should re-poll with `since=cursor`. */
   hasMore?: boolean;
-};
+  itemIds?: string[];
+  itemLinksRevision?: string;
+  items?: CanvasItem[];
+  ok: true;
+  /** Subtree `spaces` rows updated since `since` (e.g. reparent / rename). */
+  spaces?: SpaceChangePayloadRow[];
+}
 
-export type SpaceChangesFailure = {
-  ok: false;
-  error: string;
+export interface SpaceChangesFailure {
   cause: "http" | "parse" | "network";
+  error: string;
   httpStatus?: number;
-};
+  ok: false;
+}
 
 export type SpaceChangesResponse = SpaceChangesSuccess | SpaceChangesFailure;
 
@@ -426,15 +426,15 @@ export async function fetchSpaceChanges(
   }
 }
 
-export type SpacePresencePeer = {
-  clientId: string;
+export interface SpacePresencePeer {
   activeSpaceId: string;
   camera: CameraState;
-  pointer: { x: number; y: number } | null;
+  clientId: string;
   displayName: string | null;
+  pointer: { x: number; y: number } | null;
   sigil: PresenceSigilVariant | null;
   updatedAt: string;
-};
+}
 
 function parseSpacePresencePeer(raw: unknown): SpacePresencePeer | null {
   if (typeof raw !== "object" || raw === null) {

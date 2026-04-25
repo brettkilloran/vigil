@@ -1,14 +1,14 @@
 /** Shared button/panel recipes for Vigil chrome. */
 import { cx } from "@/src/lib/cx";
 
-export type VigilButtonRecipeOptions = {
-  variant?: "default" | "primary" | "danger" | "ghost" | "subtle";
+export interface VigilButtonRecipeOptions {
+  active?: boolean;
+  className?: string;
+  forceState?: "default" | "hover" | "active";
   size?: "xs" | "sm" | "md" | "lg" | "icon" | "pill";
   tone?: "glass" | "solid" | "menu" | "focus-light" | "focus-dark";
-  active?: boolean;
-  forceState?: "default" | "hover" | "active";
-  className?: string;
-};
+  variant?: "default" | "primary" | "danger" | "ghost" | "subtle";
+}
 
 export function vigilButtonRecipe(opts: VigilButtonRecipeOptions = {}) {
   const { className } = opts;

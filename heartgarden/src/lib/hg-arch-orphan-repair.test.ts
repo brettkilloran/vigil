@@ -21,12 +21,12 @@ describe("stripHgArchReferencesToItem", () => {
     };
     const next = stripHgArchReferencesToItem(cj, dead);
     expect(next).not.toBeNull();
-    const roster = (next!.hgArch as Record<string, unknown>)[
+    const roster = (next?.hgArch as Record<string, unknown>)[
       FACTION_ROSTER_HG_ARCH_KEY
     ] as {
       kind: string;
     }[];
-    expect(roster[0]!.kind).toBe("unlinked");
+    expect(roster[0]?.kind).toBe("unlinked");
   });
 
   it("removes location anchor", () => {
@@ -41,7 +41,7 @@ describe("stripHgArchReferencesToItem", () => {
     const next = stripHgArchReferencesToItem(cj, dead);
     expect(next).not.toBeNull();
     const a = (
-      next!.hgArch as { loreThreadAnchors?: { primaryLocationItemId?: string } }
+      next?.hgArch as { loreThreadAnchors?: { primaryLocationItemId?: string } }
     ).loreThreadAnchors;
     expect(a?.primaryLocationItemId).toBeUndefined();
   });

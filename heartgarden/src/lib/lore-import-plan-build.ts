@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { finalizeHeartgardenSearchFiltersForDb } from "@/src/lib/heartgarden-search-tier-policy";
 import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
@@ -44,23 +44,23 @@ const GM_LORE_IMPORT_SEARCH = { role: "gm" } as const;
 
 const VAULT_SEARCH_CONCURRENCY = 5;
 
-type OutlineNoteInternal = {
-  clientId: string;
-  title: string;
+interface OutlineNoteInternal {
+  body?: import("@/src/lib/lore-import-plan-types").LoreImportStructuredBody;
+  bodyText: string;
+  campaignEpoch?: number;
   canonicalEntityKind: CanonicalEntityKind;
-  summary: string;
+  clientId: string;
   folderClientId: string | null;
+  ingestionSignals?: IngestionSignals;
+  loreHistorical?: boolean;
   sourceChunkIds: string[];
   sourcePassages: { chunkId: string; quote: string }[];
-  body?: import("@/src/lib/lore-import-plan-types").LoreImportStructuredBody;
-  ingestionSignals?: IngestionSignals;
-  campaignEpoch?: number;
-  loreHistorical?: boolean;
-  bodyText: string;
-};
+  summary: string;
+  title: string;
+}
 
-export type LoreImportPlanEvent = {
-  phase?: string;
+export interface LoreImportPlanEvent {
+  durationMs?: number;
   kind:
     | "phase_start"
     | "phase_end"
@@ -68,27 +68,27 @@ export type LoreImportPlanEvent = {
     | "vault_search"
     | "warning"
     | "note";
-  durationMs?: number;
   model?: string;
+  phase?: string;
+  ref?: string;
+  responseSnippet?: string;
+  stopReason?: string | null;
+  text?: string;
   tokensIn?: number | null;
   tokensOut?: number | null;
-  stopReason?: string | null;
-  responseSnippet?: string;
-  text?: string;
-  ref?: string;
-};
+}
 
-type LoreImportFindings = {
-  chunks: number;
-  folders: number;
-  notes: number;
-  candidates: number;
+interface LoreImportFindings {
   candidateSpaces: number;
-  mergeProposals: number;
-  contradictions: number;
+  candidates: number;
+  chunks: number;
   clarifications: number;
+  contradictions: number;
+  folders: number;
+  mergeProposals: number;
+  notes: number;
   targetSpaceRoutes: number;
-};
+}
 
 type LoreImportPlanEventReporter = (
   event: LoreImportPlanEvent

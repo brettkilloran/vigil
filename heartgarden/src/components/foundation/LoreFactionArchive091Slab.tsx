@@ -44,17 +44,17 @@ function fillHeadingHtml(el: HTMLElement, html: string) {
   el.innerHTML = t;
 }
 
-export type LoreFactionArchive091SlabProps = {
-  nodeId: string;
+export interface LoreFactionArchive091SlabProps {
   bodyHtml: string;
-  factionRoster: FactionRosterEntry[];
-  onFactionRosterChange?: (nextRoster: FactionRosterEntry[]) => void;
-  labTestId?: string;
   editable: boolean;
+  emptyPlaceholder?: string | null;
+  factionRoster: FactionRosterEntry[];
+  labTestId?: string;
+  nodeId: string;
   onCommit: (html: string) => void;
   onDraftDirty?: (dirty: boolean) => void;
-  emptyPlaceholder?: string | null;
-};
+  onFactionRosterChange?: (nextRoster: FactionRosterEntry[]) => void;
+}
 
 export function LoreFactionArchive091Slab({
   nodeId,
@@ -261,11 +261,11 @@ export function LoreFactionArchive091Slab({
       mo?.disconnect();
       detachHost();
     };
-  }, [nodeId]);
+  }, []);
 
   useLayoutEffect(() => {
     queueMicrotask(() => recordMaskSyncRef.current?.());
-  }, [recordDoc]);
+  }, []);
 
   useEffect(() => {
     if (bodyHtml === lastPushed.current) {

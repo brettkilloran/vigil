@@ -42,26 +42,26 @@ const DEFAULT_LIMIT = 250;
 const MAX_LIMIT = 2000;
 const MAX_DEPTH = 2;
 
-type BraneGraphNode = {
-  id: string;
-  title: string;
-  itemType: string;
-  entityType: string | null;
-  spaceId: string;
+interface BraneGraphNode {
   depth: number;
-};
-
-type BraneGraphEdge = {
+  entityType: string | null;
   id: string;
-  source: string;
-  target: string;
-  edgeKind: "explicit" | "implicit";
-  matchedTerm: string | null;
-  linkType: string | null;
-  sourcePin: string | null;
-  targetPin: string | null;
+  itemType: string;
+  spaceId: string;
+  title: string;
+}
+
+interface BraneGraphEdge {
   color: string | null;
-};
+  edgeKind: "explicit" | "implicit";
+  id: string;
+  linkType: string | null;
+  matchedTerm: string | null;
+  source: string;
+  sourcePin: string | null;
+  target: string;
+  targetPin: string | null;
+}
 
 function clampInt(
   raw: string | null,
@@ -107,7 +107,7 @@ async function fetchBraneRevision(
          WHERE ${entityMentions.braneId} = ${braneId}) AS mentions_max
   `);
   const row =
-    ((result as unknown as { rows?: Array<Record<string, unknown>> }).rows ??
+    ((result as unknown as { rows?: Record<string, unknown>[] }).rows ??
       [])[0] ?? {};
   const token = [
     String(row.items_max ?? 0),

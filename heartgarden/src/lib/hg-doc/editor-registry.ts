@@ -1,29 +1,29 @@
 import type { JSONContent } from "@tiptap/core";
 
-export type HgDocFormatChromeState = {
+export interface HgDocFormatChromeState {
+  blockTag: "p" | "h1" | "h2" | "h3" | "blockquote";
   bold: boolean;
   italic: boolean;
-  underline: boolean;
-  strikeThrough: boolean;
-  unorderedList: boolean;
   orderedList: boolean;
-  blockTag: "p" | "h1" | "h2" | "h3" | "blockquote";
-};
+  strikeThrough: boolean;
+  underline: boolean;
+  unorderedList: boolean;
+}
 
-export type HgDocEditorApi = {
-  runFormat: (command: string, value?: string) => boolean;
+export interface HgDocEditorApi {
+  canRedo: () => boolean;
+  canUndo: () => boolean;
+  focus: () => void;
   getFormatState: () => HgDocFormatChromeState;
   getJSON: () => JSONContent;
-  focus: () => void;
   insertImageFromDataUrl: (src: string, alt: string) => void;
-  /** ProseMirror history undo (document-local). */
-  undo: () => boolean;
-  redo: () => boolean;
-  canUndo: () => boolean;
-  canRedo: () => boolean;
   /** True when the doc is empty — used for canvas delete vs inline backspace. */
   isEmptyDocument?: () => boolean;
-};
+  redo: () => boolean;
+  runFormat: (command: string, value?: string) => boolean;
+  /** ProseMirror history undo (document-local). */
+  undo: () => boolean;
+}
 
 const registry = new Map<string, HgDocEditorApi>();
 

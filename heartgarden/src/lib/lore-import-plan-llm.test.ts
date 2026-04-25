@@ -33,12 +33,12 @@ describe("buildOutlineChunkListPayload", () => {
 });
 
 describe("fillNoteBodiesFromChunks", () => {
-  type TestNote = {
-    clientId: string;
-    title: string;
-    sourceChunkIds: string[];
+  interface TestNote {
     bodyText?: string;
-  };
+    clientId: string;
+    sourceChunkIds: string[];
+    title: string;
+  }
   const makeNote = (id: string, ids: string[]): TestNote => ({
     clientId: id,
     title: id,
@@ -48,23 +48,23 @@ describe("fillNoteBodiesFromChunks", () => {
 
   it("does NOT dump unassigned chunks onto the first note", () => {
     const chunks = makeChunks(3);
-    const notes: TestNote[] = [makeNote("n0", [chunks[0]!.id])];
+    const notes: TestNote[] = [makeNote("n0", [chunks[0]?.id])];
     const diagnostics = fillNoteBodiesFromChunks(
       notes as unknown as Parameters<typeof fillNoteBodiesFromChunks>[0],
       chunks
     );
-    expect(notes[0]!.bodyText ?? "").not.toContain(chunks[1]!.body);
-    expect(notes[0]!.bodyText ?? "").not.toContain(chunks[2]!.body);
+    expect(notes[0]?.bodyText ?? "").not.toContain(chunks[1]?.body);
+    expect(notes[0]?.bodyText ?? "").not.toContain(chunks[2]?.body);
     expect(diagnostics.unassignedChunkIds).toEqual([
-      chunks[1]!.id,
-      chunks[2]!.id,
+      chunks[1]?.id,
+      chunks[2]?.id,
     ]);
   });
 
   it("records notes with zero resolved chunks", () => {
     const chunks = makeChunks(2);
     const notes: TestNote[] = [
-      makeNote("n0", [chunks[0]!.id]),
+      makeNote("n0", [chunks[0]?.id]),
       makeNote("n1", []),
     ];
     const diagnostics = fillNoteBodiesFromChunks(
@@ -77,16 +77,16 @@ describe("fillNoteBodiesFromChunks", () => {
   it("flags duplicate chunk assignments", () => {
     const chunks = makeChunks(2);
     const notes: TestNote[] = [
-      makeNote("a", [chunks[0]!.id]),
-      makeNote("b", [chunks[0]!.id, chunks[1]!.id]),
+      makeNote("a", [chunks[0]?.id]),
+      makeNote("b", [chunks[0]?.id, chunks[1]?.id]),
     ];
     const diagnostics = fillNoteBodiesFromChunks(
       notes as unknown as Parameters<typeof fillNoteBodiesFromChunks>[0],
       chunks
     );
     expect(diagnostics.duplicateAssignments).toHaveLength(1);
-    expect(diagnostics.duplicateAssignments[0]!.chunkId).toBe(chunks[0]!.id);
-    expect(new Set(diagnostics.duplicateAssignments[0]!.noteClientIds)).toEqual(
+    expect(diagnostics.duplicateAssignments[0]?.chunkId).toBe(chunks[0]?.id);
+    expect(new Set(diagnostics.duplicateAssignments[0]?.noteClientIds)).toEqual(
       new Set(["a", "b"])
     );
   });

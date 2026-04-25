@@ -8,7 +8,6 @@ import type {
   DragEvent as ReactDragEvent,
 } from "react";
 import {
-  forwardRef,
   memo,
   useCallback,
   useEffect,
@@ -391,103 +390,104 @@ const TitleAndContext = memo(function TitleAndContext({
   );
 });
 
-const DetailLine = memo(
-  forwardRef<
-    HTMLParagraphElement,
-    {
-      detail: string;
-      onDetailCommit: (next: string) => void;
-      editable: boolean;
-    }
-  >(function DetailLine({ detail, onDetailCommit, editable }, ref) {
-    const innerRef = useRef<HTMLParagraphElement | null>(null);
-    const focusedRef = useRef(false);
+const DetailLine = memo(function DetailLine({
+  detail,
+  onDetailCommit,
+  editable,
+  ref,
+}: {
+  detail: string;
+  onDetailCommit: (next: string) => void;
+  editable: boolean;
+  ref?: RefObject<HTMLParagraphElement | null>;
+}) {
+  const innerRef = useRef<HTMLParagraphElement | null>(null);
+  const focusedRef = useRef(false);
 
-    const setRefs = useCallback(
-      (node: HTMLParagraphElement | null) => {
-        innerRef.current = node;
-        if (typeof ref === "function") {
-          ref(node);
-        } else if (ref) {
-          (ref as MutableRefObject<HTMLParagraphElement | null>).current = node;
-        }
-      },
-      [ref]
-    );
-
-    useLayoutEffect(() => {
-      const el = innerRef.current;
-      if (!el || focusedRef.current) {
-        return;
+  const setRefs = useCallback(
+    (node: HTMLParagraphElement | null) => {
+      innerRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        (ref as MutableRefObject<HTMLParagraphElement | null>).current = node;
       }
-      fillOrdoV7SingleLineFieldDOM(el, detail);
-    }, [detail]);
+    },
+    [ref]
+  );
 
-    return (
-      <p
-        className={cardStyles.locOrdoV7DetailLine}
-        contentEditable={editable}
-        data-hg-lore-location-field="detail"
-        data-placeholder="Ward · material · micro-context"
-        onBeforeInput={(e) => {
-          if (!editable) {
-            return;
-          }
-          const native = e.nativeEvent;
-          if (!(native instanceof InputEvent)) {
-            return;
-          }
-          if (
-            shouldBlockLocationTopFieldBeforeInput(
-              "detail",
-              e.currentTarget,
-              native
-            )
-          ) {
-            e.preventDefault();
-          }
-        }}
-        onBlur={(e) => {
-          focusedRef.current = false;
-          onDetailCommit(e.currentTarget.innerText.replace(/\s+/g, " ").trim());
-        }}
-        onDrop={(e) => {
-          if (!editable) {
-            return;
-          }
-          handleTopFieldDrop(e);
-        }}
-        onFocus={() => {
-          focusedRef.current = true;
-        }}
-        onPaste={(e) => {
-          if (!editable) {
-            return;
-          }
-          handleTopFieldPaste("detail", e);
-        }}
-        ref={setRefs}
-        suppressContentEditableWarning
-      />
-    );
-  })
-);
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el || focusedRef.current) {
+      return;
+    }
+    fillOrdoV7SingleLineFieldDOM(el, detail);
+  }, [detail]);
+
+  return (
+    <p
+      className={cardStyles.locOrdoV7DetailLine}
+      contentEditable={editable}
+      data-hg-lore-location-field="detail"
+      data-placeholder="Ward · material · micro-context"
+      onBeforeInput={(e) => {
+        if (!editable) {
+          return;
+        }
+        const native = e.nativeEvent;
+        if (!(native instanceof InputEvent)) {
+          return;
+        }
+        if (
+          shouldBlockLocationTopFieldBeforeInput(
+            "detail",
+            e.currentTarget,
+            native
+          )
+        ) {
+          e.preventDefault();
+        }
+      }}
+      onBlur={(e) => {
+        focusedRef.current = false;
+        onDetailCommit(e.currentTarget.innerText.replace(/\s+/g, " ").trim());
+      }}
+      onDrop={(e) => {
+        if (!editable) {
+          return;
+        }
+        handleTopFieldDrop(e);
+      }}
+      onFocus={() => {
+        focusedRef.current = true;
+      }}
+      onPaste={(e) => {
+        if (!editable) {
+          return;
+        }
+        handleTopFieldPaste("detail", e);
+      }}
+      ref={setRefs}
+      suppressContentEditableWarning
+    />
+  );
+});
 DetailLine.displayName = "DetailLine";
 
-export type LoreLocationOrdoV7SlabProps = {
-  nodeId: string;
+export interface LoreLocationOrdoV7SlabProps {
   bodyHtml: string;
+  editable: boolean;
+  emptyPlaceholder?: string | null;
+  /** Lab: stable hashed staple tilt. */
+  labTestId?: string;
+  nodeId: string;
+  onCommit: (html: string) => void;
+  onDraftDirty?: (dirty: boolean) => void;
   /** Canvas: hide staple when grouped (stacked). Lab defaults to true. */
   showStaple?: boolean;
   /** Canvas: degrees match `entity.tapeRotation` (set on parent for staple CSS var). */
   tapeRotationDeg?: number;
-  /** Lab: stable hashed staple tilt. */
-  labTestId?: string;
-  editable: boolean;
-  onCommit: (html: string) => void;
-  onDraftDirty?: (dirty: boolean) => void;
-  emptyPlaceholder?: string | null;
-};
+}
 
 /**
  * Canonical ORDO location v7 slab — shared by infinite canvas and lore entity lab (same DOM + `buildLocationOrdoV7BodyHtml`).
@@ -541,7 +541,7 @@ export function LoreLocationOrdoV7Slab({
   useLayoutEffect(() => {
     syncLoreV11MarkerTilts(rootRef.current);
     syncLoreV11PhCaretOffsetsInHost(rootRef.current);
-  }, [name, context]);
+  }, []);
 
   /* Sync local fields when `bodyHtml` changes from outside this editor (reload, collab, parent reset). */
   /* eslint-disable react-hooks/set-state-in-effect -- intentional prop→state sync; not a cascading-render loop */

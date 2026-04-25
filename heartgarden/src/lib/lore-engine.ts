@@ -22,27 +22,27 @@ import { LORE_HYBRID_OPTIONS } from "@/src/lib/vault-retrieval-profiles";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
-export type LoreSource = {
-  itemId: string;
-  title: string;
-  spaceId: string;
-  spaceName: string;
-  excerpt: string;
+export interface LoreSource {
   /** `entity_meta.canonicalEntityKind` (e.g. `npc`, `location`, `faction`). */
   canonicalEntityKind?: string | null;
+  excerpt: string;
+  itemId: string;
   /** Semantic chunk texts surfaced for this item (UI / transparency). */
   matchedChunks?: Array<{ text: string; headingPath: string[] }>;
-  /** Included via 1-hop item_links from primary hits. */
-  viaGraph?: boolean;
+  spaceId: string;
+  spaceName: string;
+  title: string;
   /** Included via hgArch binding slots on a primary hit (no `item_links` required). */
   viaBinding?: boolean;
-};
+  /** Included via 1-hop item_links from primary hits. */
+  viaGraph?: boolean;
+}
 
-export type LoreGroundedAnswer = {
+export interface LoreGroundedAnswer {
   answerText: string;
   citedItemIds: string[];
   insufficientEvidence: boolean;
-};
+}
 
 function readCanonicalEntityKind(row: SearchRow): string | null {
   const meta = row.item.entityMeta;

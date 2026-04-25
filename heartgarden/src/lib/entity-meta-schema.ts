@@ -112,19 +112,19 @@ export function parseImportedEntityMeta(
   return parsed.data;
 }
 
-export type BuildImportedEntityMetaInput = {
+export interface BuildImportedEntityMetaInput {
+  aiReview?: AiReviewState;
   /** Merged-in base (e.g. `buildDefaultEntityMeta(note)`) that the importer owns. */
   base?: Record<string, unknown> | ImportedEntityMeta | null;
+  canonicalEntityKind?: ImportedEntityMeta["canonicalEntityKind"];
+  crossFolderRefs?: CrossFolderRef[];
   /** Additional unknown-key passthrough from existing row (merges into output). */
   existing?: Record<string, unknown> | ImportedEntityMeta | null;
-  importBatchId?: string;
-  canonicalEntityKind?: ImportedEntityMeta["canonicalEntityKind"];
-  aiReview?: AiReviewState;
-  importProvenance?: ImportProvenance;
-  crossFolderRefs?: CrossFolderRef[];
   /** Explicit marker that this write originated in the import pipeline. */
   import?: boolean;
-};
+  importBatchId?: string;
+  importProvenance?: ImportProvenance;
+}
 
 /**
  * Build a validated entity_meta object. Throws when the result fails schema validation so

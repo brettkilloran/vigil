@@ -388,7 +388,7 @@ function extractContextHtml(root: ParentNode): string {
   const first = lines[0]!;
   const spans = first.querySelectorAll("span");
   if (spans.length >= 2) {
-    const val = spans[spans.length - 1] as HTMLElement;
+    const val = spans.at(-1) as HTMLElement;
     const raw = (val.innerHTML || "").trim();
     return raw || "<br>";
   }
@@ -413,7 +413,7 @@ function extractDetailHtml(root: ParentNode): string {
   const second = lines[1]!;
   const spans = second.querySelectorAll("span");
   if (spans.length >= 2) {
-    const val = spans[spans.length - 1] as HTMLElement;
+    const val = spans.at(-1) as HTMLElement;
     const raw = (val.innerHTML || "").trim();
     return raw || "<br>";
   }
@@ -555,7 +555,7 @@ function mergeIntoLegacyTemplate(
     } else {
       const spans = first.querySelectorAll("span");
       if (spans.length >= 2) {
-        const val = spans[spans.length - 1] as HTMLElement;
+        const val = spans.at(-1) as HTMLElement;
         val.innerHTML = sanitizedHtmlOrBr(context);
       } else {
         first.innerHTML = sanitizedHtmlOrBr(context);
@@ -572,7 +572,7 @@ function mergeIntoLegacyTemplate(
     } else {
       const spans = second.querySelectorAll("span");
       if (spans.length >= 2) {
-        const val = spans[spans.length - 1] as HTMLElement;
+        const val = spans.at(-1) as HTMLElement;
         val.innerHTML = sanitizedHtmlOrBr(detail);
       } else {
         second.innerHTML = sanitizedHtmlOrBr(detail);
@@ -659,20 +659,20 @@ export function focusDocumentHtmlToLocationBody(
 }
 
 /** Parsed location focus shell (`locationBodyToFocusDocumentHtml` shape) for hgDoc migration. */
-export type LocationFocusParts = {
-  name: string;
+export interface LocationFocusParts {
   context: string;
   detail: string;
-  ref: string;
   hasRef: boolean;
+  name: string;
   notesHtml: string;
-};
+  ref: string;
+}
 
 export function parseLocationFocusDocumentHtml(
   html: string
 ): LocationFocusParts | null {
   const root = parseWrapped(html);
-  if (!(root && root.querySelector("[data-hg-lore-location-focus-notes]"))) {
+  if (!root?.querySelector("[data-hg-lore-location-focus-notes]")) {
     return null;
   }
   const refField = root.querySelector(

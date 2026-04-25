@@ -15,7 +15,7 @@
  *
  * @see docs/LORE_IMPORT_AUDIT_2026-04-21.md §4.6 and plan §7.
  */
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import type { BindingSlotId } from "@/src/lib/bindings-catalog";
 import type { FactionRosterEntry } from "@/src/lib/faction-roster-schema";
 import type { CanonicalEntityKind } from "@/src/lib/lore-import-canonical-kinds";
@@ -56,14 +56,14 @@ export type BindingPatch =
       characterItemId: string;
     };
 
-export type BuildBindingPatchInput = {
+export interface BuildBindingPatchInput {
   sourceKind: CanonicalEntityKind | string | undefined;
-  targetKind: CanonicalEntityKind | string | undefined;
   /** Resolved target item id (post-apply). */
   targetItemId: string;
+  targetKind: CanonicalEntityKind | string | undefined;
   /** Optional target title — used for roster `displayNameOverride` hints. */
   targetTitle?: string;
-};
+}
 
 /**
  * Map a (sourceKind, targetKind) pair to the best-fit structured binding slot.

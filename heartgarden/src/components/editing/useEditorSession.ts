@@ -4,23 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type EditorCommitReason = "debounce" | "blur" | "enter" | "manual";
 
-type UseEditorSessionOptions = {
-  value: string;
+interface UseEditorSessionOptions {
   debounceMs?: number;
   normalizeOnCommit?: (value: string) => string;
   onCommit: (value: string, reason: EditorCommitReason) => void;
   /** Fires when the live draft diverges from `value` while focused, and `false` when not editing or when aligned. */
   onDraftDirtyChange?: (dirty: boolean) => void;
-};
+  value: string;
+}
 
-type UseEditorSessionResult = {
+interface UseEditorSessionResult {
+  beginEditing: () => void;
+  cancelEditing: () => string;
+  commitNow: (reason?: EditorCommitReason) => string;
   draft: string;
   isEditing: boolean;
   onDraftChange: (next: string) => void;
-  beginEditing: () => void;
-  commitNow: (reason?: EditorCommitReason) => string;
-  cancelEditing: () => string;
-};
+}
 
 export function useEditorSession({
   value,

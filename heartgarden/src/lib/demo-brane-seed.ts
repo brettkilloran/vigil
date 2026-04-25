@@ -12,12 +12,7 @@ import { resolveOrCreateBraneByType } from "@/src/lib/spaces";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
-type DemoSeed = {
-  spaces: Array<{
-    id: string;
-    name: string;
-    parentSpaceId: string | null;
-  }>;
+interface DemoSeed {
   items: Array<{
     id: string;
     spaceId: string;
@@ -38,7 +33,12 @@ type DemoSeed = {
     targetItemId: string;
     linkType: string;
   }>;
-};
+  spaces: Array<{
+    id: string;
+    name: string;
+    parentSpaceId: string | null;
+  }>;
+}
 
 let demoSeedCache: DemoSeed | null = null;
 

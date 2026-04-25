@@ -29,13 +29,13 @@ Rules:
 - When there are no candidates, still return suggestedNoteTags + semanticSummary if helpful; issues should usually be [].
 - When a candidate includes structuredBindingTargets (hgArch item ids), flag a contradiction or warning if the draft clearly asserts a different employer, home, or membership than those bindings imply.`;
 
-export type LoreConsistencyIssue = {
-  summary: string;
-  severity: "info" | "warning" | "contradiction";
-  details?: string;
+export interface LoreConsistencyIssue {
   candidateItemId?: string;
+  details?: string;
   handlingHint?: string;
-};
+  severity: "info" | "warning" | "contradiction";
+  summary: string;
+}
 
 export async function runLoreConsistencyCheck(args: {
   db: VigilDb;

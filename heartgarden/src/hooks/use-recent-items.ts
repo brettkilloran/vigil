@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { WorkspaceBootTierTag } from "@/src/lib/workspace-view-cache";
 
-export type RecentPaletteItem = {
+export interface RecentPaletteItem {
   id: string;
-  title: string;
   itemType: string;
   spaceId: string;
   spaceName: string;
+  title: string;
   updatedAt: number;
-};
+}
 
 const MAX_RECENT_ITEMS = 20;
 

@@ -46,13 +46,13 @@ export function resolveFactionRosterEntryIdFromDrawTarget(
   return rosterId;
 }
 
-export type SemanticThreadPatch = {
+export interface SemanticThreadPatch {
   /** entity id → updater (applied in order, same graph tick) */
   entityUpdates: Record<
     string,
     (prev: CanvasContentEntity) => CanvasContentEntity
   >;
-};
+}
 
 export type SemanticThreadEvalResult =
   | { kind: "none" }

@@ -3,7 +3,10 @@
  * Resets per serverless instance; use for logs / relative comparison, not global SLO.
  */
 
-type PublishSample = { ms: number; at: number };
+interface PublishSample {
+  at: number;
+  ms: number;
+}
 
 const recent: PublishSample[] = [];
 const MAX_SAMPLES = 50;
@@ -34,7 +37,7 @@ export function getHeartgardenRealtimePublishMetricsSnapshot(): {
     return { count: 0, lastMs: null, p50Ms: null, p95Ms: null };
   }
   const sorted = [...recent.map((r) => r.ms)].sort((a, b) => a - b);
-  const lastMs = recent[recent.length - 1]!.ms;
+  const lastMs = recent.at(-1)?.ms;
   const p = (q: number) =>
     sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))] ??
     null;

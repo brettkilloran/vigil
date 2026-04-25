@@ -150,9 +150,9 @@ export async function POST(req: Request) {
 
     after(async () => {
       await publishHeartgardenSpaceInvalidation(db, {
-        originSpaceId: created!.id,
+        originSpaceId: created?.id,
         reason: "space.created",
-        lookupSpaceIds: [created!.id, parentSpaceId],
+        lookupSpaceIds: [created?.id, parentSpaceId],
         directSpaceIds: [parentSpaceId],
       });
     });
@@ -160,12 +160,12 @@ export async function POST(req: Request) {
     return Response.json({
       ok: true,
       space: {
-        id: created!.id,
-        name: created!.name,
+        id: created?.id,
+        name: created?.name,
         updatedAt:
-          created!.updatedAt instanceof Date
-            ? created!.updatedAt.toISOString()
-            : String(created!.updatedAt),
+          created?.updatedAt instanceof Date
+            ? created?.updatedAt.toISOString()
+            : String(created?.updatedAt),
       },
     });
   }
@@ -221,11 +221,11 @@ export async function POST(req: Request) {
 
   after(async () => {
     await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: created!.id,
+      originSpaceId: created?.id,
       reason: "space.created",
       lookupSpaceIds: parentSpaceId
-        ? [created!.id, parentSpaceId]
-        : [created!.id],
+        ? [created?.id, parentSpaceId]
+        : [created?.id],
       directSpaceIds: parentSpaceId ? [parentSpaceId] : undefined,
     });
   });
@@ -233,12 +233,12 @@ export async function POST(req: Request) {
   return Response.json({
     ok: true,
     space: {
-      id: created!.id,
-      name: created!.name,
+      id: created?.id,
+      name: created?.name,
       updatedAt:
-        created!.updatedAt instanceof Date
-          ? created!.updatedAt.toISOString()
-          : String(created!.updatedAt),
+        created?.updatedAt instanceof Date
+          ? created?.updatedAt.toISOString()
+          : String(created?.updatedAt),
     },
   });
 }

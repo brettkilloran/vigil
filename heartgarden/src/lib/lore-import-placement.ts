@@ -21,18 +21,14 @@ export const IMPORT_CARD_WIDTH = 280;
 export const IMPORT_CARD_HEIGHT = 260;
 export const IMPORT_CARD_GAP = 28;
 
-export type ImportPlacementRect = {
+export interface ImportPlacementRect {
+  height: number;
+  width: number;
   x: number;
   y: number;
-  width: number;
-  height: number;
-};
+}
 
-export type PlaceImportCardsInput = {
-  originX: number;
-  originY: number;
-  /** Source (imported document) card — placed first so it can anchor affines. */
-  source?: { width: number; height: number } | null;
+export interface PlaceImportCardsInput {
   entities: {
     clientId: string;
     width?: number;
@@ -42,14 +38,21 @@ export type PlaceImportCardsInput = {
   }[];
   /** Existing occupied rects to avoid. */
   obstacles?: ImportPlacementRect[];
-};
+  originX: number;
+  originY: number;
+  /** Source (imported document) card — placed first so it can anchor affines. */
+  source?: { width: number; height: number } | null;
+}
 
-export type PlaceImportCardsOutput = {
-  source?: ImportPlacementRect;
+export interface PlaceImportCardsOutput {
   entities: Record<string, ImportPlacementRect>;
-};
+  source?: ImportPlacementRect;
+}
 
-type Cell = { col: number; row: number };
+interface Cell {
+  col: number;
+  row: number;
+}
 
 function cellKey(c: Cell): string {
   return `${c.col},${c.row}`;

@@ -5,12 +5,12 @@ import {
 } from "@/src/lib/faction-roster-schema";
 import { isUuidLike } from "@/src/lib/uuid-like";
 
-export type LoreThreadAnchorsShape = {
-  primaryLocationItemId?: string;
+export interface LoreThreadAnchorsShape {
+  linkedCharacterItemIds?: string[];
   primaryFactionItemId?: string;
   primaryFactionRosterEntryId?: string;
-  linkedCharacterItemIds?: string[];
-};
+  primaryLocationItemId?: string;
+}
 
 function parseHgArch(
   contentJson: Record<string, unknown> | null | undefined

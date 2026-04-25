@@ -107,7 +107,7 @@ export const PlacementGrid: Story = {
             tone="glass"
           >
             <span style={{ fontSize: 11, fontWeight: 600 }}>
-              {side[0]!.toUpperCase()}
+              {side[0]?.toUpperCase()}
             </span>
           </ArchitecturalButton>
         </ArchitecturalTooltip>

@@ -6,7 +6,10 @@
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 24;
 
-type Bucket = { windowStart: number; count: number };
+interface Bucket {
+  count: number;
+  windowStart: number;
+}
 
 const buckets = new Map<string, Bucket>();
 

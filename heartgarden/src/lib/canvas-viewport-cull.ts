@@ -7,12 +7,12 @@ import type {
 } from "@/src/components/foundation/architectural-types";
 
 /** Axis-aligned rectangle in **world** (canvas) coordinates. */
-export type WorldRect = {
-  left: number;
-  top: number;
-  right: number;
+export interface WorldRect {
   bottom: number;
-};
+  left: number;
+  right: number;
+  top: number;
+}
 
 /** Default content pin insets — keep aligned with `ArchitecturalCanvasApp` `CONNECTION_PIN_DEFAULT_*`. */
 const PIN_DEFAULT_CONTENT: CanvasConnectionPin = {

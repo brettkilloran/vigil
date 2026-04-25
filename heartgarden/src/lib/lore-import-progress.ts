@@ -1,10 +1,10 @@
-export type LoreImportProgress = {
+export interface LoreImportProgress {
+  message: string;
+  meta?: Record<string, unknown>;
   phase: string;
   step?: number;
   total?: number;
-  message: string;
-  meta?: Record<string, unknown>;
-};
+}
 
 export type LoreImportProgressReporter = (
   progress: LoreImportProgress

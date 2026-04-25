@@ -19,11 +19,11 @@ import {
 } from "@/src/lib/lore-import-diagnostic";
 import { playVigilUiSound } from "@/src/lib/vigil-ui-sounds";
 
-type Props = {
+interface Props {
   failure: LoreImportFailureDetail | null;
   onClose: () => void;
   onRetry?: () => void;
-};
+}
 
 const RETRYABLE_STAGES = new Set(["parse", "job_create", "timeout", "unknown"]);
 
@@ -231,9 +231,7 @@ export function ArchitecturalLoreImportErrorDialog({
           </Button>
         </div>
         <div className={styles.syncPopoverCopyRow}>
-          <pre className={styles.syncPopoverDiagnostic} tabIndex={0}>
-            {report}
-          </pre>
+          <pre className={styles.syncPopoverDiagnostic}>{report}</pre>
         </div>
       </div>
     </div>,
