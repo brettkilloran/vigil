@@ -1,5 +1,5 @@
 /**
- * Removes `node_modules` and runs `npm ci` for a clean tree.
+ * Removes `node_modules` and runs `pnpm install --frozen-lockfile` for a clean tree.
  * Use when Storybook/Webpack report ENOENT inside packages (corrupt install).
  *
  * Close dev servers, Storybook, and IDE terminals that lock files under
@@ -29,5 +29,5 @@ if (existsSync(nm)) {
   }
 }
 
-const r = spawnSync("npm", ["ci"], { stdio: "inherit", shell: true, cwd: root });
+const r = spawnSync("pnpm", ["install", "--frozen-lockfile"], { stdio: "inherit", shell: true, cwd: root });
 process.exit(r.status ?? 1);

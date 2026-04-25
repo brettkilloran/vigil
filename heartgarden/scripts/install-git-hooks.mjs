@@ -35,7 +35,7 @@ if [ "$SKIP_SECRET_HOOK" = "1" ]; then
 fi
 ROOT="$(git rev-parse --show-toplevel)"
 if [ -d "$ROOT/heartgarden" ]; then
-  cd "$ROOT/heartgarden" && npm run secrets:protect
+  cd "$ROOT/heartgarden" && pnpm run secrets:protect
 else
   echo "[pre-commit] heartgarden/ not found at repo root; skip secrets:protect" >&2
   exit 0

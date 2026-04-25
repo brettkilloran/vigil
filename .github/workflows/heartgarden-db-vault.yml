@@ -4,23 +4,38 @@ name: heartgarden DB vault setup
 on:
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: heartgarden
-
 jobs:
   vault-db:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract Node version from mise.toml
+        id: versions
+        run: |
+          NODE_VERSION=$(grep '^node' mise.toml | cut -d'"' -f2)
+          echo "node=$NODE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: heartgarden/package-lock.json
+          package_json_file: heartgarden/package.json
+          run_install: false
+
+      - name: Setup nodejs
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.versions.outputs.node }}
+          cache: pnpm
+          cache-dependency-path: heartgarden/pnpm-lock.yaml
+
       - name: Install dependencies
-        run: npm ci
+        working-directory: heartgarden
+        run: pnpm install --frozen-lockfile
+
       - name: Write NEON_DATABASE_URL for scripts
+        working-directory: heartgarden
         env:
           NEON_DATABASE_URL: ${{ secrets.HEARTGARDEN_NEON_DATABASE_URL }}
         run: |
@@ -29,5 +44,7 @@ jobs:
             exit 1
           fi
           printf '%s\n' "NEON_DATABASE_URL=$NEON_DATABASE_URL" > .env.local
+
       - name: db:vault-setup
-        run: npm run db:vault-setup
+        working-directory: heartgarden
+        run: pnpm run db:vault-setup

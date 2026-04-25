@@ -31,8 +31,8 @@ Use the remediation ledger and terminal-state rules from `.cursor/skills/review-
 
 Before changing code, capture baseline quality signals:
 
-1. `npm run check`
-2. `npm run test:unit`
+1. `pnpm run check`
+2. `pnpm run test:unit`
 
 Record pass/fail summary. Gate on **new** failures only.
 
@@ -53,7 +53,7 @@ Before classifying or asking, follow `.cursor/skills/review-common/CLOSURE_POLIC
 Process findings in priority order (`CRITICAL` → `LOW`) and continue until every finding has a terminal state:
 
 1. Classify each finding (`SAFE`, `RISKY`, `NET_NEW`). Respect the always-RISKY categories in the closure policy (auth, migrations, billing, realtime/sync, public API, MCP).
-2. Auto-apply all `SAFE` fixes in logical batches without prompting. After each batch, run the **post-fix verification gate** from the closure policy (`npm run check`, `npm run test:unit`, diff against baseline). On new failures, make up to 2 targeted repairs; if still failing, roll that fix back to the checkpoint and reclassify as `QUESTION_FOR_USER`.
+2. Auto-apply all `SAFE` fixes in logical batches without prompting. After each batch, run the **post-fix verification gate** from the closure policy (`pnpm run check`, `pnpm run test:unit`, diff against baseline). On new failures, make up to 2 targeted repairs; if still failing, roll that fix back to the checkpoint and reclassify as `QUESTION_FOR_USER`.
 3. Apply the **stuck-state escalation rule**: if a SAFE fix takes more than 2 attempts or reveals hidden complexity, reclassify as RISKY and ask.
 4. For remaining `NET_NEW` findings, check the **feature-overflow rule** (>~5 files, new subsystem, or feature-sized work). If overflow, file a backlog entry in `heartgarden/docs/BACKLOG.md` under `## Review-sourced backlog` per the closure policy and mark `DECLINED_BY_USER` with a note. Do not ask the user a yes/no.
 5. Group the remaining `RISKY` and `NET_NEW` findings into sensible batches (default: by severity, 3–6 questions per batch). Very risky items (auth bypass, destructive migrations, billing, public API breaks, irreversible destructive changes) get their own single-question `AskQuestion` call.

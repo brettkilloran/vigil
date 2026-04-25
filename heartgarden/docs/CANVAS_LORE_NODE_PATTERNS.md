@@ -92,7 +92,7 @@ When graph state is restored while focus is open, **`focusBody` / baselines** al
 ## 7. Labs and regression
 
 - Exercise new variants in **`/dev/lore-entity-nodes`** (or the dedicated lab component) with the **same** body host classes as production where possible.
-- Run **`npm run check`** before merge; add Storybook only when a story materially reduces regression risk.
+- Run **`pnpm run check`** before merge; add Storybook only when a story materially reduces regression risk.
 
 ---
 
@@ -104,7 +104,7 @@ When graph state is restored while focus is open, **`focusBody` / baselines** al
 4. [ ] **Canvas-only CSS** under that root where the canvas must stay compact.
 5. [ ] **Focus surface** in resolver; **one** `focusBody` editor + document-style body class; for character-like shells prefer **HTML projection** (`*-focus-document-html.ts`) over split React editors unless the data model truly requires a separate tree.
 6. [ ] **`isRichDocBodyFormattingTarget`** scoped to the **prose** region (e.g. focus notes `data-hg-*` or canonical notes body class) so metadata fields do not receive block/slash.
-7. [ ] **Lab page** smoke path + `npm run check`.
+7. [ ] **Lab page** smoke path + `pnpm run check`.
 
 ---
 

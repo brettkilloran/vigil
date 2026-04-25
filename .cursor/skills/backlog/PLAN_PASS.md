@@ -118,7 +118,7 @@ source:
 
 ## Verification commands
 
-<Concrete commands from heartgarden/, e.g. `npm run check`, `npm run test:unit`, targeted Playwright specs, db:vault-setup if migrations, `npm run dev` for manual smoke, etc.>
+<Concrete commands from heartgarden/, e.g. `pnpm run check`, `pnpm run test:unit`, targeted Playwright specs, db:vault-setup if migrations, `pnpm run dev` for manual smoke, etc.>
 
 ## Open questions
 

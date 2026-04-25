@@ -6,8 +6,8 @@
  * `HEARTGARDEN_NEON_DATABASE_URL` per `src/db/postgres-env-url.ts`).
  *
  * Usage:
- *   HEARTGARDEN_SEVER_WORLDS_DRY=1 npx tsx scripts/sever-player-gm-worlds.ts   # counts only
- *   HEARTGARDEN_SEVER_WORLDS_CONFIRM=1 npx tsx scripts/sever-player-gm-worlds.ts # destructive
+ *   HEARTGARDEN_SEVER_WORLDS_DRY=1 pnpm exec tsx scripts/sever-player-gm-worlds.ts   # counts only
+ *   HEARTGARDEN_SEVER_WORLDS_CONFIRM=1 pnpm exec tsx scripts/sever-player-gm-worlds.ts # destructive
  */
 import { resolve } from "node:path";
 

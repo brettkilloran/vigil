@@ -812,7 +812,7 @@ let loreImportPdfjsWorkerSrcSet = false;
 
 type LoreImportPdfjsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 
-/** Pinned to `package-lock` `pdfjs-dist` (via `pdf-parse`); keep worker URL in sync with `import()`. */
+/** Pinned to `pnpm-lock.yaml` `pdfjs-dist` (via `pdf-parse`); keep worker URL in sync with `import()`. */
 const LORE_IMPORT_PDFJS_WORKER =
   "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/legacy/build/pdf.worker.mjs";
 const LORE_IMPORT_PDFJS_MODULE_URL =
@@ -2185,7 +2185,7 @@ No account data was deleted. This browser session could not open a Postgres work
 
 Local dev:
 1. Add NEON_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or POSTGRES_PRISMA_URL to heartgarden/.env.local (Neon connection string).
-2. Restart the dev server from the vigil folder: npm run dev
+2. Restart the dev server from the vigil folder: pnpm run dev
 3. Reload this page.
 
 Vercel / hosted:

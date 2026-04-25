@@ -33,7 +33,7 @@ This file is the **architecture snapshot** and **shipped-tranches history** for 
 | **Production canvas shell** | `ArchitecturalCanvasApp` + `src/components/foundation/*` — mounted from `app/_components/VigilApp.tsx`. |
 | **Boot + session gate (default scenario)** | `VigilAppBootScreen` + `canvasSessionActivated` / `bootLayerDismissed`; `technicalViewportReady` vs `viewportRevealReady` (bootstrap + surface ready; activation required before full chrome). Optional boot flowers (`VigilBootFlowerGarden` portaled under the overlay stack). |
 | **Flow / nav visuals (optional)** | When **canvas effects** are on: `VigilFlowRevealOverlay` via **`next/dynamic`** (`ssr: false`) from `src/components/transition-experiment/` — full-viewport **raw WebGL** shader (FBM “liquid” edge + digital-glitch pass), no `three` / `gsap`. Drives `u_progress` from `sessionActivated`, `navTransitionActive`, and `bootstrapPending`. **Off:** overlay unmounted; **space changes** skip timed nav dimming (instant `enterSpace`). `prefers-reduced-motion: reduce` → overlay returns `null`. |
-| **Canvas performance (scale)** | **`src/lib/canvas-viewport-cull.ts`** — viewport culling for entity DOM, collapsed stacks, and connections (SVG + rope **rAF**). Media: **`heartgarden-image-display-url.ts`** + optional **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`**. Bundle: **`npm run analyze`**. |
+| **Canvas performance (scale)** | **`src/lib/canvas-viewport-cull.ts`** — viewport culling for entity DOM, collapsed stacks, and connections (SVG + rope **rAF**). Media: **`heartgarden-image-display-url.ts`** + optional **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`**. Bundle: **`pnpm run analyze`**. |
 | **Space nav timing (effects on)** | `enterSpace` sets `navTransitionActive`; scene layer uses `viewportSceneLayerDimmed` until fetch + `VIEWPORT_SCENE_FADE_MS` / `VIEWPORT_TRANSITION_CENTER_MS` elide (see `ArchitecturalCanvasApp.tsx`). A **generation counter** drops stale async completions when the user navigates again before the prior fetch finishes; optional future work: cancel in-flight fetch or a CSS-only nav cue when effects are **off**. |
 | **Suspense shell** | `app/page.tsx` — dark `#0c0c0e` fallback to reduce flash before client boot UI. |
 | **Graph state** | In-component React state + **undo/redo** stack (`architectural-undo.ts`); Neon sync via `architectural-db-bridge.ts`, `architectural-neon-api.ts`, `/api/bootstrap`, item/space routes. |
@@ -43,12 +43,12 @@ This file is the **architecture snapshot** and **shipped-tranches history** for 
 | **Search** | Postgres FTS + trigram on `search_blob`. **`/api/search`**: `hybrid` / `semantic` use **RRF** of FTS + fuzzy + **pgvector** chunks when embeddings are configured (`src/lib/embedding-provider.ts`); `GET /api/search/chunks` returns raw chunk hits. **`/api/search/suggest`** remains prefix-FTS. |
 | **Vault index** | `item_embeddings` stores **per-chunk** vectors (`space_id`, `chunk_index`, …). **`POST /api/items/[id]/index`** (re)chunks + Anthropic embeds **lore summary/aliases** (`lore-item-meta.ts`). Server **`after()`** path is the default owner (`schedule-vault-index-after.ts`); client debounced trigger in `architectural-neon-api.ts` is disabled by default when `NEXT_PUBLIC_HEARTGARDEN_INDEX_OWNER=server_after`. **`POST /api/spaces/[id]/reindex`** (MCP `write_key`) remains for backfill. Rate limits: `vault-index-rate-limit.ts`. |
 | **Lore Q&A** | `POST /api/lore/query` — **hybrid retrieval** (`vault-retrieval.ts`) + **1-hop `item_links` neighbors**, synthesis via **Anthropic**. Same env + `lore-query-rate-limit.ts` as before. UI: **Ask lore** → `LoreAskPanel`. |
-| **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`npm run db:ensure-pgvector`). |
+| **DB** | Drizzle `src/db/schema.ts`; Neon requires **`CREATE EXTENSION vector`** before push (`pnpm run db:ensure-pgvector`). |
 | **Soft multiplayer (presence)** | Optional **`canvas_presence`** + `GET/POST /api/spaces/[spaceId]/presence` (subtree peer list by default). Client: `use-heartgarden-presence-heartbeat.ts`, `architectural-neon-api.ts`, remote cursors in `ArchitecturalRemotePresenceLayer.tsx`, emoji **follow** chips in `ArchitecturalStatusBar`. See **`docs/PLAYER_LAYER.md`** and **`docs/API.md`**. |
 
 **Code / API maps:** **`docs/FEATURES.md`** (shipped capability index), **`docs/CODEMAP.md`** (where logic lives by feature), **`docs/API.md`** (route catalog). Update them when you ship a user-facing feature or a new API vertical.
 
-**Health check:** From the app root (**`heartgarden/`** unless renamed — **`docs/NAMING.md`**), run `npm run check` (lint + production build). After UX / DB / stacking changes, run `npm run test:unit` and targeted `npm run test:e2e` if flows touched. **Neon vault schema:** `npm run db:vault-setup`; **embedding backfill:** app up + `npm run vault:reindex` (see **`docs/FOLLOW_UP.md`**).
+**Health check:** From the app root (**`heartgarden/`** unless renamed — **`docs/NAMING.md`**), run `pnpm run check` (lint + production build). After UX / DB / stacking changes, run `pnpm run test:unit` and targeted `pnpm run test:e2e` if flows touched. **Neon vault schema:** `pnpm run db:vault-setup`; **embedding backfill:** app up + `pnpm run vault:reindex` (see **`docs/FOLLOW_UP.md`**).
 
 ---
 
@@ -71,7 +71,7 @@ These align with the **legacy** master plan phases 1–4 in substance (see **`do
 | **Lore engine + vault retrieval** | `lore-engine.ts`, `vault-retrieval.ts`, `item-vault-index.ts`, `/api/lore/query`, `/api/search`, `/api/search/chunks`, index + reindex routes. Client: `LoreAskPanel`. |
 | **Neon save indicator** | Live sync line in status bar; tracks in-flight mutations + debounced content patches. |
 | **Soft presence + follow view** | Ephemeral **`canvas_presence`** rows; status bar collaborator chips + in-canvas remote pointers; **follow** applies peer camera / space (confirm if focus or stack UI is open). |
-| CI / Storybook | `npm run check`; Storybook in CI per `AGENTS.md`. |
+| CI / Storybook | `pnpm run check`; Storybook in CI per `AGENTS.md`. |
 
 *Recent batches (UX, seed data, stacking, boot gate, optional WebGL flow overlay, canvas-effects toggle):* they refine the shell above and **do not invalidate** the master phase map—re-run checks and e2e smoke after merges.
 

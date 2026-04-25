@@ -35,7 +35,7 @@ Run this end-to-end in the **git repository root** (or the app root if the userâ
    - `git fetch origin`.
    - Fast-forward local main if possible: `git checkout main` (or `master`), `git pull origin main`.
    - `git merge <feature-branch>` (or `git rebase` only if the user/repo consistently uses rebase â€” default to **merge** for shared main unless you know otherwise).
-   - Resolve conflicts carefully; run quick checks if the project documents them (e.g. `npm run check` from `heartgarden/` for heartgarden).
+   - Resolve conflicts carefully; run quick checks if the project documents them (e.g. `pnpm run check` from `heartgarden/` for heartgarden).
    - `git push origin main`.
 4. **Never** `git push --force` to `main`/`master` without **explicit** user instruction.
 5. If the team uses **PR-only** flow: push the feature branch, open/merge the PR via GitHub/GitLab UI (or `gh pr merge` if available and the user expects it), then ensure `origin/main` contains the merge result before treating deploy as done.

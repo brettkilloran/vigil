@@ -27,8 +27,8 @@ Restart the heartgarden dev server quickly on the same port, verify it is health
 
 3. Restart the app:
    - Stop the process currently bound to the selected port.
-   - Start dev server from the app directory (**`heartgarden/`** today — see **`docs/NAMING.md`** if renamed). On Windows with a portable Node install, ensure **`node`** / **`npm`** are on `PATH` (see **`heartgarden/AGENTS.md`** → Node on PATH / `pin-portable-node-user-path.ps1`), then run:
-     - `npm run dev -- --port <PORT> --hostname 127.0.0.1`
+   - Start dev server from the app directory (**`heartgarden/`** today — see **`docs/NAMING.md`** if renamed). On Windows with a portable Node install, ensure **`node`** / **`pnpm`** are on `PATH` (see **`heartgarden/AGENTS.md`** → Node on PATH / `pin-portable-node-user-path.ps1`), then run:
+     - `pnpm run dev -- --port <PORT> --hostname 127.0.0.1`
 
 4. Verify health before opening:
    - Probe `http://127.0.0.1:<PORT>` and confirm status `200`.

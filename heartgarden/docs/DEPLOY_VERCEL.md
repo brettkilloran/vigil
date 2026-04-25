@@ -20,7 +20,7 @@ This is the **step-by-step** companion to the short notes in [`README.md`](../RE
 
 - **Framework:** Next.js (App Router), detected automatically by Vercel.
 - **Monorepo:** The Next app is **not** at the repository root. It lives in **`heartgarden/`** ([`NAMING.md`](./NAMING.md)).
-- **Build:** After install, Vercel runs **`npm run check`** (lint + production build) via [`vercel.json`](../vercel.json) — same gate as local CI. Local **`npm run build`** remains **`next build` only** for quick iteration.
+- **Build:** After install, Vercel runs **`pnpm run check`** (lint + production build) via [`vercel.json`](../vercel.json) — same gate as local CI. Local **`pnpm run build`** remains **`next build` only** for quick iteration.
 
 ## 2. Create the Vercel project
 
@@ -28,8 +28,8 @@ This is the **step-by-step** companion to the short notes in [`README.md`](../RE
 2. Under **Configure Project**:
    - **Framework Preset:** Next.js (auto).
    - **Root Directory:** **`heartgarden`** → *Edit* → set to **`heartgarden`** (so Vercel runs install/build inside that folder).
-   - **Build Command:** leave **Override** empty so Vercel uses [`vercel.json`](../vercel.json) → **`npm run check`**. If you override in the dashboard, set it to **`npm run check`** to match (lint + `next build`).
-   - **Install Command:** leave default (`npm install`) or use **`npm ci`** only if you enable a setting that skips lockfile issues; this repo ships `package-lock.json` under `heartgarden/`.
+   - **Build Command:** leave **Override** empty so Vercel uses [`vercel.json`](../vercel.json) → **`pnpm run check`**. If you override in the dashboard, set it to **`pnpm run check`** to match (lint + `next build`).
+   - **Install Command:** leave default (`pnpm install`) or use **`pnpm install --frozen-lockfile`** for stricter CI parity; this repo ships `pnpm-lock.yaml` under `heartgarden/`.
    - **Output Directory:** leave default (Next handles this).
 3. **Node.js version:** In **Project → Settings → General → Node.js Version**, pick **22.x** (matches CI) or at least **20.x** (`package.json` has `"engines": { "node": ">=20" }`).
 
@@ -64,7 +64,7 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 | `HEARTGARDEN_BOOT_SESSION_SECRET` | Same | Required if gate on | HMAC secret for boot session cookie. Sensitive. |
 | `HEARTGARDEN_BOOT_SESSION_MAX_AGE_SEC` | Same | Optional | Cookie TTL (**60–31536000** seconds); default **30 days**. |
 | `HEARTGARDEN_REALTIME_URL` | Production, Preview (optional) | Multiplayer realtime | **`wss://`** origin of the realtime server (see §5.5). Requires **`HEARTGARDEN_REALTIME_REDIS_URL`** and **`HEARTGARDEN_REALTIME_SECRET`**. |
-| `HEARTGARDEN_REALTIME_REDIS_URL` | Same | Realtime | Redis pub/sub URL; same value on Vercel and the **`npm run realtime`** host. |
+| `HEARTGARDEN_REALTIME_REDIS_URL` | Same | Realtime | Redis pub/sub URL; same value on Vercel and the **`pnpm run realtime`** host. |
 | `HEARTGARDEN_REALTIME_SECRET` | Same | Realtime | **≥ 16** characters; shared with the realtime server. |
 
 **Do not set on Vercel:**
@@ -72,9 +72,9 @@ Add these in **Project → Settings → Environment Variables**. Mark secrets as
 - `PLAYWRIGHT_E2E` — would force empty bootstrap (tests only) and disables the boot PIN gate in **`/api/heartgarden/boot`**.
 - `NEXT_PUBLIC_*` for database or Anthropic keys — not used for those; keep server secrets server-only.
 
-**MCP:** Set **`HEARTGARDEN_MCP_SERVICE_KEY`** on the **Vercel** deployment if you use **`GET|POST|DELETE /api/mcp`** (hosted Streamable HTTP) or need stdio **`npm run mcp`** to call **`fetch`** into production with the boot gate on. Optional on the laptop: **`HEARTGARDEN_APP_URL`**, **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_MCP_WRITE_KEY`** when running the stdio MCP client against production.
+**MCP:** Set **`HEARTGARDEN_MCP_SERVICE_KEY`** on the **Vercel** deployment if you use **`GET|POST|DELETE /api/mcp`** (hosted Streamable HTTP) or need stdio **`pnpm run mcp`** to call **`fetch`** into production with the boot gate on. Optional on the laptop: **`HEARTGARDEN_APP_URL`**, **`HEARTGARDEN_DEFAULT_SPACE_ID`**, **`HEARTGARDEN_MCP_WRITE_KEY`** when running the stdio MCP client against production.
 
-**Debugging `/api/mcp` in production:** In **Vercel → Project → Logs**, filter by path **`/api/mcp`** (or search `mcp`). Expect **401** when the service key is missing or wrong, **503** when **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset in that environment, and **200** for successful MCP **`POST`**s. Do not paste tokens into tickets; use **`npm run mcp:smoke`** from **`heartgarden/`** with a local env var to verify end-to-end (see **`docs/API.md`** § MCP).
+**Debugging `/api/mcp` in production:** In **Vercel → Project → Logs**, filter by path **`/api/mcp`** (or search `mcp`). Expect **401** when the service key is missing or wrong, **503** when **`HEARTGARDEN_MCP_SERVICE_KEY`** is unset in that environment, and **200** for successful MCP **`POST`**s. Do not paste tokens into tickets; use **`pnpm run mcp:smoke`** from **`heartgarden/`** with a local env var to verify end-to-end (see **`docs/API.md`** § MCP).
 
 ### MCP and Vercel Deployment Protection (SSO / auth wall)
 
@@ -101,8 +101,8 @@ After changing env vars, **redeploy** (Deployments → … → Redeploy) so new 
 From your laptop, with production URL in env (or pasted for one command):
 
 1. Enable **`pgvector`** if your schema uses embeddings:  
-   `npm run db:ensure-pgvector` from **`heartgarden/`** with `NEON_DATABASE_URL` pointing at that database.
-2. Apply schema: **`npm run db:push`** or **`npm run db:migrate`** (whatever you use for this project — see [`docs/MIGRATION.md`](./MIGRATION.md) if upgrading).
+   `pnpm run db:ensure-pgvector` from **`heartgarden/`** with `NEON_DATABASE_URL` pointing at that database.
+2. Apply schema: **`pnpm run db:push`** or **`pnpm run db:migrate`** (whatever you use for this project — see [`docs/MIGRATION.md`](./MIGRATION.md) if upgrading).
 
 Order matters: extensions and migrations run **against Neon**, not inside Vercel’s build step, unless you deliberately add a migration step to CI/CD.
 
@@ -143,14 +143,14 @@ Without this, the canvas still syncs via **polling** (`GET /api/spaces/[id]/chan
 **What you need**
 
 1. **Redis** reachable from both **Vercel** (serverless publishes after writes) and the **realtime** process (subscribes and fans out). **Upstash** (or any Redis with `SUBSCRIBE`) works; use the **same** URL in both places.
-2. **A long-lived WebSocket server** — Vercel runs **`npm run check`** for the Next app only; **`npm run realtime`** must run **elsewhere** (container, VM, Fly.io, Railway, etc.).
+2. **A long-lived WebSocket server** — Vercel runs **`pnpm run check`** for the Next app only; **`pnpm run realtime`** must run **elsewhere** (container, VM, Fly.io, Railway, etc.).
 3. **TLS in front of the socket server** so browsers can use **`wss://`** (required when the app is served over **https://**).
 
 **Steps**
 
 1. Create Redis; copy the connection URL (often `rediss://…` with TLS).
 2. Generate a random string (**≥ 16** characters) for **`HEARTGARDEN_REALTIME_SECRET`** (same value everywhere).
-3. Deploy **`npm run realtime`** from **`heartgarden/`** with env:
+3. Deploy **`pnpm run realtime`** from **`heartgarden/`** with env:
    - **`HEARTGARDEN_REALTIME_REDIS_URL`** — same as Vercel.
    - **`HEARTGARDEN_REALTIME_SECRET`** — same as Vercel.
    - **`HEARTGARDEN_REALTIME_PORT`** — optional (default **3002**); map the platform’s HTTP port to this process.
@@ -193,9 +193,9 @@ On your machine:
 
 ```bash
 cd heartgarden
-npx vercel login
-npx vercel link    # connect repo directory to the Vercel project
-npx vercel env pull .env.local   # optional: pull non-production env for local parity
+pnpm dlx vercel login
+pnpm dlx vercel link    # connect repo directory to the Vercel project
+pnpm dlx vercel env pull .env.local   # optional: pull non-production env for local parity
 ```
 
 Production deploys are usually triggered by **git push** once the Git integration is connected.
@@ -204,12 +204,12 @@ Production deploys are usually triggered by **git push** once the Git integratio
 
 | Symptom | Things to check |
 |--------|-------------------|
-| Build fails on Vercel | Root Directory **`heartgarden`**, Node **20+**, same branch as local; run **`npm run check`** locally from `heartgarden/`. If only lint fails, fix ESLint or align dashboard **Build Command** with **`npm run check`**. |
+| Build fails on Vercel | Root Directory **`heartgarden`**, Node **20+**, same branch as local; run **`pnpm run check`** locally from `heartgarden/`. If only lint fails, fix ESLint or align dashboard **Build Command** with **`pnpm run check`**. |
 | Site loads but always “demo” / empty cloud | `NEON_DATABASE_URL` missing or wrong environment; redeploy after fixing. |
 | DB errors / too many connections | Use Neon’s **pooled** connection string for serverless. |
 | R2 upload fails in browser | CORS on bucket for your Vercel URL; `R2_PUBLIC_BASE_URL` matches how objects are read. |
 | Lore always errors | `ANTHROPIC_API_KEY` set for **Production** (or Preview); check function logs in Vercel. |
-| Realtime never connects (falls back to poll) | **`HEARTGARDEN_REALTIME_*`** set on Vercel and **redeployed**; **`npm run realtime`** running with same Redis + secret; **`HEARTGARDEN_REALTIME_URL`** is **`wss://`** from the browser’s perspective; mixed-content blocks **`ws://`** on **https://** pages. |
+| Realtime never connects (falls back to poll) | **`HEARTGARDEN_REALTIME_*`** set on Vercel and **redeployed**; **`pnpm run realtime`** running with same Redis + secret; **`HEARTGARDEN_REALTIME_URL`** is **`wss://`** from the browser’s perspective; mixed-content blocks **`ws://`** on **https://** pages. |
 
 ## 10. Quick verification after deploy
 

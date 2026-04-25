@@ -314,7 +314,7 @@ No size cap, no discriminated-union validation, no DB `CHECK` constraints. That'
 
 ### ~~18. Stories are excluded from TypeScript strict checking~~ — **fixed 2026-04-21**
 
-`tsconfig.json` excludes `**/*.stories.{ts,tsx}`. Storybook builds them separately, but type errors there won't break `npm run check`. Given the many untracked story files in the working tree, this is actively masking drift.
+`tsconfig.json` excludes `**/*.stories.{ts,tsx}`. Storybook builds them separately, but type errors there won't break `pnpm run check`. Given the many untracked story files in the working tree, this is actively masking drift.
 
 ```33:34:heartgarden/tsconfig.json
   "exclude": ["node_modules", "**/*.stories.ts", "**/*.stories.tsx"]
@@ -504,7 +504,7 @@ Body trigram matching would dramatically help recall for typos.
 
 CI runs `build-storybook` but the many untracked `*.stories.tsx` suggest story/component pairs drift locally. `verify:foundation-sync` only covers foundation shell wiring, not story coverage.
 
-**Shipped:** CI now executes `npm run verify:foundation-sync` in `[.github/workflows/heartgarden-ci.yml](../../.github/workflows/heartgarden-ci.yml)` before lint/build.
+**Shipped:** CI now executes `pnpm run verify:foundation-sync` in `[.github/workflows/heartgarden-ci.yml](../../.github/workflows/heartgarden-ci.yml)` before lint/build.
 
 ### ~~38. `heartgardenBootApi` cached-workspace reconnect effect — same identity churn risk as #15~~ — **fixed 2026-04-21** (same change as #15)
 

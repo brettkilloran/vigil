@@ -9,8 +9,8 @@ This is a [Next.js](https://nextjs.org) app: **heartgarden** — a custom DOM in
 ## Getting started
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Without `NEON_DATABASE_URL`, the app runs in **local-only** mode (data in `localStorage`). With Neon configured, use **`docs/STRATEGY.md`** migration notes if upgrading from older schemas (removed `users` / `source_shape_id` / tldraw snapshots).
@@ -19,47 +19,45 @@ Copy [`.env.local.example`](.env.local.example) to `.env.local` for database, op
 
 Upgrading an old Neon schema: see [`docs/MIGRATION.md`](docs/MIGRATION.md).
 
-**Neon + vault index (automated):** From this folder, **`npm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and replays every file in **`drizzle/migrations/`** in order via **`db:vault-sql`** (idempotent; new `.sql` files get picked up automatically). See [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md). When **`OPENAI_API_KEY`** is set, **`src/lib/embedding-provider.ts`** writes chunk vectors with OpenAI embeddings (default **`text-embedding-3-small`**); without it, vault reindex still refreshes lexical search data and lore meta, and hybrid/semantic modes fall back to lexical-only retrieval. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
+**Neon + vault index (automated):** From this folder, **`pnpm run db:vault-setup`** runs pgvector, **`drizzle-kit push --force`**, and replays every file in **`drizzle/migrations/`** in order via **`db:vault-sql`** (idempotent; new `.sql` files get picked up automatically). See [`docs/FOLLOW_UP.md`](docs/FOLLOW_UP.md). When **`OPENAI_API_KEY`** is set, **`src/lib/embedding-provider.ts`** writes chunk vectors with OpenAI embeddings (default **`text-embedding-3-small`**); without it, vault reindex still refreshes lexical search data and lore meta, and hybrid/semantic modes fall back to lexical-only retrieval. GitHub: manual workflow **`heartgarden-db-vault.yml`** + secret **`HEARTGARDEN_NEON_DATABASE_URL`**.
 
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `npm run dev` | Development server (**runs until stopped** — not a stuck terminal) |
-| `npm run dev:surfaces` | Run app (`:3000`) and Storybook (`:6006`) together for side-by-side validation |
-| `npm run check` | `lint` + `build` (use this for quick verification; exits when done) |
-| `npm run verify:foundation-sync` | Ensure app entry + foundation shell wiring did not drift from Storybook components |
-| `npm run build` | Production build |
-| `npm run db:push` | Push Drizzle schema to Neon (interactive) |
-| `npm run db:push:force` | `drizzle-kit push --force` (CI / automation; review data-loss prompts before using on prod) |
-| `npm run db:vault-sql` | Apply every `drizzle/migrations/*.sql` file in order via `pg` (idempotent — `IF NOT EXISTS` guards; HNSW fallback if unsupported). Applies extensions / custom indexes / backfills that `drizzle-kit push` cannot express. |
-| `npm run db:vault-setup` | **`db:ensure-pgvector`** → **`db:push:force`** → **`db:vault-sql`** |
-| `npm run vault:reindex` | HTTP fan-out to **`POST /api/items/:id/index`** for every item (app must be up; see `.env.local.example` for `VAULT_REINDEX_*`) |
-| `npm run mcp` | MCP stdio tools (**`heartgarden_*`**, e.g. **`heartgarden_list_items`**, **`heartgarden_search`**, **`heartgarden_graph`**; legacy **`vigil_*`** aliases still work on call) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Hosted Streamable HTTP: **`GET|POST|DELETE /api/mcp`** with **`Authorization: Bearer HEARTGARDEN_MCP_SERVICE_KEY`** (see **`AGENTS.md`**). |
-| `npm run realtime` | Optional dedicated WebSocket room server for multiplayer invalidation fanout. Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, and **`HEARTGARDEN_REALTIME_SECRET`**. Clients still merge from Neon via `/api/spaces/:id/changes`; realtime just wakes them immediately. |
+| `pnpm run dev` | Development server (**runs until stopped** — not a stuck terminal) |
+| `pnpm run dev:surfaces` | Run app (`:3000`) and Storybook (`:6006`) together for side-by-side validation |
+| `pnpm run check` | `lint` + `build` (use this for quick verification; exits when done) |
+| `pnpm run verify:foundation-sync` | Ensure app entry + foundation shell wiring did not drift from Storybook components |
+| `pnpm run build` | Production build |
+| `pnpm run db:push` | Push Drizzle schema to Neon (interactive) |
+| `pnpm run db:push:force` | `drizzle-kit push --force` (CI / automation; review data-loss prompts before using on prod) |
+| `pnpm run db:vault-sql` | Apply every `drizzle/migrations/*.sql` file in order via `pg` (idempotent — `IF NOT EXISTS` guards; HNSW fallback if unsupported). Applies extensions / custom indexes / backfills that `drizzle-kit push` cannot express. |
+| `pnpm run db:vault-setup` | **`db:ensure-pgvector`** → **`db:push:force`** → **`db:vault-sql`** |
+| `pnpm run vault:reindex` | HTTP fan-out to **`POST /api/items/:id/index`** for every item (app must be up; see `.env.local.example` for `VAULT_REINDEX_*`) |
+| `pnpm run mcp` | MCP stdio tools (**`heartgarden_*`**, e.g. **`heartgarden_list_items`**, **`heartgarden_search`**, **`heartgarden_graph`**; legacy **`vigil_*`** aliases still work on call) — needs app reachable at `HEARTGARDEN_APP_URL` (default `http://localhost:3000`). Hosted Streamable HTTP: **`GET|POST|DELETE /api/mcp`** with **`Authorization: Bearer HEARTGARDEN_MCP_SERVICE_KEY`** (see **`AGENTS.md`**). |
+| `pnpm run realtime` | Optional dedicated WebSocket room server for multiplayer invalidation fanout. Requires **`HEARTGARDEN_REALTIME_URL`**, **`HEARTGARDEN_REALTIME_REDIS_URL`**, and **`HEARTGARDEN_REALTIME_SECRET`**. Clients still merge from Neon via `/api/spaces/:id/changes`; realtime just wakes them immediately. |
 
-**More npm tasks** (see also **`AGENTS.md`** for CI and Storybook guardrails):
+**More pnpm tasks** (see also **`AGENTS.md`** for CI and Storybook guardrails):
 
 | Script | Purpose |
 |--------|---------|
-| `npm run check:all` | `check` + production **Storybook** build (use when touching stories or `.storybook/`) |
-| `npm run analyze` | Webpack bundle analyzer (`ANALYZE=1` build) |
-| `npm run test:unit` | Vitest unit tests (`src/**/*.test.ts`) |
-| `npm run test:e2e` | Playwright (`e2e/`); see **`AGENTS.md`** for **`PLAYWRIGHT_E2E`** / port **3001** |
-| `npm run test:e2e:visual` | Visual regression snapshots (OS-specific baselines) |
-| `npm run reinstall` | Clean reinstall **`node_modules`** from lockfile (fixes broken Storybook/Webpack installs) |
-| `npm run verify:package-lock-ci` | Verify **`npm ci`**-safe lockfile for Linux CI |
-| `npm run lockfile:regenerate-linux` | Regenerate lockfile Linux optionals after **`npm install`** on Windows |
-| `npm run verify:editor-cutover` | Guard script for editor migration wiring |
-| `npm run mcp:smoke` | Smoke-test hosted **`/api/mcp`** (same transport as Claude Desktop) |
-| `npm run realtime:redis-smoke` | Redis connectivity check for realtime stack |
-| `npm run db:studio` | Drizzle Studio |
-| `npm run db:migrate` | `drizzle-kit migrate` |
-| `npm run db:sever-worlds` | One-time GM / Players data severance — see **`docs/PLAYER_LAYER.md`** |
-| `npm run storybook:lan` | Storybook on **`0.0.0.0:6006`** (LAN) |
-| `npm run storybook:doctor` | Preflight that Storybook deps exist |
-| `npm run storybook:static` | Build + serve static Storybook on **6007** |
-| `npm run secrets:protect` / `secrets:scan` | Gitleaks (repo root config) |
+| `pnpm run check:all` | `check` + production **Storybook** build (use when touching stories or `.storybook/`) |
+| `pnpm run analyze` | Webpack bundle analyzer (`ANALYZE=1` build) |
+| `pnpm run test:unit` | Vitest unit tests (`src/**/*.test.ts`) |
+| `pnpm run test:e2e` | Playwright (`e2e/`); see **`AGENTS.md`** for **`PLAYWRIGHT_E2E`** / port **3001** |
+| `pnpm run test:e2e:visual` | Visual regression snapshots (OS-specific baselines) |
+| `pnpm run reinstall` | Clean reinstall **`node_modules`** from lockfile (fixes broken Storybook/Webpack installs) |
+| `pnpm run verify:editor-cutover` | Guard script for editor migration wiring |
+| `pnpm run mcp:smoke` | Smoke-test hosted **`/api/mcp`** (same transport as Claude Desktop) |
+| `pnpm run realtime:redis-smoke` | Redis connectivity check for realtime stack |
+| `pnpm run db:studio` | Drizzle Studio |
+| `pnpm run db:migrate` | `drizzle-kit migrate` |
+| `pnpm run db:sever-worlds` | One-time GM / Players data severance — see **`docs/PLAYER_LAYER.md`** |
+| `pnpm run storybook:lan` | Storybook on **`0.0.0.0:6006`** (LAN) |
+| `pnpm run storybook:doctor` | Preflight that Storybook deps exist |
+| `pnpm run storybook:static` | Build + serve static Storybook on **6007** |
+| `pnpm run secrets:protect` / `secrets:scan` | Gitleaks (repo root config) |
 
 ### Keyboard (canvas, not typing in a note)
 
@@ -77,14 +75,14 @@ Handlers use **`Ctrl` on Windows and Linux** and **`⌘` on macOS** (`ctrlKey ||
 
 ### “Background shell” running 20+ minutes?
 
-That is usually **`next dev`** (or a second copy started by mistake). Stop it from the terminal trashcan / **Ctrl+C**, or run **`npm run check`** instead when you only need to validate the project.
+That is usually **`next dev`** (or a second copy started by mistake). Stop it from the terminal trashcan / **Ctrl+C**, or run **`pnpm run check`** instead when you only need to validate the project.
 
 ### Storybook and app out of sync?
 
 Run both surfaces together while editing foundation UI:
 
 ```bash
-npm run dev:surfaces
+pnpm run dev:surfaces
 ```
 
 Then keep these open in parallel:
@@ -96,7 +94,7 @@ If one view looks stale:
 
 1. Hard-refresh the stale tab (`Ctrl+Shift+R`).
 2. Confirm the terminal shows a fresh compile for the file you changed.
-3. Run `npm run verify:foundation-sync` to ensure the app still points at the same foundation components being edited in Storybook.
+3. Run `pnpm run verify:foundation-sync` to ensure the app still points at the same foundation components being edited in Storybook.
 
 ## Deploy on Vercel
 

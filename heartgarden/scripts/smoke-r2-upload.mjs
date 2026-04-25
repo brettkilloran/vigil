@@ -13,7 +13,7 @@ writeFileSync(bodyPath, JSON.stringify({ contentType: "image/png", filename: "sm
 
 const dataArg = `@${bodyPath.replaceAll("\\", "/")}`;
 const quoted = JSON.stringify(dataArg);
-const cmd = `npx vercel curl /api/upload/presign -- --request POST --header "Content-Type: application/json" --data ${quoted} -s`;
+const cmd = `pnpm dlx vercel curl /api/upload/presign -- --request POST --header "Content-Type: application/json" --data ${quoted} -s`;
 const out = execSync(cmd, {
   cwd: root,
   encoding: "utf8",

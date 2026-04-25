@@ -26,7 +26,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 | **Soft presence** | Emoji chips in status bar (subtree peers), remote cursors, **follow** another tab’s view (confirm if focus/stack open) | [`PLAYER_LAYER.md`](./PLAYER_LAYER.md), [`API.md`](./API.md) (`…/presence`) | `canvas_presence` in `schema.ts`, `presence/route.ts`, `use-heartgarden-presence-heartbeat.ts`, `ArchitecturalRemotePresenceLayer.tsx`, `collab-presence-identity.ts` |
 | **PATCH conflict (409)** | Server version wins; shell surfaces a **conflict banner** with server copy vs dismiss (keep local draft); dev-only `NEXT_PUBLIC_HEARTGARDEN_SYNC_DEBUG=1` logs PATCH timing | [`API.md`](./API.md) (Items PATCH) | `app/api/items/[itemId]/route.ts`, item patch flow in `ArchitecturalCanvasApp.tsx` / `architectural-neon-api.ts`, `heartgarden-sync-debug.ts` |
 | **Remote merge / protected ids** | Graph merge preserves local title/body for focus overlay, **inline** drafts, and **in-flight PATCH** ids; poll `updatedAt` map only advances when newer (no regress) | [`API.md`](./API.md) (browser shell — delta sync) | `architectural-db-bridge.ts`, `architectural-db-bridge.merge-remote.test.ts`, `heartgarden-space-change-sync-utils.ts` |
-| **Realtime invalidation (optional)** | When **`HEARTGARDEN_REALTIME_*`** is set + **`npm run realtime`**, WebSocket events wake peers; Neon + **`GET …/changes`** remain source of truth | [`API.md`](./API.md) (Realtime), [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5.5 | `use-heartgarden-realtime-space-sync.ts`, `heartgarden-realtime-*.ts`, `scripts/realtime-server.ts` |
+| **Realtime invalidation (optional)** | When **`HEARTGARDEN_REALTIME_*`** is set + **`pnpm run realtime`**, WebSocket events wake peers; Neon + **`GET …/changes`** remain source of truth | [`API.md`](./API.md) (Realtime), [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md) §5.5 | `use-heartgarden-realtime-space-sync.ts`, `heartgarden-realtime-*.ts`, `scripts/realtime-server.ts` |
 
 ---
 
@@ -79,7 +79,7 @@ Single place to **look up what exists** and where it lives. For **HTTP contracts
 |--------|----------------------------|------|----------------|
 | **Zoom-aware image URLs** | Optional CDN resize template for card images by zoom | [`FOLLOW_UP.md`](./FOLLOW_UP.md) | `heartgarden-image-display-url.ts`, **`NEXT_PUBLIC_HEARTGARDEN_IMAGE_URL_TEMPLATE`** (see `.env.local.example`) |
 | **Viewport culling** | Off-screen entities / stacks / connections skip heavy work | [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `canvas-viewport-cull.ts`, wired in `ArchitecturalCanvasApp.tsx` |
-| **Bundle analyze** | Webpack bundle analyzer opt-in | [`README.md`](../README.md) (Scripts — more npm tasks), [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `npm run analyze` in `package.json` |
+| **Bundle analyze** | Webpack bundle analyzer opt-in | [`README.md`](../README.md) (Scripts — more pnpm tasks), [`BUILD_PLAN.md`](./BUILD_PLAN.md) | `pnpm run analyze` in `package.json` |
 
 ---
 

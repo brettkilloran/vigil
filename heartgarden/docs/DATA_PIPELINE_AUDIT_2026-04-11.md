@@ -58,7 +58,7 @@ Pass/fail invariants tested against code:
 
 ## 4) Three-track E2E smoke playbook
 
-Run from `heartgarden/` with `npm run dev`.
+Run from `heartgarden/` with `pnpm run dev`.
 
 ### Track A: Neon workspace (GM/full)
 
@@ -281,6 +281,6 @@ The full-scope plan is **closed** when:
 
 From `heartgarden/`:
 
-- `npm run check`
-- `npm run test:unit`
-- targeted `npm run test:e2e` scenarios for sync/import/player scoping paths
+- `pnpm run check`
+- `pnpm run test:unit`
+- targeted `pnpm run test:e2e` scenarios for sync/import/player scoping paths

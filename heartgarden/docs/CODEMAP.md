@@ -95,8 +95,8 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Room JWT issue (**`POST /api/realtime/room-token`**) | `app/api/realtime/room-token/route.ts`, `src/lib/heartgarden-realtime-token.ts` |
 | Redis publish after writes | `src/lib/heartgarden-realtime-publisher.ts`, `src/lib/heartgarden-realtime-invalidation.ts` |
 | Publish timings (**`GET /api/realtime/metrics`**) | `src/lib/heartgarden-realtime-publish-metrics.ts`, `app/api/realtime/metrics/route.ts` |
-| Long-lived WebSocket server | `scripts/realtime-server.ts` (**`npm run realtime`**), optional `Dockerfile.realtime` |
-| Redis smoke | `scripts/realtime-redis-smoke.ts` (**`npm run realtime:redis-smoke`**) |
+| Long-lived WebSocket server | `scripts/realtime-server.ts` (**`pnpm run realtime`**), optional `Dockerfile.realtime` |
+| Redis smoke | `scripts/realtime-redis-smoke.ts` (**`pnpm run realtime:redis-smoke`**) |
 
 
 ## Search & vault index
@@ -208,7 +208,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 
 | Concern                        | Location                                                                                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tool definitions & HTTP to app | `src/lib/mcp/heartgarden-mcp-server.ts`, `scripts/mcp-server.ts`, `scripts/mcp-prod-smoke.ts` (`npm run mcp:smoke`), `app/api/mcp/route.ts` |
+| Tool definitions & HTTP to app | `src/lib/mcp/heartgarden-mcp-server.ts`, `scripts/mcp-server.ts`, `scripts/mcp-prod-smoke.ts` (`pnpm run mcp:smoke`), `app/api/mcp/route.ts` |
 | Write-guarded routes           | e.g. `write_key` on reindex / patch (see `docs/API.md`)                                                                                     |
 
 
@@ -220,7 +220,7 @@ High-level map from **feature / subsystem** to **primary files**. This does not 
 | Unit + route tests | `src/**/*.test.ts`, `app/api/**/*.test.ts`, `vitest.config.ts` |
 | E2E     | `e2e/`, `playwright.config.ts`                     |
 | Storybook | `src/components/**/*.stories.tsx`, `.storybook/` |
-| Checks  | `npm run check`, `npm run check:all` (`AGENTS.md`) |
+| Checks  | `pnpm run check`, `pnpm run check:all` (`AGENTS.md`) |
 
 
 ---

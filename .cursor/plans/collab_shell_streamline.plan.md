@@ -129,7 +129,7 @@ isProject: false
 
 ## Verification
 
-- `npm run check` from `heartgarden/` after refactors.
+- `pnpm run check` from `heartgarden/` after refactors.
 - Two-browser smoke: delta still merges; presence still counts peers; no camera regression (per existing plan).
 - If E changes response shape: update `docs/API.md` and any client types in `architectural-neon-api.ts` / `canvas-types.ts`.
 

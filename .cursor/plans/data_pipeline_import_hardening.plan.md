@@ -75,7 +75,7 @@ isProject: false
 
 | Step | Action |
 |------|--------|
-| C1 | **Smoke gate** — Add `npm run smoke:three-track` **or** document in `AGENTS.md` / GitHub Action manual job that §4 playbook is run before release (checkbox template) |
+| C1 | **Smoke gate** — Add `pnpm run smoke:three-track` **or** document in `AGENTS.md` / GitHub Action manual job that §4 playbook is run before release (checkbox template) |
 | C2 | **localStorage namespacing** — Design: suffix `heartgarden-space-camera-v1` with `sessionId` or `bootTier` (audit §5 matrix). Prototype in `heartgarden-space-camera.ts`; migration: read old key once, write new, or dual-read for one version |
 | C3 | **Risk note** — If namespacing ships, update `PLAYER_LAYER.md` / `API.md` client storage notes |
 
@@ -113,7 +113,7 @@ The following must be added in **Agent** (or normal edit) mode:
 1. **Create** [`heartgarden/src/lib/lore-object-registry.ts`](../../heartgarden/src/lib/lore-object-registry.ts) — exports `persistedEntityTypeFromCanonical`, `loreShellKindFromCanonical`, `isLoreCardPersistedEntityType`, `ALL_CANONICAL_KINDS` (see matrix in [`LORE_IMPORT_KIND_MAPPING.md`](../../heartgarden/docs/LORE_IMPORT_KIND_MAPPING.md)).
 2. **Wire** [`heartgarden/src/lib/lore-import-apply.ts`](../../heartgarden/src/lib/lore-import-apply.ts) — replace `entityType: note.canonicalEntityKind` and `buildSearchBlob` `entityType` with `persistedEntityTypeFromCanonical(note.canonicalEntityKind)`.
 3. **Tests** — `lore-object-registry.test.ts`, `lore-import-registry-wiring.test.ts` (iterate `ALL_CANONICAL_KINDS` + `buildSearchBlob`), optional `lore-import-conformance.test.ts` for `planLoreImportCardLayout` non-overlap.
-4. **Optional** — `npm run smoke:three-track` script echoing §4 checklist; **localStorage** namespacing remains deferred unless product approves migration.
+4. **Optional** — `pnpm run smoke:three-track` script echoing §4 checklist; **localStorage** namespacing remains deferred unless product approves migration.
 
 Remove the **Status** handoff line above once code ships.
 
