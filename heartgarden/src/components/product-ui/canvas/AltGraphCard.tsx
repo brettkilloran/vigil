@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { forwardRef, useMemo } from "react";
 
 import { Button } from "@/src/components/ui/Button";
 import {
@@ -15,20 +15,15 @@ type MiniNode = {
   ghost: boolean;
 };
 
-export function AltGraphCard({
-  open,
-  term,
-  x,
-  y,
-  mentions,
-  searchItems,
-  loadingMentions,
-  loadingSearch,
-  onClose,
-  onShowItem,
-}: {
+export type AltGraphCardProps = {
   open: boolean;
   term: string;
+  /**
+   * Initial x/y in viewport coordinates. After mount the parent typically
+   * updates the card's position imperatively via the forwarded ref's
+   * `style.transform` to avoid per-frame React re-renders during pointer move.
+   * (See REVIEW_2026-04-25_1835.md M8.)
+   */
   x: number;
   y: number;
   mentions: MentionRow[];
@@ -37,7 +32,23 @@ export function AltGraphCard({
   loadingSearch: boolean;
   onClose: () => void;
   onShowItem: (itemId: string) => void;
-}) {
+};
+
+export const AltGraphCard = forwardRef<HTMLDivElement, AltGraphCardProps>(function AltGraphCard(
+  {
+    open,
+    term,
+    x,
+    y,
+    mentions,
+    searchItems,
+    loadingMentions,
+    loadingSearch,
+    onClose,
+    onShowItem,
+  },
+  ref,
+) {
   const miniGraph = useMemo(() => {
     const seed: MiniNode[] = [];
     const byId = new Map<string, MiniNode>();
@@ -65,8 +76,14 @@ export function AltGraphCard({
   if (!open) return null;
   return (
     <div
+      ref={ref}
       className="fixed z-[2100] w-[380px] rounded-lg border border-[var(--vigil-border)] bg-[var(--vigil-surface)] p-2 shadow-2xl"
-      style={{ left: x, top: y }}
+      style={{
+        left: 0,
+        top: 0,
+        transform: `translate3d(${x}px, ${y}px, 0)`,
+        willChange: "transform",
+      }}
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="text-xs uppercase tracking-[0.16em] text-[var(--vigil-label)]">Alt graph</div>
@@ -160,4 +177,4 @@ export function AltGraphCard({
       </ul>
     </div>
   );
-}
+});

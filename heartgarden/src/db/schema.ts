@@ -59,6 +59,10 @@ export const spaces = pgTable(
     // REVIEW_2026-04-25_1730 M5: hot-path filter for /api/graph/brane,
     // /api/branes/[id]/vocabulary, /api/mentions, vocabulary builder.
     index("spaces_brane_id_idx").on(table.braneId),
+    // REVIEW_2026-04-25_1835 H4: subtree-walk hot path used by player permission
+    // checks, presence subtree resolution, and realtime invalidation. SQL mirror
+    // in 0019_spaces_parent_space_id_idx.sql.
+    index("spaces_parent_space_id_idx").on(table.parentSpaceId),
   ],
 );
 

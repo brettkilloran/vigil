@@ -98,6 +98,9 @@ export async function GET(req: Request) {
     ...hybridQueryOverrides,
     maxItems: hybridQueryOverrides.maxItems ?? retrievalBaseLimit,
     includeVector: true as const,
+    // `/api/search` returns rows only (snippets are stripped by `mapRows`); skip
+    // `ts_headline` generation in the lexical leg. (`REVIEW_2026-04-25_1835` M5.)
+    includeSnippets: false,
   };
 
   if (mode === "semantic") {

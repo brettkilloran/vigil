@@ -359,6 +359,7 @@ import {
   resolveProseCommandTarget,
 } from "@/src/lib/rich-editor-surface";
 import { readWordUnderPointer } from "@/src/lib/word-under-pointer";
+import { BoundedMap } from "@/src/lib/bounded-map";
 import type {
   AltMentionRow,
   AltSearchRow,
@@ -375,6 +376,12 @@ const VigilFlowRevealOverlay = dynamic(
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const ZOOM_BUTTON_STEP = 0.2;
+/**
+ * Cap on entries in the alt-hover mention/search caches. Entries are evicted
+ * least-recently-touched first so a long hover-heavy session can't grow the map
+ * without bound. (REVIEW_2026-04-25_1835.md M8.)
+ */
+const ALT_HOVER_CACHE_MAX = 256;
 /** Subpixel / border rounding when comparing `scrollHeight` vs `clientHeight`. */
 const SCROLLPORT_OVERFLOW_EPSILON_PX = 1;
 /** Trackpad pinch (ctrl/meta + wheel): tuned to feel close to Figma on laptop trackpads. */
@@ -2671,27 +2678,51 @@ export function ArchitecturalCanvasApp({
   }, [GRAPH_PANEL_WIDTH_STORAGE_KEY, graphPanelWidth]);
   const [activeBraneId, setActiveBraneId] = useState<string | null>(null);
   const [altHeld, setAltHeld] = useState(false);
+  /**
+   * Alt-hover graph card content. NOTE: position (x/y) is intentionally NOT
+   * stored in state — it changes on every pointer move, which would re-render
+   * the whole canvas at frame rate. Position is updated imperatively via
+   * `altGraphCardDivRef.current.style.transform`. (REVIEW_2026-04-25_1835.md M8.)
+   */
   const [altGraphCard, setAltGraphCard] = useState<{
     term: string;
-    x: number;
-    y: number;
     mentions: AltMentionRow[];
     searchItems: AltSearchRow[];
     loadingMentions: boolean;
     loadingSearch: boolean;
   } | null>(null);
-  const [altWordHighlightRect, setAltWordHighlightRect] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  } | null>(null);
+  const altGraphCardPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const altMentionCacheRef = useRef(
-    new Map<string, { at: number; items: AltMentionRow[] }>(),
+    new BoundedMap<string, { at: number; items: AltMentionRow[] }>(ALT_HOVER_CACHE_MAX),
   );
   const altSearchCacheRef = useRef(
-    new Map<string, { at: number; items: AltSearchRow[] }>(),
+    new BoundedMap<string, { at: number; items: AltSearchRow[] }>(ALT_HOVER_CACHE_MAX),
   );
+  const altWordHighlightDivRef = useRef<HTMLDivElement | null>(null);
+  const altGraphCardDivRef = useRef<HTMLDivElement | null>(null);
+
+  const setAltHighlightRect = useCallback(
+    (rect: { left: number; top: number; width: number; height: number } | null) => {
+      const el = altWordHighlightDivRef.current;
+      if (!el) return;
+      if (!rect) {
+        el.style.display = "none";
+        return;
+      }
+      el.style.display = "block";
+      el.style.transform = `translate3d(${rect.left - 2}px, ${rect.top - 1}px, 0)`;
+      el.style.width = `${rect.width + 4}px`;
+      el.style.height = `${rect.height + 2}px`;
+    },
+    [],
+  );
+
+  const setAltGraphCardPos = useCallback((x: number, y: number) => {
+    altGraphCardPosRef.current = { x, y };
+    const el = altGraphCardDivRef.current;
+    if (!el) return;
+    el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  }, []);
   const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
@@ -3594,7 +3625,7 @@ export function ArchitecturalCanvasApp({
       setAltHeld(false);
       delete document.body.dataset.hgAltHeld;
       setAltGraphCard(null);
-      setAltWordHighlightRect(null);
+      setAltHighlightRect(null);
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -3624,29 +3655,24 @@ export function ArchitecturalCanvasApp({
           mentionAbort = null;
           searchAbort = null;
           setAltGraphCard(null);
-          setAltWordHighlightRect(null);
+          setAltHighlightRect(null);
           return;
         }
         const term = hit.word.toLowerCase();
-        setAltWordHighlightRect({
+        // Hot path: imperative DOM updates avoid per-frame React re-renders.
+        setAltHighlightRect({
           left: hit.rect.left,
           top: hit.rect.top,
           width: Math.max(8, hit.rect.width),
           height: Math.max(8, hit.rect.height),
         });
+        setAltGraphCardPos(hit.rect.left + 8, hit.rect.bottom + 8);
         if (term === lastTerm) {
-          setAltGraphCard((prev) =>
-            prev && prev.term === term
-              ? { ...prev, x: hit.rect.left + 8, y: hit.rect.bottom + 8 }
-              : prev,
-          );
           return;
         }
         lastTerm = term;
         setAltGraphCard({
           term,
-          x: hit.rect.left + 8,
-          y: hit.rect.bottom + 8,
           mentions: [],
           searchItems: [],
           loadingMentions: true,
@@ -3755,7 +3781,7 @@ export function ArchitecturalCanvasApp({
       const hit = readWordUnderPointer(e.clientX, e.clientY);
       if (!hit) {
         setAltGraphCard(null);
-        setAltWordHighlightRect(null);
+        setAltHighlightRect(null);
         return;
       }
       if (!graphOverlayOpen) setGraphOverlayOpen(true);
@@ -3763,7 +3789,7 @@ export function ArchitecturalCanvasApp({
     const onEscape = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       setAltGraphCard(null);
-      setAltWordHighlightRect(null);
+      setAltHighlightRect(null);
     };
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerdown", onClick);
@@ -3776,7 +3802,7 @@ export function ArchitecturalCanvasApp({
       document.removeEventListener("pointerdown", onClick);
       document.removeEventListener("keydown", onEscape);
     };
-  }, [activeBraneId, activeSpaceId, altHeld, graphOverlayOpen]);
+  }, [activeBraneId, activeSpaceId, altHeld, graphOverlayOpen, setAltHighlightRect, setAltGraphCardPos]);
 
   useEffect(() => {
     const prev = connectionModeSoundPrevRef.current;
@@ -14379,29 +14405,26 @@ export function ArchitecturalCanvasApp({
               onClose={() => setGraphOverlayOpen(false)}
               onSelectItem={(id) => focusEntityFromPalette(id)}
             />
-            {altHeld && altWordHighlightRect ? (
+            {altHeld ? (
               <div
-                className="pointer-events-none fixed z-[2090] rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)]/35"
-                style={{
-                  left: altWordHighlightRect.left - 2,
-                  top: altWordHighlightRect.top - 1,
-                  width: altWordHighlightRect.width + 4,
-                  height: altWordHighlightRect.height + 2,
-                }}
+                ref={altWordHighlightDivRef}
+                className="pointer-events-none fixed left-0 top-0 z-[2090] rounded border border-[var(--vigil-border)] bg-[var(--vigil-btn-bg)]/35"
+                style={{ display: "none", willChange: "transform" }}
               />
             ) : null}
             <AltGraphCard
+              ref={altGraphCardDivRef}
               open={Boolean(altGraphCard)}
               term={altGraphCard?.term ?? ""}
-              x={altGraphCard?.x ?? 0}
-              y={altGraphCard?.y ?? 0}
+              x={altGraphCardPosRef.current.x}
+              y={altGraphCardPosRef.current.y}
               mentions={altGraphCard?.mentions ?? []}
               searchItems={altGraphCard?.searchItems ?? []}
               loadingMentions={Boolean(altGraphCard?.loadingMentions)}
               loadingSearch={Boolean(altGraphCard?.loadingSearch)}
               onClose={() => {
                 setAltGraphCard(null);
-                setAltWordHighlightRect(null);
+                setAltHighlightRect(null);
               }}
               onShowItem={(id) => {
                 if (!graphOverlayOpen) setGraphOverlayOpen(true);

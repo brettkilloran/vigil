@@ -40,8 +40,27 @@ export async function GET(req: Request) {
 
   const limitRaw = url.searchParams.get("limit");
   const offset = Math.max(0, parseInt(url.searchParams.get("offset") ?? "0", 10) || 0);
-  if (limitRaw == null && offset > 0) {
-    return Response.json({ error: "offset requires limit" }, { status: 400 });
+  // REVIEW_2026-04-25_1835 M2: previously a missing `limit` returned the entire
+  // space dump (tens of MB at thousands of items). Default to 500 with `limit=all`
+  // as the explicit unlimited opt-out for export tooling.
+  const wantAll = limitRaw === "all";
+  let pageLimit: number | undefined;
+  if (!wantAll) {
+    if (limitRaw == null) {
+      pageLimit = 500;
+    } else {
+      const parsed = parseInt(limitRaw, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return Response.json(
+          { error: "limit must be a positive integer or \"all\"" },
+          { status: 400 },
+        );
+      }
+      pageLimit = Math.min(parsed, 1000);
+    }
+  }
+  if (wantAll && offset > 0) {
+    return Response.json({ error: "offset cannot be combined with limit=all" }, { status: 400 });
   }
 
   const [totalRow] = await db
@@ -51,15 +70,13 @@ export async function GET(req: Request) {
   const total = totalRow?.c ?? 0;
 
   let rows;
-  let pageLimit: number | undefined;
-  if (limitRaw == null) {
+  if (pageLimit == null) {
     rows = await db
       .select()
       .from(items)
       .where(eq(items.spaceId, spaceId))
       .orderBy(asc(items.zIndex), asc(items.createdAt));
   } else {
-    pageLimit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 500), 1000);
     rows = await db
       .select()
       .from(items)
@@ -75,9 +92,11 @@ export async function GET(req: Request) {
     total,
     items: rows.map(rowToCanvasItem),
   };
-  if (limitRaw != null && pageLimit != null) {
+  if (pageLimit != null) {
     payload.limit = pageLimit;
     payload.offset = offset;
+    const next = offset + rows.length;
+    payload.next_offset = next < total ? next : null;
   }
   return Response.json(payload);
 }

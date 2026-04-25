@@ -54,11 +54,36 @@ import { parseFactionRoster, type FactionRosterEntry } from "@/src/lib/faction-r
 import { resolveLoreImportAllowedSpaceIds } from "@/src/lib/lore-import-space-scope";
 
 type ItemRow = InferSelectModel<typeof items>;
+type ItemInsertValues = typeof items.$inferInsert;
 
 const NODE_W = 280;
 const FOLDER_W = 420;
 const FOLDER_H = 280;
 export const SOURCE_SECTION_CARD_MAX_CHARS = 10_000;
+/**
+ * Cap on rows per `INSERT ... VALUES (...) RETURNING` to stay well below
+ * Postgres' 65535-parameter limit (each row uses ~14 placeholders so
+ * 4000 rows ≈ 56k params). 500 leaves comfortable headroom and keeps a
+ * single insert under the typical statement-timeout. (`REVIEW_2026-04-25_1835` H12.)
+ */
+const IMPORT_INSERT_BATCH = 500;
+
+async function bulkInsertItems(
+  db: VigilDb,
+  values: readonly ItemInsertValues[],
+): Promise<ItemRow[]> {
+  if (values.length === 0) return [];
+  if (values.length <= IMPORT_INSERT_BATCH) {
+    return await db.insert(items).values([...values]).returning();
+  }
+  const out: ItemRow[] = [];
+  for (let i = 0; i < values.length; i += IMPORT_INSERT_BATCH) {
+    const slice = values.slice(i, i + IMPORT_INSERT_BATCH);
+    const rows = await db.insert(items).values([...slice]).returning();
+    out.push(...rows);
+  }
+  return out;
+}
 
 type SourceCardDraft = {
   title: string;
@@ -767,11 +792,15 @@ export async function applyLoreImportPlan(
       }
     }
 
+    // REVIEW_2026-04-25_1835 H12: build all source-card + note insert payloads
+    // first, then issue **one** `INSERT ... VALUES ... RETURNING` per group
+    // (capped at IMPORT_INSERT_BATCH rows so a 5k-card import doesn't blow
+    // the parameter limit). The previous pattern round-tripped Neon once per
+    // row — minutes for a 500-note import.
     let zRoot = takeNextZIndex(zIndexCursor, body.spaceId);
     if (hasSource && rootSourceRect) {
       const layoutSource = rootSourceRect;
-      for (let i = 0; i < sourceCardDrafts.length; i += 1) {
-        const draft = sourceCardDrafts[i]!;
+      const sourceValues = sourceCardDrafts.map((draft, i) => {
         const sourceContentJson = buildLoreSourceContentJson(draft.text.slice(0, 120_000));
         const sourceEntityMeta = buildImportedEntityMeta({
           base: {
@@ -793,35 +822,39 @@ export async function applyLoreImportPlan(
           loreSummary: null,
           loreAliases: null,
         });
-        const [row] = await dbx
-          .insert(items)
-          .values({
-            spaceId: body.spaceId,
-            itemType: "note",
-            x: layoutSource.x + i * 28,
-            y: layoutSource.y + i * 26,
-            width: layoutSource.width,
-            height: layoutSource.height,
-            zIndex: zRoot,
-            title: draft.title.slice(0, 255),
-            contentText: draft.text.slice(0, 120_000),
-            searchBlob,
-            contentJson: sourceContentJson,
-            color: DS_COLOR.itemDefaultNote,
-            entityType: persistedEntityTypeForLoreSource(),
-            entityMeta: sourceEntityMeta,
-          })
-          .returning();
-        if (row) {
+        return {
+          spaceId: body.spaceId,
+          itemType: "note" as const,
+          x: layoutSource.x + i * 28,
+          y: layoutSource.y + i * 26,
+          width: layoutSource.width,
+          height: layoutSource.height,
+          zIndex: zRoot + i,
+          title: draft.title.slice(0, 255),
+          contentText: draft.text.slice(0, 120_000),
+          searchBlob,
+          contentJson: sourceContentJson,
+          color: DS_COLOR.itemDefaultNote,
+          entityType: persistedEntityTypeForLoreSource(),
+          entityMeta: sourceEntityMeta,
+        };
+      });
+      if (sourceValues.length > 0) {
+        const inserted = await bulkInsertItems(dbx, sourceValues);
+        for (const row of inserted) {
           createdItemIds.push(row.id);
           rowsToSchedule.push(row);
         }
-        zRoot += 1;
       }
+      zRoot += sourceCardDrafts.length;
       zIndexCursor.set(body.spaceId, zRoot);
     }
 
-    for (const note of notesToCreate) {
+    type NoteInsertPlan = {
+      clientId: string;
+      values: Parameters<typeof bulkInsertItems>[1][number];
+    };
+    const notePlans: NoteInsertPlan[] = notesToCreate.map((note) => {
       const targetSpaceId =
         orgMode === "folders" && note.folderClientId
           ? (folderClientToChildSpace.get(note.folderClientId) ?? body.spaceId)
@@ -861,11 +894,11 @@ export async function applyLoreImportPlan(
         loreAliases: null,
       });
 
-      const [row] = await dbx
-        .insert(items)
-        .values({
+      return {
+        clientId: note.clientId,
+        values: {
           spaceId: targetSpaceId,
-          itemType: "note",
+          itemType: "note" as const,
           x: pos.x,
           y: pos.y,
           width: pos.width,
@@ -878,12 +911,27 @@ export async function applyLoreImportPlan(
           color: DS_COLOR.itemDefaultNote,
           entityType: persistedEntityType,
           entityMeta,
-        })
-        .returning();
+        },
+      };
+    });
 
-      if (row) {
+    if (notePlans.length > 0) {
+      // Returned rows preserve input order in Postgres `INSERT ... VALUES (...) RETURNING`,
+      // so we can re-pair `clientId -> row.id` by index within each batch.
+      const inserted = await bulkInsertItems(
+        dbx,
+        notePlans.map((p) => p.values),
+      );
+      if (inserted.length !== notePlans.length) {
+        throw new Error(
+          `lore-import apply: expected ${notePlans.length} inserted notes, got ${inserted.length}`,
+        );
+      }
+      for (let i = 0; i < inserted.length; i += 1) {
+        const row = inserted[i]!;
+        const plan = notePlans[i]!;
         createdItemIds.push(row.id);
-        clientIdToItemId.set(note.clientId, row.id);
+        clientIdToItemId.set(plan.clientId, row.id);
         rowsToSchedule.push(row);
       }
     }

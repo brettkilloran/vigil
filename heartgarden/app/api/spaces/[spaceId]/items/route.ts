@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { LoreCardKind } from "@/src/components/foundation/architectural-types";
@@ -64,8 +64,19 @@ const createBody = z.object({
   lore_variant: z.enum(["v1", "v2", "v3", "v11"]).optional(),
 });
 
+/**
+ * Default page size for the items list. Unbounded responses at thousands of items
+ * per space were a real risk for any v1 / MCP / script caller that omitted
+ * `?limit=`; they would receive tens of MB on large spaces. Add a default limit
+ * (with `limit=all` as an explicit opt-out for export tooling) and surface
+ * `total` + `nextOffset` so callers can page deterministically.
+ * (`REVIEW_2026-04-25_1835` M2.)
+ */
+const DEFAULT_ITEMS_LIST_LIMIT = 500;
+const MAX_ITEMS_LIST_LIMIT = 1000;
+
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ spaceId: string }> },
 ) {
   const db = tryGetDb();
@@ -79,8 +90,47 @@ export async function GET(
   const { spaceId } = await context.params;
   const access = await requireHeartgardenSpaceApiAccess(db, bootCtx, spaceId);
   if (!access.ok) return access.response;
-  const rows = await listItemsForSpace(db, spaceId);
-  return Response.json({ ok: true, items: rows.map(rowToCanvasItem) });
+
+  const url = new URL(req.url);
+  const limitRaw = url.searchParams.get("limit");
+  const offsetRaw = url.searchParams.get("offset");
+  const wantAll = limitRaw === "all";
+  const offset = Math.max(0, parseInt(offsetRaw ?? "0", 10) || 0);
+  let limit: number | undefined;
+  if (!wantAll) {
+    if (limitRaw == null) {
+      limit = DEFAULT_ITEMS_LIST_LIMIT;
+    } else {
+      const parsed = parseInt(limitRaw, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return Response.json(
+          { ok: false, error: "limit must be a positive integer or \"all\"" },
+          { status: 400 },
+        );
+      }
+      limit = Math.min(parsed, MAX_ITEMS_LIST_LIMIT);
+    }
+  }
+
+  const [totalRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(items)
+    .where(eq(items.spaceId, spaceId));
+  const total = totalRow?.c ?? 0;
+
+  const rows = await listItemsForSpace(db, spaceId, { limit, offset });
+  const payload: Record<string, unknown> = {
+    ok: true,
+    items: rows.map(rowToCanvasItem),
+    total,
+    offset,
+  };
+  if (limit != null) {
+    payload.limit = limit;
+    const next = offset + rows.length;
+    payload.nextOffset = next < total ? next : null;
+  }
+  return Response.json(payload);
 }
 
 export async function POST(
