@@ -1,6 +1,11 @@
 {
   "version": 1,
   "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "mise format"
+      }
+    ],
     "subagentStop": [
       {
         "command": "node .cursor/hooks/review-heavy-fix-kickoff.mjs",

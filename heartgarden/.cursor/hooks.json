@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "mise format"
+      }
+    ]
+  },
+  "version": 1
+}
