@@ -53,7 +53,7 @@ Fields:
 - `scored` — ISO8601 UTC timestamp.
 - `model` — the Codex model slug used.
 - `category` — one of `feature` / `hardening` / `cleanup` / `bug` / `docs` / `human-infra`. Used for mood alignment.
-- `code_refs` — comma-separated list of files the scorer cites as "material to this item." Empty if none. Used by freshness check.
+- `code_refs` — comma-separated list of files the scorer cites as "material to this item." Empty if none. Used by freshness check. **Always include the bundled plan path** (e.g. `.cursor/plans/<slug>.plan.md`) when the backlog entry has one — when the plan is edited, the backlog cache must invalidate so the summary stays accurate. List code refs first, then plan files; both contribute to the freshness check identically.
 
 For YAML todos in `.cursor/plans/*.plan.md`, use a sibling YAML key instead of an HTML comment:
 
@@ -82,7 +82,7 @@ A cached score is **reusable** if **all** of the following hold:
 
 1. `scored` is within the last **14 days**.
 2. `mood` matches the current run's mood (or either is `agents-pick`).
-3. No file listed in `code_refs` has been modified since `scored` (compare to `git log -- <path>` most-recent commit timestamp). If `code_refs` is empty, skip this check.
+3. No file listed in `code_refs` has been modified since `scored` (compare to `git log -- <path>` most-recent commit timestamp). This includes any bundled `.cursor/plans/<slug>.plan.md` listed in `code_refs` — a plan edit invalidates the backlog summary's cache. If `code_refs` is empty, skip this check.
 4. Cache schema version (`v`) matches the current version in this document.
 
 If any check fails, recompute. Recompute always if the user passes an explicit "recompute" hint.

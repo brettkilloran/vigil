@@ -41,16 +41,24 @@ Read and follow:
 
 **Scan-everywhere, write-to-SOT rule:** scan all sources below on every normal run so nothing is orphaned. DNF/strike-through edits still happen **in-place** on the source that holds the item (so the breadcrumb is where a reader would look). But **new** items and consolidation moves always land in `BACKLOG.md`, with a `<!-- moved-to: docs/BACKLOG.md#<anchor> ... -->` breadcrumb on the original if the source keeps a pointer.
 
+**Plan files are bundled context, not competing sources.** A `.cursor/plans/<slug>.plan.md` is the **deep design context** for whatever backlog entry links to it. When a `BACKLOG.md` entry includes a `Plan:` link to a plan file (or its score cache cites one in `code_refs`), that plan file is **part of the bundle** for that entry — Codex must read it for context but **must not** re-surface its YAML todos as separate Top 3 candidates, score them as standalone items, or duplicate their content into `BACKLOG.md`. The bundle pattern is:
+- **Backlog entry** = title + score + 1–2 paragraph summary + risk callouts + `Plan:` link + `code_refs` for staleness.
+- **Plan file** = the full design (goals, todos, tasks, acceptance criteria, diagrams, code sketches). This is where the detail lives so we never rewrite it into the backlog.
+- **Score cache** lives on the backlog entry only. Per-todo `backlog_score` keys inside a plan are for future plan-execution flows, not `/backlog` triage.
+
 Sources to scan, in order of authority:
 
 1. **`heartgarden/docs/BACKLOG.md`** — SOT. Sections: `Near-term — hardening & parity`, `Lore import + data pipeline`, `Mid-term`, `Later`, `Cross-cutting code health`, `Review-sourced backlog`, `Archive`.
 2. `heartgarden/docs/BUILD_PLAN.md` — architecture + shipped-tranches history only (after 2026-04-23). Scan the `Completed tranches` table to recognize already-shipped work (useful for `already-fixed` DNF detection); do not expect open backlog here.
-3. `.cursor/plans/*.plan.md` — YAML `todos` with `status: pending`. Ignore plans whose README row says `Completed / parked` or `Superseded`. Plans are execution notes, not backlog; surface pending todos for triage but do not file new items into plan files — file them into `BACKLOG.md` instead.
+3. `.cursor/plans/*.plan.md` — **two roles, decided per-file**:
+   - **Bundled context** (default when a `BACKLOG.md` entry already links to the plan): read for design depth, cite the plan path inline when surfacing the backlog entry, never re-extract its todos as separate candidates. The plan content is "free context" the backlog entry's summary leans on.
+   - **Orphan source** (only when no `BACKLOG.md` entry links to the plan): surface the plan as a candidate in its own right, with a recommended consolidation that *creates* a summary entry in `BACKLOG.md` linking to the plan (rather than copying the plan's content over). Ignore plans whose `README` row says `Completed / parked` or `Superseded`.
+   In both modes, never file *new* items into plan files — file into `BACKLOG.md`. Plans are write-once-per-design-iteration; the backlog index moves more often.
 4. `heartgarden/docs/REVIEW_*.md` — findings with terminal state `QUESTION_FOR_USER` that were never resolved in a later review. If surfaced and still real, migrate into `BACKLOG.md` under `Review-sourced backlog` with a breadcrumb on the review file.
 5. `heartgarden/docs/FOLLOW_UP.md` — human/keys/infra only (not engineering backlog). Tag `[human]` and leave in place; only migrate to `BACKLOG.md` if it's clearly engineering work that drifted in.
 6. `heartgarden/docs/GO_LIVE_REMAINING.md` — release gates / operator runbook only. Same rule: migrate out if engineering drift is detected.
 
-Every candidate surfaced must include its source path and anchor (section or todo id) so the user can jump straight to it.
+Every candidate surfaced must include its source path and anchor (section or todo id) so the user can jump straight to it. When a candidate has a bundled plan, the plan path is also surfaced inline.
 
 ## 3. Mood Preamble (Required)
 
@@ -79,22 +87,30 @@ Common requirements:
 Codex must produce a structured report with these sections:
 
 1. **Summary** (3–5 plain-language sentences for a layman product designer)
-2. **Top 3 candidates** (aligned to mood; for `agents-pick` return one feature + one risk + one cruft):
+2. **Thematic clusters** — **run this BEFORE scoring** so cluster members are not re-fragmented into standalone candidates. A "thematic cluster" is when one existing entry in `BACKLOG.md` (with or without a linked plan file) is a unifying feature/plan that subsumes 2+ smaller open items elsewhere in the backlog. For each cluster:
+   - **Canonical entry**: path + anchor + title (the unifying plan/feature in `BACKLOG.md`).
+   - **Bundled plan(s)**: list of `.cursor/plans/*.plan.md` paths the canonical entry links to or which clearly form its deep context. State explicitly that these plan files are "bundled context — do not re-surface as separate candidates." If a subsumed item is *already* a `.cursor/plans/*.plan.md` orphan with no `BACKLOG.md` summary, the recommended consolidation creates one (a summary entry that links to the orphan plan) rather than copying the plan's content.
+   - **Subsumed items**: list of paths + anchors + titles for each smaller open item that is a facet of the canonical entry.
+   - **Why they belong together**: one-line rationale citing what the canonical plan delivers vs what each subsumed item asks for. Be concrete — generic thematic overlap is not enough; the canonical plan must actually ship the smaller item's outcome. Cite the plan file's `Goals` / `Tasks` / `Acceptance criteria` lines when possible since those are the contract the canonical entry summarizes.
+   - **Recommended consolidation**: collapse the subsumed items into a "Phase X themes this entry subsumes" (or equivalent) callout on the canonical entry, replace the loose bullets at the source with a brief framing paragraph that names the legacy themes and points down at the canonical entry. Add a `<!-- consolidated YYYY-MM-DD: <legacy items> collapsed into <canonical anchor> -->` breadcrumb. The canonical entry's callout is a **short mapping** (theme → "delivered by `<plan tool / route / task>`"), not a duplication of the plan's design — depth lives in the plan file. Do **not** strike-through legacy bullets — they aren't DNF, they're unified.
+   - **Items inside an active cluster do not appear as standalone Top 3 candidates.** They count once, as the canonical entry.
+3. **Top 3 candidates** (aligned to mood; for `agents-pick` return one feature + one risk + one cruft):
    - title
    - source path + anchor
-   - one-line user-facing impact
+   - **bundled plan path** (if any) — the `.cursor/plans/<slug>.plan.md` that holds the deep design. Cite it inline so the user can jump there for detail; do not re-state its content in the candidate block.
+   - one-line user-facing impact (from the backlog entry's summary, not from re-deriving the plan)
    - score breakdown (impact / fit / risk / cost) + composite
-   - recommended approach (2–4 bullets)
+   - recommended approach (2–4 bullets — for bundled candidates these reference plan task IDs / sections rather than re-explaining)
    - rough size: S / M / L
    - risk call-outs
    - cache status: `fresh` / `recomputed` with reason
-3. **DNF candidates** — items that look stale / already fixed / superseded / out-of-strategy. For each:
+4. **DNF candidates** — items that look stale / already fixed / superseded / out-of-strategy. For each:
    - title + source path + anchor
    - DNF reason code (`already-fixed` / `superseded` / `out-of-strategy` / `stale-code-drift`)
    - evidence (file:line for code-grep, PR / commit / review reference, or successor plan path)
    - recommended in-place edit (exact strike-through + comment)
-4. **Score cache updates** — list of items whose scores were (re)computed this run, with the comment string to append.
-5. **Source hygiene notes** — observations about any sources that look empty, entirely stale, or redundant (feeds the consolidation mode).
+5. **Score cache updates** — list of items whose scores were (re)computed this run, with the comment string to append.
+6. **Source hygiene notes** — observations about any sources that look empty, entirely stale, or redundant (feeds the consolidation mode).
 
 Use the severity and confidence calibration conventions from `.cursor/skills/review-heavy/RUBRIC.md` where applicable.
 
@@ -103,12 +119,18 @@ Use the severity and confidence calibration conventions from `.cursor/skills/rev
 Once Codex returns, the parent agent must:
 
 1. Write a short plain-English summary (4–8 sentences) of the 3 candidates and DNF count. No jargon without a definition.
-2. Use `AskQuestion` — see `.cursor/skills/review-common/CLOSURE_POLICY.md` → "Questions Phase" for exact format. Emit two (or three) batched calls:
+2. Use `AskQuestion` — see `.cursor/skills/review-common/CLOSURE_POLICY.md` → "Questions Phase" for exact format. Emit two-to-four batched calls (Batch C is conditional, Batch A is conditional):
 
    **Batch A — DNF approval** (only if Codex surfaced DNF candidates). Single multi-select `AskQuestion`:
    - One option per DNF item, pre-checked. Each option label includes title + reason code.
    - Plus `Apply none of these` and `Apply all`.
    - Prompt includes: what DNF means ("we'll strike through the item and add a note explaining why"), that nothing is deleted (only struck), and that it's fully reversible via git.
+
+   **Batch C — Cluster consolidation** (only if Codex surfaced thematic clusters in §2 of its report). Run this **before** Batch B so the user picks a planning candidate against a clean, consolidated backlog. Single multi-select `AskQuestion`:
+   - One option per cluster, pre-checked. Each option label includes the canonical entry title + a count like `(folds 3 items)`.
+   - Plus `Apply none of these` and `Apply all`.
+   - Prompt explains in plain language: "we'll fold N smaller items into the existing unifying entry, replace their loose bullets with a short framing paragraph that names the legacy themes, and add a 'subsumes' callout on the canonical entry. Nothing is deleted; the legacy themes stay named in-place. This prevents the same idea from being scattered across multiple bullets that all point at one plan."
+   - For each option, list the subsumed item titles inline so the user sees exactly what they're approving.
 
    **Batch B — Plan trigger** (required). Single-select `AskQuestion`:
    - One option per top candidate: `Plan candidate A: <title>` / `B` / `C`.
@@ -129,8 +151,15 @@ After answers:
    - Append an HTML comment immediately after: `<!-- dnf: reason=<code> evidence=<path:line-or-ref> scored=<YYYY-MM-DDTHH:MMZ> -->`.
    - For `.cursor/plans/*.plan.md` YAML todos: change `status: pending` → `status: dnf` and append a trailing `note:` with the reason code and evidence.
    - If a whole plan file is DNF, also update `.cursor/plans/README.md` to move the row to `Completed / parked` (DNF note) or `Superseded`.
-2. **Score caches** — for each item Codex (re)scored this run (whether surfaced as a top-3 candidate or not), append the cache comment to the source item per `SCORING.md`.
-3. Record a ledger of what was edited (file + line or anchor) for the closure report.
+2. **Cluster consolidations** — for each approved cluster:
+   - **On the canonical entry in `BACKLOG.md`**: add a "Phase X themes this entry subsumes" (or "Subsumes") callout listing each subsumed legacy theme on its own line with a **one-line "how this plan delivers it" mapping** (theme → MCP tool / route / component / plan task ID that addresses it). Keep this short — it's an index, not a re-derivation. The canonical entry must already include a `Plan:` link to the plan file holding the deep design; if it doesn't, add one.
+   - **In the bundled plan file** (`.cursor/plans/<slug>.plan.md`): editing the plan is **optional**. If the plan already covers the subsumed themes inside its `Goals` / `Tasks` / `Acceptance criteria`, leave it alone — the backlog callout is enough. Only edit the plan if a subsumed theme is genuinely missing from it (in which case add a single bullet to `Goals` or a single new YAML todo, and call that out in the closure report — this is a plan-scope change, not just a backlog reorg).
+   - **At the source section** where the legacy bullets lived: replace the loose bullets with a brief framing paragraph that names the legacy themes and points down/across at the canonical entry. Do **not** strike-through — these aren't DNF, they're unified. Leave a breadcrumb comment immediately above or below the framing paragraph: `<!-- consolidated <YYYY-MM-DD>: <legacy items, comma-separated> collapsed into <canonical anchor> -->`.
+   - **Orphan-plan promotion** — if the cluster's canonical context is a `.cursor/plans/<slug>.plan.md` that does **not yet have** a `BACKLOG.md` summary entry, *create one* in the appropriate `BACKLOG.md` section. The new entry follows the bundle pattern: short summary + score cache + `Plan:` link + risk callouts. **Never copy the plan's content into `BACKLOG.md`.** The new entry is an index that points readers at the plan; the plan stays the source of truth for design depth.
+   - If a subsumed item lived in a different file (e.g. `BUILD_PLAN.md`, an old review, or `FOLLOW_UP.md`) leave a `<!-- moved-to: docs/BACKLOG.md#<canonical-anchor> consolidated=<YYYY-MM-DD> -->` breadcrumb at its original location instead of replacing the bullet — the original may be a historical record that shouldn't be rewritten.
+   - Cluster consolidation never deletes content and never duplicates plan content. Reframe in-place; lean on the bundle.
+3. **Score caches** — for each item Codex (re)scored this run (whether surfaced as a top-3 candidate or not), append the cache comment to the source item per `SCORING.md`. Items inside a cluster have their cache attached to the canonical entry; do not score subsumed bullets independently.
+4. Record a ledger of what was edited (file + line or anchor) for the closure report. Distinguish DNF edits from cluster consolidations — they are different operations with different intent.
 
 Do not commit. Leave the working tree dirty so the user can review the diff.
 
@@ -139,11 +168,12 @@ Do not commit. Leave the working tree dirty so the user can review the diff.
 Skip mood + triage. Run one Codex subagent whose sole job is to cross-reference sources and produce:
 
 - **Duplicate coverage** — items in two or more sources that describe the same scope (include both paths + anchors, similarity confidence, suggested canonical home — **default canonical home is `heartgarden/docs/BACKLOG.md`** unless the item is clearly operator-runbook or human-infra in nature).
+- **Thematic clusters** — same shape as Section 4 §2 (Stage 1 triage). Multiple distinct items that are facets of one unifying plan or feature, where one canonical entry already exists or could be created. Distinct from "duplicate coverage" — clusters describe items asking for different sub-outcomes that all roll up to one plan, not items that say the same thing twice. Each cluster includes the canonical entry, the subsumed items, the why-they-belong rationale, and the recommended consolidation edits per Section 6 §2.
 - **Stale sources** — whole files or sections where >N% of items are already DNF-worthy.
 - **Recommended merges / retirements** — concrete "move X to Y" or "archive section Z" proposals, with exact edits. Default target for moves is `BACKLOG.md`.
 - **SOT drift** — items that *should* be in `BACKLOG.md` but have drifted into `FOLLOW_UP.md`, `GO_LIVE_REMAINING.md`, an old review, or a plan file. Flag them for migration with a `<!-- moved-to: docs/BACKLOG.md#<anchor> -->` breadcrumb at the original and a fresh row in `BACKLOG.md`.
 
-Parent agent presents via `AskQuestion` multi-select: apply none / apply subset / apply all. On approval, apply the edits. Do not proceed to Stage 2 planning in consolidation mode.
+Parent agent presents via `AskQuestion` multi-select (one batch per category — duplicate coverage, thematic clusters, stale sources, merges, SOT drift): apply none / apply subset / apply all. On approval, apply the edits using the Section 6 shapes (DNF for stale, cluster consolidation for thematic clusters, in-place rewrite for duplicate coverage and SOT drift). Do not proceed to Stage 2 planning in consolidation mode.
 
 ## 8. Stage-2 Handoff (Plan Creation)
 
@@ -163,6 +193,7 @@ End the run with a compact report:
 - Mood selected
 - Top 3 candidates (titles + one-line summaries + scores)
 - DNF edits applied (count + titles)
+- Cluster consolidations applied (count + canonical anchors + subsumed item count per cluster)
 - Score cache entries added/updated (count)
 - Source hygiene notes (if any)
 - What happens next (either "Plan pass started for <title>" or "No plan pass this run")

@@ -150,12 +150,33 @@ After writing `.cursor/plans/<slug>.plan.md`:
 
 1. Update `.cursor/plans/README.md`:
    - Add a row in the `## Active (still drives or may drive work)` table with the plan link and a one-line note.
-2. If the originating backlog item lives in `heartgarden/docs/BACKLOG.md` (SOT) or, for pre-2026-04-23 items, `heartgarden/docs/BUILD_PLAN.md`, append a backreference comment to that item:
-   ```
-   <!-- backlog-plan: path=.cursor/plans/<slug>.plan.md created=<YYYY-MM-DDTHH:MMZ> -->
-   ```
-   Do not strike through the `BACKLOG.md` / `BUILD_PLAN.md` row — the work is just starting, not done.
-3. If the originating source is a `REVIEW_*.md` `QUESTION_FOR_USER` that's now being planned, append the same backreference comment beside that finding.
+2. **Promote / update the `BACKLOG.md` summary entry** so the plan has a bundled index entry (per the bundle pattern in `SKILL.md` §2):
+   - **If the originating backlog item lives in `heartgarden/docs/BACKLOG.md`**: edit that entry so it (a) includes a `Plan: [.cursor/plans/<slug>.plan.md](...)` link in the body, (b) carries a brief 1–2 paragraph summary that matches the plan's `overview` field, (c) lists the plan path in the score cache's `code_refs` so freshness invalidates on plan edits, and (d) appends a backreference comment immediately under the entry heading:
+     ```
+     <!-- backlog-plan: path=.cursor/plans/<slug>.plan.md created=<YYYY-MM-DDTHH:MMZ> -->
+     ```
+     Do **not** copy the plan's design content into the backlog entry. The entry is the index; the plan is the detail.
+   - **If the originating item lives in `BUILD_PLAN.md`** (pre-2026-04-23) or any other source that isn't `BACKLOG.md`, **create a new summary entry in `BACKLOG.md`** (in the appropriate section — `Near-term`, `Mid-term`, etc.) following the same bundle pattern: short summary + `Plan:` link + score cache including the plan path in `code_refs`. Leave a `<!-- moved-to: docs/BACKLOG.md#<anchor> created=<YYYY-MM-DDTHH:MMZ> -->` breadcrumb at the original location.
+   - Do not strike through the original row — the work is just starting, not done. The breadcrumb routes future readers to the canonical entry.
+3. If the originating source is a `REVIEW_*.md` `QUESTION_FOR_USER` that's now being planned, append the same `backlog-plan:` backreference beside that finding.
+
+## 4b. Subsumption Check (prevents legacy bullets coexisting with the new plan)
+
+Before closing, scan `heartgarden/docs/BACKLOG.md` and the other backlog sources listed in `SKILL.md` §2 for **open items that are facets of the new plan you just wrote**. This is the same "thematic cluster" pattern from `SKILL.md` §4 (Stage 1 triage), but applied at plan-creation time so the new plan doesn't ship into a backlog that still has scattered bullets pointing at the same outcome.
+
+For each open item where the plan's `Goals` / `Tasks` / `Acceptance criteria` clearly deliver the item's outcome:
+
+- Record it as a candidate for consolidation: source path + anchor + title, and the one-line "how the new plan delivers it" mapping.
+
+If you found at least one candidate, present them via a single `AskQuestion` (multi-select, all options pre-checked) — same shape as `SKILL.md` Stage 1 Batch C:
+
+- Title: `Fold these existing backlog items into the new plan?`
+- Prompt explains: "the new plan you just wrote subsumes these N items. We'll add a 'Subsumes' callout on the new plan's backlog row pointing at each, replace each item's loose bullet with a brief line that names the theme and points up at the canonical entry, and leave a `<!-- consolidated <YYYY-MM-DD>: collapsed into <canonical-anchor> -->` breadcrumb. Nothing is deleted; legacy themes stay named in-place."
+- Options: one per candidate item (pre-checked) plus `Apply none of these` and `Apply all`.
+
+On approval, apply the consolidation edits using the shape from `SKILL.md` §6 step 2. Record the cluster consolidation in the closure report (Section 5 of this file).
+
+If the plan does not actually subsume any open backlog items, skip this step silently. Do not invent overlap.
 
 ## 5. Closure Report (Appends to Stage 1 Closure)
 
@@ -164,6 +185,7 @@ End with a compact report:
 - Plan path
 - Tasks count (and how many flagged `risk: high`)
 - Files touched in scope (from Pass A, top 10)
+- Cluster consolidations applied (from §4b — count + subsumed item titles + canonical anchor on the new plan's backlog row). Omit if none.
 - Open questions (if any)
 - Next steps for the user ("review the plan, then ask me to execute task <first id> when ready")
 
