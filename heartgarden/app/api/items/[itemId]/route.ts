@@ -2,7 +2,7 @@ import { and, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
-import { itemEmbeddings, itemLinks, items } from "@/src/db/schema";
+import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
 import {
   getHeartgardenApiBootContext,
   gmMayAccessItemSpaceAsync,
@@ -19,6 +19,7 @@ import {
   playersPatchBodyViolatesPolicy,
   stripGmOnlyEntityMetaPatch,
 } from "@/src/lib/player-item-policy";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { validateItemWriteJsonPayload } from "@/src/lib/heartgarden-item-json-schema";
 import { jsonValidationError } from "@/src/lib/heartgarden-validation-error";
@@ -26,6 +27,7 @@ import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { buildSearchBlob } from "@/src/lib/search-blob";
 import { jsonValuesEqualForPatch } from "@/src/lib/json-value-equal";
 import { scrubHgArchRefsAfterItemDelete } from "@/src/lib/hg-arch-orphan-repair";
+import { scheduleEntityMentionRescanOnVocabularyChange } from "@/src/lib/entity-mentions";
 import { scheduleVaultReindexAfterResponse } from "@/src/lib/schedule-vault-index-after";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
@@ -344,6 +346,16 @@ export async function PATCH(
     p.entityMeta !== undefined || p.entityMetaMerge !== undefined;
   if (row && (contentDirty || metaDirty)) {
     scheduleVaultReindexAfterResponse(row.id);
+    if (titleChanged) {
+      const [spaceRow] = await db
+        .select({ braneId: spaces.braneId })
+        .from(spaces)
+        .where(eq(spaces.id, row.spaceId))
+        .limit(1);
+      if (spaceRow?.braneId) {
+        scheduleEntityMentionRescanOnVocabularyChange(db, spaceRow.braneId);
+      }
+    }
   }
 
   if (!row) {
@@ -399,6 +411,7 @@ export async function DELETE(
     return heartgardenApiForbiddenJsonResponse();
   }
   const deleted = await db.transaction(async (tx) => {
+    invalidateItemLinksRevisionForSpace(existing.spaceId);
     // Defensive cleanup for older deployments where FK cascades may be absent.
     await tx
       .delete(itemLinks)

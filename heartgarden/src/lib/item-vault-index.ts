@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import type { tryGetDb } from "@/src/db/index";
 import { itemEmbeddings, items } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
+import { rescanItemEntityMentions } from "@/src/lib/entity-mentions";
 import { deriveSectionsFromHgDoc, fallbackSingleSection } from "@/src/lib/hg-doc/derive-sections";
 import { isHgDocContentJson, readHgDocFromContentJson } from "@/src/lib/hg-doc/serialize";
 import { extractLoreItemMeta, normalizeLoreMetaInputText } from "@/src/lib/lore-item-meta";
@@ -166,6 +167,9 @@ export async function reindexItemVault(
       await db.update(items).set({ searchBlob: corpus }).where(eq(items.id, itemId));
     }
     await clearItemEmbeddings(db, itemId);
+    await rescanItemEntityMentions(db, itemId).catch(() => {
+      /* best effort */
+    });
     return { ok: true, chunks: 0, loreMetaUpdated };
   }
 
@@ -201,6 +205,9 @@ export async function reindexItemVault(
     }
     await tx.delete(itemEmbeddings).where(eq(itemEmbeddings.itemId, itemId));
     await tx.insert(itemEmbeddings).values(values);
+  });
+  await rescanItemEntityMentions(db, itemId).catch(() => {
+    /* best effort */
   });
 
   return { ok: true, chunks: chunks.length, loreMetaUpdated };

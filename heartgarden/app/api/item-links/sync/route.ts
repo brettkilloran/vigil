@@ -1,4 +1,4 @@
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { tryGetDb } from "@/src/db/index";
@@ -15,6 +15,8 @@ import {
   heartgardenApiRejectIfPlayerBlocked,
   heartgardenApiRequireDb,
 } from "@/src/lib/heartgarden-api-route-helpers";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
+import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
 
 const bodySchema = z.object({
@@ -63,7 +65,30 @@ export async function POST(req: Request) {
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }
+  for (const targetSpaceId of validated.targetSpaceIds) {
+    if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, targetSpaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, targetSpaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+  }
   const uniqueTargets = validated.targetIds;
+  const touchedSpaceIds = new Set<string>();
+  touchedSpaceIds.add(srcItem.spaceId);
+  const existingTargets = await db
+    .select({ spaceId: items.spaceId })
+    .from(itemLinks)
+    .innerJoin(items, eq(items.id, itemLinks.targetItemId))
+    .where(eq(itemLinks.sourceItemId, sourceItemId));
+  for (const row of existingTargets) touchedSpaceIds.add(row.spaceId);
+  if (uniqueTargets.length > 0) {
+    const nextRows = await db
+      .select({ spaceId: items.spaceId })
+      .from(items)
+      .where(inArray(items.id, uniqueTargets));
+    for (const row of nextRows) touchedSpaceIds.add(row.spaceId);
+  }
 
   await db.transaction(async (tx) => {
     if (uniqueTargets.length === 0) {
@@ -96,6 +121,15 @@ export async function POST(req: Request) {
       .onConflictDoNothing({
         target: [itemLinks.sourceItemId, itemLinks.targetItemId, itemLinks.sourcePin, itemLinks.targetPin],
       });
+  });
+  for (const spaceId of touchedSpaceIds) {
+    invalidateItemLinksRevisionForSpace(spaceId);
+  }
+  await publishHeartgardenSpaceInvalidation(db, {
+    originSpaceId: srcItem.spaceId,
+    reason: "item-links.changed",
+    itemId: sourceItemId,
+    lookupSpaceIds: [srcItem.spaceId, ...validated.targetSpaceIds],
   });
 
   return Response.json({ ok: true });

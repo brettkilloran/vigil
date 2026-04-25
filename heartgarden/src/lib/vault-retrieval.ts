@@ -4,7 +4,7 @@
  */
 import { and, eq, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 
-import { itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
+import { entityMentions, itemEmbeddings, itemLinks, items, spaces } from "@/src/db/schema";
 import { embedTexts, isEmbeddingApiConfigured } from "@/src/lib/embedding-provider";
 import { logVaultHybridRetrieval } from "@/src/lib/vault-retrieval-debug";
 import { fuseRrfFromOrderedLists } from "@/src/lib/vault-retrieval-rrf";
@@ -35,6 +35,7 @@ export const DEFAULT_MAX_CHUNKS_PER_ITEM = 4;
 export const DEFAULT_RRF_K = 60;
 export const DEFAULT_RRF_LEXICAL_WEIGHT = 1;
 export const DEFAULT_RRF_VECTOR_WEIGHT = 1;
+export const DEFAULT_RRF_MENTION_WEIGHT = 0.5;
 
 function envNumberInRange(
   raw: string | undefined,
@@ -76,6 +77,12 @@ const defaultRrfVectorWeightFromEnv = envNumberInRange(
   0.1,
   8,
 );
+const defaultRrfMentionWeightFromEnv = envNumberInRange(
+  process.env.HEARTGARDEN_RETRIEVE_MENTION_WEIGHT,
+  DEFAULT_RRF_MENTION_WEIGHT,
+  0.1,
+  8,
+);
 
 /**
  * Options for `hybridRetrieveItems`. Omitted fields use defaults matching pre-tuning behavior.
@@ -92,7 +99,17 @@ export type HybridRetrieveOptions = {
   rrfK?: number;
   rrfLexicalWeight?: number;
   rrfVectorWeight?: number;
+  rrfMentionWeight?: number;
 };
+
+function tokenizeMentionQuery(query: string): string[] {
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((v) => v.trim())
+    .filter((v) => v.length >= 3)
+    .slice(0, 8);
+}
 
 function vectorSqlLiteral(embedding: number[]): string {
   if (embedding.length !== 1536 || !embedding.every((n) => Number.isFinite(n))) {
@@ -212,6 +229,7 @@ export async function hybridRetrieveItems(
   const rrfK = options.rrfK ?? defaultRrfKFromEnv;
   const rrfLexicalWeight = options.rrfLexicalWeight ?? defaultRrfLexicalWeightFromEnv;
   const rrfVectorWeight = options.rrfVectorWeight ?? defaultRrfVectorWeightFromEnv;
+  const rrfMentionWeight = options.rrfMentionWeight ?? defaultRrfMentionWeightFromEnv;
 
   const itemIdToChunks = new Map<string, string[]>();
   const itemIdToChunkMatches = new Map<string, VectorChunkMatch[]>();
@@ -271,14 +289,45 @@ export async function hybridRetrieveItems(
     seenVectorSections.add(sectionKey);
     vectorOrderedIds.push(hit.itemId);
   }
+  let mentionOrderedIds: string[] = [];
+  const mentionTerms = tokenizeMentionQuery(q);
+  if (mentionTerms.length > 0) {
+    const mentionRows = await db
+      .select({
+        itemId: entityMentions.sourceItemId,
+        mentionCount: sql<number>`sum(${entityMentions.mentionCount})::int`,
+      })
+      .from(entityMentions)
+      .where(
+        and(
+          inArray(entityMentions.matchedTerm, mentionTerms),
+          ...(filters.spaceIds?.length
+            ? [inArray(entityMentions.sourceSpaceId, filters.spaceIds)]
+            : filters.spaceId
+              ? [eq(entityMentions.sourceSpaceId, filters.spaceId)]
+              : []),
+          ...(filters.excludeSpaceIds?.length
+            ? [notInArray(entityMentions.sourceSpaceId, filters.excludeSpaceIds)]
+            : filters.excludeSpaceId
+              ? [ne(entityMentions.sourceSpaceId, filters.excludeSpaceId)]
+              : []),
+        ),
+      )
+      .groupBy(entityMentions.sourceItemId)
+      .orderBy(sql`sum(${entityMentions.mentionCount}) desc`)
+      .limit(Math.max(vecLimit, ftsLimit));
+    mentionOrderedIds = mentionRows.map((row) => row.itemId);
+  }
   const { topIds, scores } = fuseRrfFromOrderedLists({
     lexicalOrderedIds,
     vectorOrderedIds,
+    mentionOrderedIds,
     maxItems,
     config: {
       k: rrfK,
       lexicalWeight: rrfLexicalWeight,
       vectorWeight: rrfVectorWeight,
+      mentionWeight: rrfMentionWeight,
     },
   });
 
@@ -327,9 +376,11 @@ export async function hybridRetrieveItems(
     rrfK,
     rrfLexicalWeight,
     rrfVectorWeight,
+    rrfMentionWeight,
     ftsHits: ftsRows.length,
     lexicalRows: lexicalRows.length,
     vectorChunkHits: vecHits.length,
+    mentionHits: mentionOrderedIds.length,
     filtersSummary: summarizeSearchFiltersForDebug(filters),
     top: topIds.slice(0, 12).map((id) => {
       const s = scores.get(id);
@@ -339,6 +390,7 @@ export async function hybridRetrieveItems(
         title,
         lexRank: s?.lexRank,
         vecRank: s?.vecRank,
+        mentionRank: s?.mentionRank,
         rrf: s?.rrf != null ? Number(s.rrf.toFixed(5)) : undefined,
       };
     }),

@@ -20,12 +20,24 @@ import {
   normalizeLinkTypeAlias,
 } from "@/src/lib/connection-kind-colors";
 import { validateStructuredMirrorItemLink } from "@/src/lib/item-links-structured-validation";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import {
   heartgardenApiReadJsonBody,
   heartgardenApiRejectIfPlayerBlocked,
   heartgardenApiRequireDb,
 } from "@/src/lib/heartgarden-api-route-helpers";
 import { validateLinkTargetsInSourceSpace } from "@/src/lib/item-links-validation";
+
+function invalidateLinkRevisionSpaces(...spaceIds: Array<string | null | undefined>): void {
+  const unique = new Set<string>();
+  for (const spaceId of spaceIds) {
+    if (typeof spaceId !== "string" || spaceId.length === 0) continue;
+    unique.add(spaceId);
+  }
+  for (const spaceId of unique) {
+    invalidateItemLinksRevisionForSpace(spaceId);
+  }
+}
 
 function normalizeItemLinkMeta(meta: Record<string, unknown>): Record<string, unknown> {
   const next = { ...meta };
@@ -108,12 +120,20 @@ export async function POST(req: Request) {
   if (!validated.ok) {
     return Response.json({ ok: false, error: validated.error }, { status: validated.status });
   }
+  for (const targetSpaceId of validated.targetSpaceIds) {
+    if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, targetSpaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+    if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, targetSpaceId))) {
+      return heartgardenApiForbiddenJsonResponse();
+    }
+  }
   const canonicalLinkType = normalizeLinkTypeAlias(linkType ?? "pin");
   const metaForRow = normalizeItemLinkMeta(
     withLinkSemanticMeta(meta ? { ...meta } : {}, canonicalLinkType),
   );
   const entRows = await db
-    .select({ id: items.id, entityType: items.entityType })
+    .select({ id: items.id, entityType: items.entityType, spaceId: items.spaceId })
     .from(items)
     .where(inArray(items.id, [sourceItemId, targetItemId]));
   const srcRow = entRows.find((r) => r.id === sourceItemId);
@@ -161,8 +181,9 @@ export async function POST(req: Request) {
       originSpaceId: srcItem.spaceId,
       reason: "item-links.changed",
       itemId: sourceItemId,
-      lookupSpaceIds: [srcItem.spaceId],
+      lookupSpaceIds: [srcItem.spaceId, ...validated.targetSpaceIds],
     });
+    invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
     return Response.json({
       ok: true,
       deduped: true,
@@ -173,8 +194,9 @@ export async function POST(req: Request) {
     originSpaceId: srcItem.spaceId,
     reason: "item-links.changed",
     itemId: sourceItemId,
-    lookupSpaceIds: [srcItem.spaceId],
+    lookupSpaceIds: [srcItem.spaceId, ...validated.targetSpaceIds],
   });
+  invalidateLinkRevisionSpaces(srcRow.spaceId, tgtRow.spaceId);
   return Response.json({ ok: true, link: row });
 }
 
@@ -297,12 +319,26 @@ export async function PATCH(req: Request) {
     );
   }
   if (srcForLink?.spaceId) {
+    const [tgtForLink] = await db
+      .select({ spaceId: items.spaceId })
+      .from(items)
+      .where(eq(items.id, linkMeta.targetItemId))
+      .limit(1);
+    if (tgtForLink?.spaceId) {
+      if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
+        return heartgardenApiForbiddenJsonResponse();
+      }
+      if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
+        return heartgardenApiForbiddenJsonResponse();
+      }
+    }
     await publishHeartgardenSpaceInvalidation(db, {
       originSpaceId: srcForLink.spaceId,
       reason: "item-links.changed",
       itemId: linkMeta.sourceItemId,
-      lookupSpaceIds: [srcForLink.spaceId],
+      lookupSpaceIds: [srcForLink.spaceId, tgtForLink?.spaceId ?? srcForLink.spaceId],
     });
+    invalidateLinkRevisionSpaces(srcForLink.spaceId, tgtForLink?.spaceId);
   }
   return Response.json({ ok: true, link: updated });
 }
@@ -325,7 +361,7 @@ export async function DELETE(req: Request) {
   }
   const { id } = parsed.data;
   const [linkMeta] = await db
-    .select({ sourceItemId: itemLinks.sourceItemId })
+    .select({ sourceItemId: itemLinks.sourceItemId, targetItemId: itemLinks.targetItemId })
     .from(itemLinks)
     .where(eq(itemLinks.id, id))
     .limit(1);
@@ -360,12 +396,26 @@ export async function DELETE(req: Request) {
     );
   }
   if (srcForLink?.spaceId) {
+    const [tgtForLink] = await db
+      .select({ spaceId: items.spaceId })
+      .from(items)
+      .where(eq(items.id, linkMeta.targetItemId))
+      .limit(1);
+    if (tgtForLink?.spaceId) {
+      if (!(await playerMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
+        return heartgardenApiForbiddenJsonResponse();
+      }
+      if (!(await gmMayAccessItemSpaceAsync(db, bootCtx, tgtForLink.spaceId))) {
+        return heartgardenApiForbiddenJsonResponse();
+      }
+    }
     await publishHeartgardenSpaceInvalidation(db, {
       originSpaceId: srcForLink.spaceId,
       reason: "item-links.changed",
       itemId: linkMeta.sourceItemId,
-      lookupSpaceIds: [srcForLink.spaceId],
+      lookupSpaceIds: [srcForLink.spaceId, tgtForLink?.spaceId ?? srcForLink.spaceId],
     });
+    invalidateLinkRevisionSpaces(srcForLink.spaceId, tgtForLink?.spaceId);
   }
   return Response.json({ ok: true });
 }

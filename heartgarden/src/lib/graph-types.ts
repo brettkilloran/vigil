@@ -3,6 +3,8 @@ export type GraphNode = {
   title: string;
   itemType: string;
   entityType: string | null;
+  external?: boolean;
+  foreignSpaceId?: string | null;
 };
 
 export type GraphEdge = {

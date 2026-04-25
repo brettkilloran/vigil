@@ -73,12 +73,14 @@ export function ArchitecturalLinksPanel({
   activeSpaceId,
   selectedEntityIds,
   cloudEnabled,
+  itemLinksRevision,
   onFocusEntity,
 }: {
   graph: CanvasGraph;
   activeSpaceId: string;
   selectedEntityIds: readonly string[];
   cloudEnabled: boolean;
+  itemLinksRevision?: string | null;
   onFocusEntity: (entityId: string) => void;
 }) {
   const entityId = selectedEntityIds.length === 1 ? selectedEntityIds[0]! : null;
@@ -136,7 +138,7 @@ export function ArchitecturalLinksPanel({
     return () => {
       cancelled = true;
     };
-  }, [cloudEnabled, itemIdForCloud]);
+  }, [cloudEnabled, itemIdForCloud, itemLinksRevision]);
 
   useEffect(() => {
     if (!itemIdForCloud || !cloudEnabled) {

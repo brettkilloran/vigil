@@ -19,7 +19,7 @@ import {
 import { isHeartgardenImplicitPlayerRootSpaceName } from "@/src/lib/heartgarden-implicit-player-space";
 import { publishHeartgardenSpaceInvalidation } from "@/src/lib/heartgarden-realtime-invalidation";
 import { fetchPlayerSubtreeSpacesFull, spaceIsUnderPlayerRoot } from "@/src/lib/heartgarden-space-subtree";
-import { assertSpaceExists, listGmWorkspaceSpaces } from "@/src/lib/spaces";
+import { assertSpaceExists, listGmWorkspaceSpaces, resolveOrCreateBraneByType } from "@/src/lib/spaces";
 
 const bodySchema = z.object({
   /** When set, insert this row id (undo-after-delete folder subtree restore). Must not already exist. */
@@ -111,6 +111,7 @@ export async function POST(req: Request) {
       .values({
         name,
         parentSpaceId,
+        braneId: parent.braneId,
       })
       .returning();
 
@@ -145,6 +146,7 @@ export async function POST(req: Request) {
     }
   }
 
+  let parentBraneId: string | null = null;
   if (parentSpaceId !== undefined && parentSpaceId !== null) {
     if (!(await gmMayAccessSpaceIdAsync(db, bootCtx, parentSpaceId))) {
       return heartgardenApiForbiddenJsonResponse();
@@ -159,11 +161,13 @@ export async function POST(req: Request) {
     if (isHeartgardenImplicitPlayerRootSpaceName(parent.name)) {
       return Response.json({ ok: false, error: "Invalid parent" }, { status: 400 });
     }
+    parentBraneId = parent.braneId;
   }
 
   const [created] = await db
     .insert(spaces)
     .values({
+      braneId: parentBraneId ?? (await resolveOrCreateBraneByType(db, "gm")).id,
       ...(parsed.data.id ? { id: parsed.data.id } : {}),
       name,
       ...(parentSpaceId !== undefined ? { parentSpaceId } : {}),

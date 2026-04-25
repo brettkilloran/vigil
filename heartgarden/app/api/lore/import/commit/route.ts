@@ -9,6 +9,7 @@ import {
   gmMayAccessSpaceIdAsync,
   heartgardenApiForbiddenJsonResponse,
 } from "@/src/lib/heartgarden-api-boot-context";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { DS_COLOR } from "@/src/lib/design-system-tokens";
 import { buildLoreNoteContentJson } from "@/src/lib/lore-import-commit";
 import {
@@ -334,6 +335,9 @@ export async function POST(req: Request) {
     if (row.contentText.trim().length > 0 || row.title.trim().length > 0) {
       scheduleVaultReindexAfterResponse(row.id);
     }
+  }
+  if (linksCreated > 0) {
+    invalidateItemLinksRevisionForSpace(parsed.data.spaceId);
   }
 
   return Response.json({

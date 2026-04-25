@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
-import { itemLinks, items } from "@/src/db/schema";
+import { entityMentions, itemLinks, items } from "@/src/db/schema";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
@@ -36,22 +36,41 @@ async function computeItemLinksRevisionUncached(
 ): Promise<string> {
   const [row] = await db
     .select({
-      c: sql<number>`count(*)::int`,
-      maxU: sql<Date | null>`max(${itemLinks.updatedAt})`,
-      maxId: sql<string | null>`max(${itemLinks.id}::text)`,
+      c: sql<number>`sum(s.c)::int`,
+      maxU: sql<Date | null>`max(s.max_u)`,
+      maxId: sql<string | null>`max(s.max_id)`,
     })
-    .from(itemLinks)
-    .where(
+    .from(
       sql`(
-        EXISTS (
-          SELECT 1 FROM ${items}
-          WHERE ${items.id} = ${itemLinks.sourceItemId} AND ${items.spaceId} = ${spaceId}
+        SELECT
+          count(*)::int AS c,
+          max(${itemLinks.updatedAt}) AS max_u,
+          max(${itemLinks.id}::text) AS max_id
+        FROM ${itemLinks}
+        WHERE (
+          EXISTS (
+            SELECT 1 FROM ${items}
+            WHERE ${items.id} = ${itemLinks.sourceItemId} AND ${items.spaceId} = ${spaceId}
+          )
+          OR EXISTS (
+            SELECT 1 FROM ${items}
+            WHERE ${items.id} = ${itemLinks.targetItemId} AND ${items.spaceId} = ${spaceId}
+          )
         )
-        OR EXISTS (
-          SELECT 1 FROM ${items}
-          WHERE ${items.id} = ${itemLinks.targetItemId} AND ${items.spaceId} = ${spaceId}
+        UNION ALL
+        SELECT
+          count(*)::int AS c,
+          max(${entityMentions.updatedAt}) AS max_u,
+          max(${entityMentions.id}::text) AS max_id
+        FROM ${entityMentions}
+        WHERE (
+          ${entityMentions.sourceSpaceId} = ${spaceId}
+          OR EXISTS (
+            SELECT 1 FROM ${items}
+            WHERE ${items.id} = ${entityMentions.targetItemId} AND ${items.spaceId} = ${spaceId}
+          )
         )
-      )`,
+      ) s`,
     );
 
   const c = row?.c ?? 0;

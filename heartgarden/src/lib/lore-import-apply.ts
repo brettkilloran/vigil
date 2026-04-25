@@ -550,12 +550,22 @@ export async function applyLoreImportPlan(
         : body.spaceId;
 
       const folderZ = takeNextZIndex(zIndexCursor, parentSpaceId);
+      const [parentSpace] = await dbx
+        .select({ braneId: spaces.braneId })
+        .from(spaces)
+        .where(eq(spaces.id, parentSpaceId))
+        .limit(1);
+      if (!parentSpace?.braneId) {
+        linkWarnings.push(`Skipped folder "${folder.title}" (missing brane on parent space)`);
+        continue;
+      }
 
       const [childSpace] = await dbx
         .insert(spaces)
         .values({
           name: folder.title.slice(0, 255),
           parentSpaceId,
+          braneId: parentSpace.braneId,
         })
         .returning();
       if (!childSpace) continue;

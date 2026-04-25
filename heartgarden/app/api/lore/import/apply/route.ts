@@ -9,6 +9,7 @@ import {
   applyLoreImportPlan,
   loreImportApplyBodySchema,
 } from "@/src/lib/lore-import-apply";
+import { invalidateItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
 import { assertSpaceExists } from "@/src/lib/spaces";
 
 export const runtime = "nodejs";
@@ -72,6 +73,9 @@ export async function POST(req: Request) {
         resolvedClarificationAnswers: result.resolvedClarificationAnswers,
         followUp: result.followUp,
       });
+    }
+    if (result.linksCreated > 0) {
+      invalidateItemLinksRevisionForSpace(parsed.data.spaceId);
     }
     return Response.json({
       ok: true,

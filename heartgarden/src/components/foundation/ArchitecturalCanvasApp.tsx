@@ -271,6 +271,8 @@ import {
 import { ArchitecturalLinksPanel } from "@/src/components/ui/ArchitecturalLinksPanel";
 import { LinkGraphOverlay } from "@/src/components/ui/LinkGraphOverlay";
 import { LoreAskPanel } from "@/src/components/ui/LoreAskPanel";
+import { GraphPanel } from "@/src/components/product-ui/canvas/GraphPanel";
+import { EntityPopover } from "@/src/components/product-ui/canvas/EntityPopover";
 import {
   type CanvasBodyCommitPayload,
   type CanvasConnectionPin,
@@ -356,6 +358,7 @@ import {
   resolveActiveRichEditorSurface,
   resolveProseCommandTarget,
 } from "@/src/lib/rich-editor-surface";
+import { readWordUnderPointer } from "@/src/lib/word-under-pointer";
 import { useChunkLoadRecovery } from "@/src/lib/chunk-load-recovery";
 const VigilFlowRevealOverlay = dynamic(
   () =>
@@ -2642,6 +2645,16 @@ export function ArchitecturalCanvasApp({
   const lorePanelOpenRef = useRef(false);
   const lorePanelOpenSoundPrevRef = useRef(false);
   const [graphOverlayOpen, setGraphOverlayOpen] = useState(false);
+  const [graphPanelWidth] = useState(360);
+  const [activeBraneId, setActiveBraneId] = useState<string | null>(null);
+  const [altHeld, setAltHeld] = useState(false);
+  const [entityPopover, setEntityPopover] = useState<{
+    term: string;
+    x: number;
+    y: number;
+    rows: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
+    loading: boolean;
+  } | null>(null);
   const graphOverlayOpenSoundPrevRef = useRef(false);
   const [loreSmartReview, setLoreSmartReview] = useState<LoreSmartImportReviewState | null>(null);
   const [loreSmartPlanning, setLoreSmartPlanning] = useState(false);
@@ -3532,6 +3545,88 @@ export function ArchitecturalCanvasApp({
     if (graphOverlayOpenSoundPrevRef.current && !graphOverlayOpen) playVigilUiSound("tap");
     graphOverlayOpenSoundPrevRef.current = graphOverlayOpen;
   }, [graphOverlayOpen]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Alt") return;
+      e.preventDefault();
+      setAltHeld(true);
+      document.body.dataset.hgAltHeld = "1";
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== "Alt") return;
+      setAltHeld(false);
+      delete document.body.dataset.hgAltHeld;
+      setEntityPopover(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      delete document.body.dataset.hgAltHeld;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!altHeld || !activeBraneId) return;
+    let raf = 0;
+    let abort: AbortController | null = null;
+    const onMove = (e: PointerEvent) => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const hit = readWordUnderPointer(e.clientX, e.clientY);
+        if (!hit) {
+          setEntityPopover(null);
+          return;
+        }
+        const term = hit.word.toLowerCase();
+        setEntityPopover((prev) => {
+          if (prev && prev.term === term) {
+            return { ...prev, x: hit.rect.left + 8, y: hit.rect.bottom + 8 };
+          }
+          return { term, x: hit.rect.left + 8, y: hit.rect.bottom + 8, rows: [], loading: true };
+        });
+        abort?.abort();
+        abort = new AbortController();
+        void (async () => {
+          try {
+            const res = await fetch(
+              `/api/mentions?term=${encodeURIComponent(term)}&braneId=${encodeURIComponent(activeBraneId)}`,
+              { signal: abort?.signal },
+            );
+            const data = (await res.json()) as {
+              ok?: boolean;
+              items?: Array<{ itemId: string; title: string; mentionCount: number; snippet?: string | null }>;
+            };
+            if (!data.ok) return;
+            setEntityPopover((prev) =>
+              prev && prev.term === term
+                ? { ...prev, rows: data.items ?? [], loading: false }
+                : prev,
+            );
+          } catch {
+            setEntityPopover((prev) => (prev && prev.term === term ? { ...prev, loading: false } : prev));
+          }
+        })();
+      });
+    };
+    const onClick = (e: PointerEvent) => {
+      if (!altHeld) return;
+      const hit = readWordUnderPointer(e.clientX, e.clientY);
+      if (!hit) return;
+      if (!graphOverlayOpen) setGraphOverlayOpen(true);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerdown", onClick);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      abort?.abort();
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerdown", onClick);
+    };
+  }, [activeBraneId, altHeld, graphOverlayOpen]);
 
   useEffect(() => {
     const prev = connectionModeSoundPrevRef.current;
@@ -6320,6 +6415,8 @@ export function ArchitecturalCanvasApp({
   /** Hydrates graph from bootstrap and sets camera to `defaultCamera` (world origin centered — see `AGENTS.md`). */
   const applyBootstrapData = useCallback((data: BootstrapResponse, maxZi: number) => {
     if (!data.spaceId) return;
+    const braneId = (data as BootstrapResponse & { braneId?: string | null }).braneId ?? null;
+    setActiveBraneId(braneId);
     const nextGraph = buildCanvasGraphFromBootstrap(data);
     setGraph(nextGraph);
     setActiveSpaceId(data.spaceId);
@@ -6371,6 +6468,7 @@ export function ArchitecturalCanvasApp({
     setWorkspaceViewFromCache(false);
     persistNeonRef.current = false;
     neonSyncSetCloudEnabled(false);
+    setActiveBraneId(null);
     const freshGraph = buildHeartgardenDemoLocalGraph();
     setGraph(freshGraph);
     setActiveSpaceId(freshGraph.rootSpaceId);
@@ -14066,15 +14164,38 @@ export function ArchitecturalCanvasApp({
           activeSpaceId={activeSpaceId}
           selectedEntityIds={selectedNodeIds}
           cloudEnabled={cloudLinksBar}
+          itemLinksRevision={lastItemLinksRevisionRef.current}
           onFocusEntity={(id) => focusEntityFromPalette(id)}
         />
         {!isRestrictedLayer ? (
-          <LinkGraphOverlay
-            open={graphOverlayOpen}
-            spaceId={cloudLinksBar && isUuidLike(activeSpaceId) ? activeSpaceId : null}
-            onClose={() => setGraphOverlayOpen(false)}
-            onSelectItem={(id) => focusEntityFromPalette(id)}
-          />
+          <>
+            <GraphPanel
+              open={graphOverlayOpen}
+              braneId={activeBraneId}
+              width={graphPanelWidth}
+              onClose={() => setGraphOverlayOpen(false)}
+              onSelectItem={(id) => focusEntityFromPalette(id)}
+            />
+            <LinkGraphOverlay
+              open={false}
+              spaceId={cloudLinksBar && isUuidLike(activeSpaceId) ? activeSpaceId : null}
+              onClose={() => setGraphOverlayOpen(false)}
+              onSelectItem={(id) => focusEntityFromPalette(id)}
+            />
+            <EntityPopover
+              open={Boolean(entityPopover)}
+              term={entityPopover?.term ?? ""}
+              x={entityPopover?.x ?? 0}
+              y={entityPopover?.y ?? 0}
+              rows={entityPopover?.rows ?? []}
+              loading={Boolean(entityPopover?.loading)}
+              onClose={() => setEntityPopover(null)}
+              onShowItem={(id) => {
+                if (!graphOverlayOpen) setGraphOverlayOpen(true);
+                focusEntityFromPalette(id);
+              }}
+            />
+          </>
         ) : null}
       </div>
       </div>

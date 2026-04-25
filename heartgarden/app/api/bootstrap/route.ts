@@ -7,6 +7,7 @@ import {
 import { rowToCanvasItem } from "@/src/lib/item-mapper";
 import { parseSpaceIdParam } from "@/src/lib/space-id";
 import { fetchPlayerSubtreeSpacesFull } from "@/src/lib/heartgarden-space-subtree";
+import { ensureDemoBraneSeed } from "@/src/lib/demo-brane-seed";
 import {
   listItemsForSpaceSubtree,
   parseCameraFromRow,
@@ -45,6 +46,7 @@ export async function GET(req: Request) {
       camera: { x: 0, y: 0, zoom: 1 },
     });
   }
+  await ensureDemoBraneSeed(db);
 
   const url = new URL(req.url);
   const requested = parseSpaceIdParam(url.searchParams.get("space"));
@@ -78,6 +80,7 @@ export async function GET(req: Request) {
       ok: true,
       demo: false,
       spaceId: activeSpace.id,
+      braneId: activeSpace.braneId,
       spaces: subtreeRows.map((s) => ({
         id: s.id,
         name: s.name,
@@ -108,6 +111,7 @@ export async function GET(req: Request) {
     ok: true,
     demo: false,
     spaceId: activeSpace.id,
+    braneId: activeSpace.braneId,
     spaces: allSpaces.map((s) => ({
       id: s.id,
       name: s.name,

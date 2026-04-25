@@ -1,7 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
+import { branes, spaces } from "@/src/db/schema";
 import {
   HEARTGARDEN_BOOT_COOKIE_NAME,
   readBootEnv,
@@ -70,8 +72,17 @@ export async function gmMayAccessSpaceIdAsync(
 ): Promise<boolean> {
   if (!gmMayAccessSpaceId(ctx, spaceId)) return false;
   if (ctx.role !== "gm") return true;
-  const row = await assertSpaceExists(db, spaceId);
+  const [row] = await db
+    .select({
+      name: spaces.name,
+      braneType: branes.braneType,
+    })
+    .from(spaces)
+    .leftJoin(branes, eq(branes.id, spaces.braneId))
+    .where(eq(spaces.id, spaceId))
+    .limit(1);
   if (!row) return false;
+  if (row.braneType === "player" && !isHeartgardenGmPlayerSpaceBreakGlassEnabled()) return false;
   return !isHeartgardenImplicitPlayerRootSpaceName(row.name);
 }
 

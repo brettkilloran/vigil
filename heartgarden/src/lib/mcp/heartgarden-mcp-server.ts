@@ -527,7 +527,8 @@ export function createHeartgardenMcpServer(config: HeartgardenMcpServerConfig): 
       },
       {
         name: "heartgarden_title_mentions",
-        description: "FTS search for an item's title in a space (GET /api/search fts).",
+        description:
+          "Legacy tool: FTS search for an item's title in a space (deprecated; migrate to heartgarden_entity_mentions).",
         inputSchema: {
           type: "object",
           properties: {

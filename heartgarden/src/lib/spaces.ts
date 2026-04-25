@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 
 import type { tryGetDb } from "@/src/db/index";
-import { itemLinks, items, spaces } from "@/src/db/schema";
+import { branes, itemLinks, items, spaces } from "@/src/db/schema";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { fetchDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import {
@@ -13,6 +13,7 @@ import type { CameraState } from "@/src/model/canvas-types";
 import { defaultCamera } from "@/src/model/canvas-types";
 
 export type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
+export type BraneType = "gm" | "player" | "demo";
 
 function playerSpaceIdExcludedFromGmDb(): string | undefined {
   return parseSpaceIdParam((process.env.HEARTGARDEN_PLAYER_SPACE_ID ?? "").trim() || null);
@@ -42,12 +43,58 @@ export async function listAllSpaces(db: VigilDb) {
     .orderBy(desc(spaces.updatedAt));
 }
 
+export async function resolveOrCreateBraneByType(
+  db: VigilDb,
+  braneType: BraneType,
+): Promise<{ id: string; name: string; braneType: string }> {
+  const [existing] = await db
+    .select({ id: branes.id, name: branes.name, braneType: branes.braneType })
+    .from(branes)
+    .where(eq(branes.braneType, braneType))
+    .limit(1);
+  if (existing) return existing;
+  const defaultName =
+    braneType === "gm" ? "GM Brane" : braneType === "player" ? "Player Brane" : "Demo Brane";
+  const [created] = await db
+    .insert(branes)
+    .values({
+      name: defaultName,
+      braneType,
+    })
+    .onConflictDoNothing({ target: [branes.braneType] })
+    .returning({ id: branes.id, name: branes.name, braneType: branes.braneType });
+  if (created) return created;
+  const [afterConflict] = await db
+    .select({ id: branes.id, name: branes.name, braneType: branes.braneType })
+    .from(branes)
+    .where(eq(branes.braneType, braneType))
+    .limit(1);
+  if (!afterConflict) {
+    throw new Error(`Failed to resolve brane for type: ${braneType}`);
+  }
+  return afterConflict;
+}
+
+export async function listBraneSpaces(db: VigilDb, braneId: string) {
+  return db
+    .select()
+    .from(spaces)
+    .where(eq(spaces.braneId, braneId))
+    .orderBy(desc(spaces.updatedAt));
+}
+
+export async function resolveSpaceBraneId(db: VigilDb, spaceId: string): Promise<string | undefined> {
+  const [row] = await db.select({ braneId: spaces.braneId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+  return row?.braneId ?? undefined;
+}
+
 /**
  * Spaces visible in the GM workspace (excludes the implicit Players-only root row and
  * `HEARTGARDEN_PLAYER_SPACE_ID` when set).
  */
 export async function listGmWorkspaceSpaces(db: VigilDb) {
-  const all = await listAllSpaces(db);
+  const gmBrane = await resolveOrCreateBraneByType(db, "gm");
+  const all = await listBraneSpaces(db, gmBrane.id);
   const withoutImplicit = all.filter((s) => !isHeartgardenImplicitPlayerRootSpaceName(s.name));
   const hid = playerSpaceIdExcludedFromGmDb();
   if (!hid || isHeartgardenGmPlayerSpaceBreakGlassEnabled()) return withoutImplicit;
@@ -56,26 +103,38 @@ export async function listGmWorkspaceSpaces(db: VigilDb) {
 
 /** Select-only: used for GM search exclusion (must not insert rows). */
 export async function findImplicitPlayerRootSpaceId(db: VigilDb): Promise<string | undefined> {
+  const playerBrane = await resolveOrCreateBraneByType(db, "player");
   const [row] = await db
     .select({ id: spaces.id })
     .from(spaces)
-    .where(eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME))
+    .where(
+      and(
+        eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME),
+        eq(spaces.braneId, playerBrane.id),
+      ),
+    )
     .orderBy(asc(spaces.createdAt))
     .limit(1);
   return row?.id;
 }
 
 export async function resolveOrCreateImplicitPlayerRootSpace(db: VigilDb) {
+  const playerBrane = await resolveOrCreateBraneByType(db, "player");
   const existing = await db
     .select()
     .from(spaces)
-    .where(eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME))
+    .where(
+      and(
+        eq(spaces.name, HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME),
+        eq(spaces.braneId, playerBrane.id),
+      ),
+    )
     .orderBy(asc(spaces.createdAt))
     .limit(1);
   if (existing[0]) return existing[0];
   const [created] = await db
     .insert(spaces)
-    .values({ name: HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME })
+    .values({ name: HEARTGARDEN_IMPLICIT_PLAYER_ROOT_SPACE_NAME, braneId: playerBrane.id })
     .returning();
   return created!;
 }
@@ -94,7 +153,8 @@ async function ensureDevGmWorkspaceSpace(db: VigilDb): Promise<void> {
   if (!id) return;
   const existing = await assertSpaceExists(db, id);
   if (existing) return;
-  await db.insert(spaces).values({ id, name: "Dev workspace" });
+  const gmBrane = await resolveOrCreateBraneByType(db, "gm");
+  await db.insert(spaces).values({ id, name: "Dev workspace", braneId: gmBrane.id });
 }
 
 /**
@@ -105,9 +165,10 @@ export async function resolveActiveSpaceGmWorkspace(db: VigilDb, requestedSpaceI
   await ensureDevGmWorkspaceSpace(db);
   let allSpaces = await listGmWorkspaceSpaces(db);
   if (allSpaces.length === 0) {
+    const gmBrane = await resolveOrCreateBraneByType(db, "gm");
     const [created] = await db
       .insert(spaces)
-      .values({ name: "Main space" })
+      .values({ name: "Main space", braneId: gmBrane.id })
       .returning();
     allSpaces = [created!];
   }
@@ -136,9 +197,10 @@ export async function resolveActiveSpace(
 ) {
   let allSpaces = await listAllSpaces(db);
   if (allSpaces.length === 0) {
+    const gmBrane = await resolveOrCreateBraneByType(db, "gm");
     const [created] = await db
       .insert(spaces)
-      .values({ name: "Main space" })
+      .values({ name: "Main space", braneId: gmBrane.id })
       .returning();
     allSpaces = [created!];
   }

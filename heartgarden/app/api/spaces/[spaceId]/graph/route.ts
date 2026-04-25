@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
@@ -109,10 +109,7 @@ export async function GET(
     })
     .from(itemLinks)
     .where(
-      and(
-        inArray(itemLinks.sourceItemId, idList),
-        inArray(itemLinks.targetItemId, idList),
-      ),
+      and(or(inArray(itemLinks.sourceItemId, idList), inArray(itemLinks.targetItemId, idList))),
     );
 
   const linkRows = dedupeLogicalItemLinkRows(
@@ -135,6 +132,34 @@ export async function GET(
     itemType: r.itemType,
     entityType: r.entityType ?? null,
   }));
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const ghostIds = new Set<string>();
+  for (const edge of linkRows) {
+    if (!nodeIds.has(edge.source)) ghostIds.add(edge.source);
+    if (!nodeIds.has(edge.target)) ghostIds.add(edge.target);
+  }
+  if (ghostIds.size > 0) {
+    const ghostRows = await db
+      .select({
+        id: items.id,
+        title: items.title,
+        itemType: items.itemType,
+        entityType: items.entityType,
+        foreignSpaceId: items.spaceId,
+      })
+      .from(items)
+      .where(inArray(items.id, [...ghostIds]));
+    for (const ghost of ghostRows) {
+      nodes.push({
+        id: ghost.id,
+        title: ghost.title || "Untitled",
+        itemType: ghost.itemType,
+        entityType: ghost.entityType ?? null,
+        external: true,
+        foreignSpaceId: ghost.foreignSpaceId,
+      });
+    }
+  }
 
   const edges: GraphEdge[] = linkRows.map((l) => ({
     id: l.id,

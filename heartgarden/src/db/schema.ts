@@ -18,10 +18,23 @@ const vector1536 = customType<{ data: number[] }>({
   },
 });
 
+export const branes = pgTable(
+  "branes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    braneType: varchar("brane_type", { length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [unique("branes_brane_type_uidx").on(table.braneType)],
+);
+
 export const spaces = pgTable(
   "spaces",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    braneId: uuid("brane_id"),
     parentSpaceId: uuid("parent_space_id"),
     name: varchar("name", { length: 255 }).notNull(),
     color: varchar("color", { length: 64 }),
@@ -32,6 +45,10 @@ export const spaces = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
+    foreignKey({
+      columns: [table.braneId],
+      foreignColumns: [branes.id],
+    }).onDelete("cascade"),
     foreignKey({
       columns: [table.parentSpaceId],
       foreignColumns: [table.id],
@@ -156,6 +173,40 @@ export const itemLinks = pgTable(
       t.targetItemId,
       t.sourcePin,
       t.targetPin,
+    ),
+  ],
+);
+
+export const entityMentions = pgTable(
+  "entity_mentions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sourceItemId: uuid("source_item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    targetItemId: uuid("target_item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    matchedTerm: text("matched_term").notNull(),
+    mentionCount: integer("mention_count").notNull().default(1),
+    snippet: text("snippet"),
+    headingPath: text("heading_path"),
+    braneId: uuid("brane_id")
+      .notNull()
+      .references(() => branes.id, { onDelete: "cascade" }),
+    sourceSpaceId: uuid("source_space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    sourceKind: varchar("source_kind", { length: 16 }).notNull().default("term"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    unique("entity_mentions_source_target_term_kind_uidx").on(
+      t.sourceItemId,
+      t.targetItemId,
+      t.matchedTerm,
+      t.sourceKind,
     ),
   ],
 );

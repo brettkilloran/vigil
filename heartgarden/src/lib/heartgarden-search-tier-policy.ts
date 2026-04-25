@@ -1,13 +1,13 @@
-import { spaces } from "@/src/db/schema";
+import { eq } from "drizzle-orm";
+
+import { branes, spaces } from "@/src/db/schema";
 import {
-  heartgardenPlayerSpaceIdExcludedFromGm,
   type HeartgardenApiBootContext,
   playerMayAccessSpaceIdAsync,
 } from "@/src/lib/heartgarden-api-boot-context";
 import { isHeartgardenGmPlayerSpaceBreakGlassEnabled } from "@/src/lib/heartgarden-gm-break-glass";
 import { collectDescendantSpaceIds } from "@/src/lib/heartgarden-space-subtree";
 import {
-  findImplicitPlayerRootSpaceId,
   type SearchFilters,
   type VigilDb,
 } from "@/src/lib/spaces";
@@ -27,17 +27,12 @@ export function applySearchTierPolicy(
   modeRaw: string,
 ): SearchTierPolicyResult {
   const mode = modeRaw.toLowerCase();
-  const hid = heartgardenPlayerSpaceIdExcludedFromGm();
 
   if (ctx.role === "player") {
     const nextFilters = { ...filters };
     let m = mode;
     if (m === "hybrid" || m === "semantic") m = "fts";
     return { ok: true, filters: nextFilters, mode: m };
-  }
-
-  if (ctx.role === "gm" && hid && !filters.spaceId && !isHeartgardenGmPlayerSpaceBreakGlassEnabled()) {
-    return { ok: true, filters: { ...filters, excludeSpaceId: hid }, mode };
   }
 
   return { ok: true, filters: { ...filters }, mode };
@@ -48,14 +43,8 @@ export function applySuggestTierPolicy(
   ctx: HeartgardenApiBootContext,
   filters: SearchFilters,
 ): SearchTierPolicyResult {
-  const hid = heartgardenPlayerSpaceIdExcludedFromGm();
-
   if (ctx.role === "player") {
     return { ok: true, filters: { ...filters }, mode: "" };
-  }
-
-  if (ctx.role === "gm" && hid && !filters.spaceId && !isHeartgardenGmPlayerSpaceBreakGlassEnabled()) {
-    return { ok: true, filters: { ...filters, excludeSpaceId: hid }, mode: "" };
   }
 
   return { ok: true, filters: { ...filters }, mode: "" };
@@ -101,13 +90,18 @@ export async function finalizeHeartgardenSearchFiltersForDb(
     !filters.excludeSpaceId &&
     !(filters.excludeSpaceIds?.length)
   ) {
-    const implicitRootId = await findImplicitPlayerRootSpaceId(db);
-    if (implicitRootId) {
+    const [playerBrane] = await db
+      .select({ id: branes.id })
+      .from(branes)
+      .where(eq(branes.braneType, "player"))
+      .limit(1);
+    if (playerBrane) {
       const next: SearchFilters = { ...filters };
-      const slim = await db
-        .select({ id: spaces.id, parentSpaceId: spaces.parentSpaceId })
-        .from(spaces);
-      next.excludeSpaceIds = [...collectDescendantSpaceIds(implicitRootId, slim)];
+      const scoped = await db
+        .select({ id: spaces.id })
+        .from(spaces)
+        .where(eq(spaces.braneId, playerBrane.id));
+      next.excludeSpaceIds = scoped.map((row) => row.id);
       return next;
     }
   }

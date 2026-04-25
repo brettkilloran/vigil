@@ -13,13 +13,10 @@ import type { VigilDb } from "@/src/lib/spaces";
 const PLAYER_UUID = "11111111-1111-4111-8111-111111111111";
 
 describe("applySearchTierPolicy", () => {
-  const prevPlayerSpace = process.env.HEARTGARDEN_PLAYER_SPACE_ID;
   const prevBreakGlass = process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE;
 
   afterEach(() => {
     vi.restoreAllMocks();
-    if (prevPlayerSpace === undefined) delete process.env.HEARTGARDEN_PLAYER_SPACE_ID;
-    else process.env.HEARTGARDEN_PLAYER_SPACE_ID = prevPlayerSpace;
     if (prevBreakGlass === undefined) delete process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE;
     else process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE = prevBreakGlass;
   });
@@ -74,19 +71,7 @@ describe("applySearchTierPolicy", () => {
     expect(out?.excludeSpaceIds?.slice().sort()).toEqual([PLAYER_UUID, child].sort());
   });
 
-  it("adds excludeSpaceId for GM global search when player space is configured", () => {
-    process.env.HEARTGARDEN_PLAYER_SPACE_ID = PLAYER_UUID;
-    const ctx: HeartgardenApiBootContext = { role: "gm" };
-    const r = applySearchTierPolicy(ctx, {}, "hybrid");
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.filters.excludeSpaceId).toBe(PLAYER_UUID);
-      expect(r.mode).toBe("hybrid");
-    }
-  });
-
-  it("does not downgrade GM hybrid when player space is unset", () => {
-    delete process.env.HEARTGARDEN_PLAYER_SPACE_ID;
+  it("keeps GM global filters unchanged in apply tier policy", () => {
     const ctx: HeartgardenApiBootContext = { role: "gm" };
     const r = applySearchTierPolicy(ctx, {}, "hybrid");
     expect(r.ok).toBe(true);
@@ -96,16 +81,19 @@ describe("applySearchTierPolicy", () => {
     }
   });
 
-  it("skips global excludeSpaceId when GM break-glass is enabled", () => {
-    process.env.HEARTGARDEN_PLAYER_SPACE_ID = PLAYER_UUID;
+  it("does not downgrade GM hybrid mode", () => {
+    const ctx: HeartgardenApiBootContext = { role: "gm" };
+    const r = applySearchTierPolicy(ctx, {}, "hybrid");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.filters.excludeSpaceId).toBeUndefined();
+      expect(r.mode).toBe("hybrid");
+    }
+  });
+
+  it("suggest policy stays pass-through for GM (break-glass unchanged)", () => {
     process.env.HEARTGARDEN_GM_ALLOW_PLAYER_SPACE = "1";
     const ctx: HeartgardenApiBootContext = { role: "gm" };
-    const r = applySearchTierPolicy(ctx, {}, "hybrid");
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.filters.excludeSpaceId).toBeUndefined();
-      expect(r.mode).toBe("hybrid");
-    }
     const s = applySuggestTierPolicy(ctx, {});
     expect(s.ok).toBe(true);
     if (s.ok) expect(s.filters.excludeSpaceId).toBeUndefined();

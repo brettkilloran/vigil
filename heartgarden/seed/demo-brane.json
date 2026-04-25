@@ -1,0 +1,80 @@
+{
+  "spaces": [
+    {
+      "id": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d1001",
+      "name": "Demo space",
+      "parentSpaceId": null
+    },
+    {
+      "id": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d1002",
+      "name": "Demo subspace folder",
+      "parentSpaceId": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d1001"
+    }
+  ],
+  "items": [
+    {
+      "id": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d2001",
+      "spaceId": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d1001",
+      "itemType": "note",
+      "x": -420,
+      "y": -440,
+      "width": 340,
+      "height": 260,
+      "zIndex": 10,
+      "title": "Start here - how this board works",
+      "contentText": "Heartgarden demo welcome card. Use this board to test global links and graph tooling.",
+      "contentJson": null,
+      "entityType": "loreNote"
+    },
+    {
+      "id": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d2002",
+      "spaceId": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d1001",
+      "itemType": "checklist",
+      "x": -420,
+      "y": 160,
+      "width": 340,
+      "height": 280,
+      "zIndex": 11,
+      "title": "Try these steps",
+      "contentText": "Open search, draw threads, and inspect persisted links.",
+      "contentJson": null,
+      "entityType": "loreNote"
+    },
+    {
+      "id": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d2003",
+      "spaceId": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d1002",
+      "itemType": "note",
+      "x": -210,
+      "y": -160,
+      "width": 340,
+      "height": 260,
+      "zIndex": 20,
+      "title": "Morgan Vale",
+      "contentText": "Lead warder in the Ratcatchers demo faction.",
+      "contentJson": null,
+      "entityType": "character"
+    },
+    {
+      "id": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d2004",
+      "spaceId": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d1002",
+      "itemType": "note",
+      "x": 210,
+      "y": -160,
+      "width": 340,
+      "height": 260,
+      "zIndex": 21,
+      "title": "Ratcatchers",
+      "contentText": "Demo faction card with roster and role links.",
+      "contentJson": null,
+      "entityType": "faction"
+    }
+  ],
+  "links": [
+    {
+      "id": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d3001",
+      "sourceItemId": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d2003",
+      "targetItemId": "8f2c6d9b-6e1b-4e1b-b04b-6c3f9f4d2004",
+      "linkType": "bond"
+    }
+  ]
+}

@@ -62,6 +62,7 @@ export type BootstrapResponse = {
   ok: boolean;
   demo?: boolean;
   spaceId: string | null;
+  braneId?: string | null;
   spaces: BootstrapSpaceRow[];
   items: CanvasItem[];
   camera: CameraState;
