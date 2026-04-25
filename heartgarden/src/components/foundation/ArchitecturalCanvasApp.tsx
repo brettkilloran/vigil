@@ -3362,6 +3362,8 @@ export function ArchitecturalCanvasApp({
     zoom: number;
   }>({ spaceId: ROOT_SPACE_ID, tx: 0, ty: 0, zoom: 1 });
   const itemServerUpdatedAtRef = useRef<Map<string, string>>(new Map());
+  /** Item ids with an in-flight create request; PATCH waits for create to settle. */
+  const pendingCreatePromisesRef = useRef<Map<string, Promise<void>>>(new Map());
   /** While undo restores a deleted row, collab merge must not tombstone it before POST /items completes. */
   const remoteTombstoneExemptIdsRef = useRef<Set<string>>(new Set());
   const syncCursorRef = useRef<string>(new Date(0).toISOString());
@@ -3808,6 +3810,11 @@ export function ArchitecturalCanvasApp({
 
   const patchItemWithVersion = useCallback(
     async (itemId: string, patch: Record<string, unknown>) => {
+      const pendingCreate = pendingCreatePromisesRef.current.get(itemId);
+      if (pendingCreate) {
+        await pendingCreate.catch(() => {});
+      }
+      if (!graphRef.current.entities[itemId]) return false;
       savingContentIdsRef.current.add(itemId);
       try {
         const base = itemServerUpdatedAtRef.current.get(itemId);
@@ -8398,203 +8405,256 @@ export function ArchitecturalCanvasApp({
 
     if (persistNeonRef.current && isUuidLike(activeSpaceId)) {
       const spaceId = activeSpaceId;
-      void (async () => {
-        try {
-        if (type === "folder") {
-          const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
-          const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
-          const spaceRes = await apiCreateSpace("New Folder", spaceId);
-          if (!spaceRes.ok || !spaceRes.space?.id) {
-            window.alert(
-              spaceRes.error?.trim() ||
-                "Could not create folder space. Check sync status or try again.",
-            );
-            return;
-          }
-          const childSpaceId = spaceRes.space.id;
-          const tempFolder: CanvasFolderEntity = {
-            id: "",
-            title: "New Folder",
-            kind: "folder",
-            theme: "folder",
-            childSpaceId,
-            rotation,
-            width: FOLDER_CARD_WIDTH,
-            height: FOLDER_CARD_HEIGHT,
-            tapeRotation: 0,
-            stackId: null,
-            stackOrder: null,
-            slots: { [spaceId]: { x: fx, y: fy } },
+      if (type === "folder") {
+        const fx = center.x - FOLDER_CARD_WIDTH / 2 + (Math.random() * 60 - 30);
+        const fy = center.y - FOLDER_CARD_HEIGHT / 2 + (Math.random() * 60 - 30);
+        const entityId = createId();
+        const childSpaceId = createId();
+        const optimisticFolder: CanvasFolderEntity = {
+          id: entityId,
+          title: "New Folder",
+          kind: "folder",
+          theme: "folder",
+          childSpaceId,
+          rotation,
+          width: FOLDER_CARD_WIDTH,
+          height: FOLDER_CARD_HEIGHT,
+          tapeRotation: 0,
+          stackId: null,
+          stackOrder: null,
+          slots: { [spaceId]: { x: fx, y: fy } },
+        };
+        setGraph((prev) => {
+          const next = shallowCloneGraph(prev);
+          next.spaces[childSpaceId] = {
+            id: childSpaceId,
+            name: "New Folder",
+            parentSpaceId: spaceId,
+            entityIds: [],
           };
-          const itemRes = await apiCreateItem(spaceId, {
-            itemType: "folder",
-            x: fx,
-            y: fy,
-            width: FOLDER_CARD_WIDTH,
-            height: FOLDER_CARD_HEIGHT,
-            title: "New Folder",
-            contentJson: buildContentJsonForFolderEntity(tempFolder),
-            zIndex: nextZ,
-          });
+          next.entities[entityId] = optimisticFolder;
+          const sp = next.spaces[spaceId];
+          if (sp) {
+            next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entityId] };
+          }
+          return next;
+        });
+        setSelectedNodeIds([entityId]);
+        setPendingFolderTitleSelectId(entityId);
+        const createPromise = (async () => {
+          try {
+            const spaceRes = await apiCreateSpace("New Folder", spaceId, { id: childSpaceId });
+            if (!spaceRes.ok || !spaceRes.space?.id) {
+              itemServerUpdatedAtRef.current.delete(entityId);
+              setGraph((prev) => {
+                const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]);
+                delete next.spaces[childSpaceId];
+                return next;
+              });
+              setSelectedNodeIds((prev) => prev.filter((id) => id !== entityId));
+              if (activeNodeIdRef.current === entityId) {
+                setFocusOpen(false);
+                setActiveNodeId(null);
+              }
+              window.alert(
+                spaceRes.error?.trim() ||
+                  "Could not create folder space. Check sync status or try again.",
+              );
+              return;
+            }
+            const itemRes = await apiCreateItem(spaceId, {
+              id: entityId,
+              itemType: "folder",
+              x: fx,
+              y: fy,
+              width: FOLDER_CARD_WIDTH,
+              height: FOLDER_CARD_HEIGHT,
+              title: "New Folder",
+              contentJson: buildContentJsonForFolderEntity(optimisticFolder),
+              zIndex: nextZ,
+            });
+            if (!itemRes.ok || !itemRes.item) {
+              itemServerUpdatedAtRef.current.delete(entityId);
+              setGraph((prev) => {
+                const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]);
+                delete next.spaces[childSpaceId];
+                return next;
+              });
+              setSelectedNodeIds((prev) => prev.filter((id) => id !== entityId));
+              if (activeNodeIdRef.current === entityId) {
+                setFocusOpen(false);
+                setActiveNodeId(null);
+              }
+              window.alert(
+                itemRes.error?.trim() ||
+                  "Could not create folder on the canvas. Check sync status or try again.",
+              );
+              return;
+            }
+            if (itemRes.item.updatedAt) {
+              itemServerUpdatedAtRef.current.set(entityId, itemRes.item.updatedAt);
+            }
+          } catch (e) {
+            itemServerUpdatedAtRef.current.delete(entityId);
+            setGraph((prev) => {
+              const next = removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]);
+              delete next.spaces[childSpaceId];
+              return next;
+            });
+            setSelectedNodeIds((prev) => prev.filter((id) => id !== entityId));
+            if (activeNodeIdRef.current === entityId) {
+              setFocusOpen(false);
+              setActiveNodeId(null);
+            }
+            const msg = e instanceof Error ? e.message : "Create failed unexpectedly.";
+            if (getNeonSyncSnapshot().cloudEnabled) {
+              neonSyncReportAuxiliaryFailure({
+                operation: "createNewNode",
+                message: msg,
+                cause: "network",
+              });
+            }
+            window.alert(msg);
+          }
+        })();
+        pendingCreatePromisesRef.current.set(entityId, createPromise);
+        void createPromise.finally(() => {
+          if (pendingCreatePromisesRef.current.get(entityId) === createPromise) {
+            pendingCreatePromisesRef.current.delete(entityId);
+          }
+        });
+        return;
+      }
+
+      let title = "New Note";
+      const width = UNIFIED_NODE_WIDTH;
+      let contentTheme: ContentTheme = "default";
+      if (type === "code") contentTheme = "code";
+      else if (type === "media") contentTheme = "media";
+      else if (type === "task") contentTheme = "task";
+
+      const entityId = createId();
+      let bodyHtml = "";
+      let bodyDoc: JSONContent | undefined;
+      let loreCard: LoreCard | undefined;
+
+      if (isLoreCreateNodeType(type)) {
+        title = defaultTitleForLoreKind(type);
+        const resolvedVariant = resolveLoreVariantForCreate(type, loreVariant);
+        loreCard = { kind: type, variant: resolvedVariant };
+        const locationStripSeed =
+          type === "location" && resolvedVariant === "v3"
+            ? globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`
+            : undefined;
+        bodyHtml = getLoreNodeSeedBodyHtml(
+          type,
+          resolvedVariant,
+          locationStripSeed != null ? { locationStripSeed } : undefined,
+        );
+      } else if (type === "code") {
+        title = "Snippet";
+        bodyDoc = legacyCodeBodyHtmlToHgDocSeed("// [IN] Compose shard at cursor…");
+        bodyHtml = hgDocToHtml(bodyDoc);
+      } else if (type === "media") {
+        title = "Untitled photo";
+        bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
+          mediaFrameClass: styles.mediaFrame,
+          imageSlotImgClass: styles.imageSlotImg,
+          placeholderImgClasses: heartgardenMediaPlaceholderClassList("neutral"),
+          mediaImageActionsClass: styles.mediaImageActions,
+          mediaUploadBtnClass: styles.mediaUploadBtn,
+          uploadLabel: mediaUploadActionLabel(false),
+        });
+      } else if (type === "task") {
+        title = "Checklist";
+        bodyDoc = newTaskHgDocSeed();
+        bodyHtml = hgDocToHtml(bodyDoc);
+      } else {
+        bodyDoc = newDefaultHgDocSeed();
+        bodyHtml = hgDocToHtml(bodyDoc);
+      }
+
+      const optimisticNode: CanvasContentEntity = {
+        id: entityId,
+        title,
+        kind: "content",
+        rotation,
+        width,
+        height: 280,
+        theme: contentTheme,
+        tapeVariant:
+          loreCard != null
+            ? tapeVariantForLoreCard(loreCard.kind, loreCard.variant)
+            : tapeVariantForTheme(contentTheme),
+        tapeRotation,
+        bodyHtml,
+        ...(bodyDoc != null ? { bodyDoc } : {}),
+        loreCard,
+        ...(loreCard?.kind === "faction" ? { factionRoster: createDefaultFactionRosterSeed() } : {}),
+        stackId: null,
+        stackOrder: null,
+        slots: { [spaceId]: { x, y } },
+      };
+      setGraph((prev) => {
+        const next = shallowCloneGraph(prev);
+        next.entities[entityId] = optimisticNode;
+        const sp = next.spaces[spaceId];
+        if (sp) {
+          next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entityId] };
+        }
+        return next;
+      });
+
+      const createItemBody: Record<string, unknown> = {
+        id: entityId,
+        itemType: architecturalItemType(optimisticNode),
+        x,
+        y,
+        width,
+        height: 280,
+        title,
+        contentText: contentPlainTextForEntity(optimisticNode),
+        contentJson: buildContentJsonForContentEntity(optimisticNode),
+        zIndex: nextZ,
+      };
+      if (loreCard) createItemBody.entityType = loreCard.kind;
+
+      const createPromise = (async () => {
+        try {
+          const itemRes = await apiCreateItem(spaceId, createItemBody);
           if (!itemRes.ok || !itemRes.item) {
+            itemServerUpdatedAtRef.current.delete(entityId);
+            setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]));
             window.alert(
               itemRes.error?.trim() ||
-                "Could not create folder on the canvas. Check sync status or try again.",
+                "Could not create item on the canvas. Check sync status or try again.",
             );
             return;
           }
           if (itemRes.item.updatedAt) {
-            itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
+            itemServerUpdatedAtRef.current.set(entityId, itemRes.item.updatedAt);
           }
           const entity = canvasItemToEntity(itemRes.item, spaceId);
-          if (!entity || entity.kind !== "folder") {
+          if (!entity) {
             const msg =
-              "Could not display the new folder after create (unexpected response).";
+              "Could not display the new item after create (unexpected response).";
             if (getNeonSyncSnapshot().cloudEnabled) {
               neonSyncReportAuxiliaryFailure({
-                operation: "createNewNode (folder map)",
+                operation: "createNewNode (content map)",
                 message: msg,
                 cause: "client",
               });
             }
-            window.alert(msg);
             return;
           }
           setGraph((prev) => {
             const next = shallowCloneGraph(prev);
-            next.spaces[childSpaceId] = {
-              id: childSpaceId,
-              name: "New Folder",
-              parentSpaceId: spaceId,
-              entityIds: [],
-            };
-            next.entities[entity.id] = entity;
-            const sp = next.spaces[spaceId];
-            if (sp) {
-              next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entity.id] };
-            }
+            next.entities[entityId] = { ...entity, id: entityId };
             return next;
           });
-          setSelectedNodeIds([entity.id]);
-          setPendingFolderTitleSelectId(entity.id);
-          return;
-        }
-
-        let title = "New Note";
-        const width = UNIFIED_NODE_WIDTH;
-        let contentTheme: ContentTheme = "default";
-        if (type === "code") contentTheme = "code";
-        else if (type === "media") contentTheme = "media";
-        else if (type === "task") contentTheme = "task";
-
-        let bodyHtml = "";
-        let bodyDoc: JSONContent | undefined;
-        let loreCard: LoreCard | undefined;
-
-        if (isLoreCreateNodeType(type)) {
-          title = defaultTitleForLoreKind(type);
-          const resolvedVariant = resolveLoreVariantForCreate(type, loreVariant);
-          loreCard = { kind: type, variant: resolvedVariant };
-          const locationStripSeed =
-            type === "location" && resolvedVariant === "v3"
-              ? globalThis.crypto?.randomUUID?.() ?? `loc-${Date.now()}`
-              : undefined;
-          bodyHtml = getLoreNodeSeedBodyHtml(
-            type,
-            resolvedVariant,
-            locationStripSeed != null ? { locationStripSeed } : undefined,
-          );
-        } else if (type === "code") {
-          title = "Snippet";
-          bodyDoc = legacyCodeBodyHtmlToHgDocSeed("// [IN] Compose shard at cursor…");
-          bodyHtml = hgDocToHtml(bodyDoc);
-        } else if (type === "media") {
-          title = "Untitled photo";
-          bodyHtml = buildEmptyArchitecturalMediaBodyHtml({
-            mediaFrameClass: styles.mediaFrame,
-            imageSlotImgClass: styles.imageSlotImg,
-            placeholderImgClasses: heartgardenMediaPlaceholderClassList("neutral"),
-            mediaImageActionsClass: styles.mediaImageActions,
-            mediaUploadBtnClass: styles.mediaUploadBtn,
-            uploadLabel: mediaUploadActionLabel(false),
-          });
-        } else if (type === "task") {
-          title = "Checklist";
-          bodyDoc = newTaskHgDocSeed();
-          bodyHtml = hgDocToHtml(bodyDoc);
-        } else {
-          bodyDoc = newDefaultHgDocSeed();
-          bodyHtml = hgDocToHtml(bodyDoc);
-        }
-
-        const tempNode: CanvasContentEntity = {
-          id: "",
-          title,
-          kind: "content",
-          rotation,
-          width,
-          height: 280,
-          theme: contentTheme,
-          tapeVariant:
-            loreCard != null
-              ? tapeVariantForLoreCard(loreCard.kind, loreCard.variant)
-              : tapeVariantForTheme(contentTheme),
-          tapeRotation,
-          bodyHtml,
-          ...(bodyDoc != null ? { bodyDoc } : {}),
-          loreCard,
-          ...(loreCard?.kind === "faction" ? { factionRoster: createDefaultFactionRosterSeed() } : {}),
-          stackId: null,
-          stackOrder: null,
-          slots: { [spaceId]: { x, y } },
-        };
-        const createItemBody: Record<string, unknown> = {
-          itemType: architecturalItemType(tempNode),
-          x,
-          y,
-          width,
-          height: 280,
-          title,
-          contentText: contentPlainTextForEntity(tempNode),
-          contentJson: buildContentJsonForContentEntity(tempNode),
-          zIndex: nextZ,
-        };
-        if (loreCard) createItemBody.entityType = loreCard.kind;
-        const itemRes = await apiCreateItem(spaceId, createItemBody);
-        if (!itemRes.ok || !itemRes.item) {
-          window.alert(
-            itemRes.error?.trim() ||
-              "Could not create item on the canvas. Check sync status or try again.",
-          );
-          return;
-        }
-        if (itemRes.item.updatedAt) {
-          itemServerUpdatedAtRef.current.set(itemRes.item.id, itemRes.item.updatedAt);
-        }
-        const entity = canvasItemToEntity(itemRes.item, spaceId);
-        if (!entity) {
-          const msg =
-            "Could not display the new item after create (unexpected response).";
-          if (getNeonSyncSnapshot().cloudEnabled) {
-            neonSyncReportAuxiliaryFailure({
-              operation: "createNewNode (content map)",
-              message: msg,
-              cause: "client",
-            });
-          }
-          window.alert(msg);
-          return;
-        }
-        setGraph((prev) => {
-          const next = shallowCloneGraph(prev);
-          next.entities[entity.id] = entity;
-          const sp = next.spaces[spaceId];
-          if (sp) {
-            next.spaces[spaceId] = { ...sp, entityIds: [...sp.entityIds, entity.id] };
-          }
-          return next;
-        });
         } catch (e) {
+          itemServerUpdatedAtRef.current.delete(entityId);
+          setGraph((prev) => removeEntitiesFromGraphAfterRemoteDelete(prev, [entityId]));
           const msg = e instanceof Error ? e.message : "Create failed unexpectedly.";
           if (getNeonSyncSnapshot().cloudEnabled) {
             neonSyncReportAuxiliaryFailure({
@@ -8606,6 +8666,12 @@ export function ArchitecturalCanvasApp({
           window.alert(msg);
         }
       })();
+      pendingCreatePromisesRef.current.set(entityId, createPromise);
+      void createPromise.finally(() => {
+        if (pendingCreatePromisesRef.current.get(entityId) === createPromise) {
+          pendingCreatePromisesRef.current.delete(entityId);
+        }
+      });
       return;
     }
 

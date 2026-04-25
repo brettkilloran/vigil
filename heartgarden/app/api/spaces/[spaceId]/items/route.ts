@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { after } from "next/server";
 import { z } from "zod";
 
 import type { LoreCardKind } from "@/src/components/foundation/architectural-types";
@@ -281,11 +282,13 @@ export async function POST(
   }
 
   if (row) {
-    await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: spaceId,
-      reason: "item.created",
-      itemId: row.id,
-      lookupSpaceIds: [spaceId],
+    after(async () => {
+      await publishHeartgardenSpaceInvalidation(db, {
+        originSpaceId: spaceId,
+        reason: "item.created",
+        itemId: row.id,
+        lookupSpaceIds: [spaceId],
+      });
     });
   }
 

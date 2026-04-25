@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { eq } from "drizzle-orm";
+import { after } from "next/server";
 
 import { tryGetDb } from "@/src/db/index";
 import { spaces } from "@/src/db/schema";
@@ -115,11 +116,13 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    await publishHeartgardenSpaceInvalidation(db, {
-      originSpaceId: created!.id,
-      reason: "space.created",
-      lookupSpaceIds: [created!.id, parentSpaceId],
-      directSpaceIds: [parentSpaceId],
+    after(async () => {
+      await publishHeartgardenSpaceInvalidation(db, {
+        originSpaceId: created!.id,
+        reason: "space.created",
+        lookupSpaceIds: [created!.id, parentSpaceId],
+        directSpaceIds: [parentSpaceId],
+      });
     });
 
     return Response.json({
@@ -174,11 +177,13 @@ export async function POST(req: Request) {
     })
     .returning();
 
-  await publishHeartgardenSpaceInvalidation(db, {
-    originSpaceId: created!.id,
-    reason: "space.created",
-    lookupSpaceIds: parentSpaceId ? [created!.id, parentSpaceId] : [created!.id],
-    directSpaceIds: parentSpaceId ? [parentSpaceId] : undefined,
+  after(async () => {
+    await publishHeartgardenSpaceInvalidation(db, {
+      originSpaceId: created!.id,
+      reason: "space.created",
+      lookupSpaceIds: parentSpaceId ? [created!.id, parentSpaceId] : [created!.id],
+      directSpaceIds: parentSpaceId ? [parentSpaceId] : undefined,
+    });
   });
 
   return Response.json({

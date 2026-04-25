@@ -1,7 +1,6 @@
 import { after } from "next/server";
 
 import { tryGetDb } from "@/src/db/index";
-import { reindexItemVault } from "@/src/lib/item-vault-index";
 
 function vaultReindexAfterPatchDisabled(): boolean {
   const v = (process.env.HEARTGARDEN_INDEX_AFTER_PATCH ?? "").trim().toLowerCase();
@@ -22,6 +21,7 @@ export function scheduleVaultReindexAfterResponse(itemId: string): void {
   after(async () => {
     const db = tryGetDb();
     if (!db) return;
+    const { reindexItemVault } = await import("@/src/lib/item-vault-index");
     await reindexItemVault(db, itemId, { refreshLoreMeta: false }).catch((e) => {
       console.error("[after() vault reindex]", itemId, e);
     });
