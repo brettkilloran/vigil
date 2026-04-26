@@ -343,7 +343,6 @@
    * they cannot sample the canvas content composited in the sibling .viewport layer.
    * The filter transition (shellBackdropBlurActive) still animates correctly without the
    * hint; the focus-overlay blur relies on the content-layer filter fallback anyway.
-   * See also: prefers-reduced-motion block below which already sets will-change: auto.
    */
 }
 
