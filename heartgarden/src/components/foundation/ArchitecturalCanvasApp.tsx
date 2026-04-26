@@ -3827,12 +3827,36 @@ export function ArchitecturalCanvasApp({
     }
   }, [canvasEffectsEnabled]);
 
+  const markOptimisticProtectedId = useCallback((id: string, ttlMs = 3500) => {
+    optimisticProtectedIdsRef.current.add(id);
+    const prevTimer = optimisticProtectedTimerRef.current.get(id);
+    if (prevTimer) clearTimeout(prevTimer);
+    const nextTimer = setTimeout(() => {
+      optimisticProtectedTimerRef.current.delete(id);
+      optimisticProtectedIdsRef.current.delete(id);
+    }, ttlMs);
+    optimisticProtectedTimerRef.current.set(id, nextTimer);
+  }, []);
+
+  const clearOptimisticProtectedId = useCallback((id: string) => {
+    const prevTimer = optimisticProtectedTimerRef.current.get(id);
+    if (prevTimer) clearTimeout(prevTimer);
+    optimisticProtectedTimerRef.current.delete(id);
+    optimisticProtectedIdsRef.current.delete(id);
+  }, []);
+
   const enqueueItemConflict = useCallback((item: CanvasItem) => {
+    markOptimisticProtectedId(item.id, 120_000);
     setItemConflictQueue((q) => {
       const deduped = q.filter((i) => i.id !== item.id);
       return [...deduped, item].slice(-8);
     });
-  }, []);
+  }, [markOptimisticProtectedId]);
+
+  const resolveBaseUpdatedAt = useCallback(
+    (itemId: string) => itemServerUpdatedAtRef.current.get(itemId),
+    [],
+  );
 
   const patchItemWithVersion = useCallback(
     async (itemId: string, patch: Record<string, unknown>) => {
@@ -3843,9 +3867,10 @@ export function ArchitecturalCanvasApp({
       if (!graphRef.current.entities[itemId]) return false;
       savingContentIdsRef.current.add(itemId);
       try {
-        const base = itemServerUpdatedAtRef.current.get(itemId);
-        const body: Record<string, unknown> = base ? { ...patch, baseUpdatedAt: base } : { ...patch };
-        const r = await apiPatchItem(itemId, body);
+        const patchOpts = {
+          resolveBaseUpdatedAt: () => resolveBaseUpdatedAt(itemId),
+        };
+        const r = await apiPatchItem(itemId, patch, patchOpts);
         if (r.ok) {
           if (r.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r.item.updatedAt);
           return true;
@@ -3893,6 +3918,18 @@ export function ArchitecturalCanvasApp({
                 if (r2.item.updatedAt) itemServerUpdatedAtRef.current.set(r2.item.id, r2.item.updatedAt);
                 return false;
               }
+              const serverAt3 = r2.item.updatedAt;
+              if (typeof serverAt3 === "string" && serverAt3.length > 0) {
+                itemServerUpdatedAtRef.current.set(itemId, serverAt3);
+                const r3 = await apiPatchItem(itemId, { ...patch, baseUpdatedAt: serverAt3 });
+                if (r3.ok) {
+                  if (r3.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r3.item.updatedAt);
+                  return true;
+                }
+                if (!r3.ok && "conflict" in r3 && r3.conflict) {
+                  if (r3.item.updatedAt) itemServerUpdatedAtRef.current.set(itemId, r3.item.updatedAt);
+                }
+              }
               enqueueItemConflict(r2.item);
               return false;
             }
@@ -3909,12 +3946,13 @@ export function ArchitecturalCanvasApp({
         savingContentIdsRef.current.delete(itemId);
       }
     },
-    [enqueueItemConflict, pruneRecentFolders, pruneRecentItems],
+    [enqueueItemConflict, pruneRecentFolders, pruneRecentItems, resolveBaseUpdatedAt],
   );
 
   const applyItemConflictFromServer = useCallback(() => {
     const it = itemConflictQueueRef.current[0];
     if (!it) return;
+    clearOptimisticProtectedId(it.id);
     setGraph((prev) => applyServerCanvasItemToGraph(prev, it));
     if (it.updatedAt) itemServerUpdatedAtRef.current.set(it.id, it.updatedAt);
     queueMicrotask(() => {
@@ -3936,11 +3974,7 @@ export function ArchitecturalCanvasApp({
       }
     });
     setItemConflictQueue((q) => q.slice(1));
-  }, []);
-
-  const dismissConflictHead = useCallback(() => {
-    setItemConflictQueue((q) => q.slice(1));
-  }, []);
+  }, [clearOptimisticProtectedId]);
 
   const schedulePersistContentBody = useCallback(
     (entityId: string) => {
@@ -3949,11 +3983,15 @@ export function ArchitecturalCanvasApp({
       const isFirstTimerForEntity = !prevT;
       if (prevT) clearTimeout(prevT);
       if (isFirstTimerForEntity) neonSyncBumpPending();
+      markOptimisticProtectedId(entityId, 8000);
       const t = setTimeout(() => {
         itemContentPatchTimersRef.current.delete(entityId);
         neonSyncUnbumpPending();
         const ent = graphRef.current.entities[entityId];
-        if (!ent || ent.kind !== "content") return;
+        if (!ent || ent.kind !== "content") {
+          clearOptimisticProtectedId(entityId);
+          return;
+        }
         const clearAiMeta = isAiReviewPending(ent.entityMeta) && !contentEntityHasHgAiPending(ent);
         const patch: Record<string, unknown> = {
           contentText: contentPlainTextForEntity(ent),
@@ -3980,8 +4018,42 @@ export function ArchitecturalCanvasApp({
       }, 450);
       itemContentPatchTimersRef.current.set(entityId, t);
     },
-    [patchItemWithVersion],
+    [clearOptimisticProtectedId, markOptimisticProtectedId, patchItemWithVersion],
   );
+
+  const keepLocalVersionForConflict = useCallback(() => {
+    const serverItem = itemConflictQueueRef.current[0];
+    if (!serverItem) return;
+    clearOptimisticProtectedId(serverItem.id);
+    if (serverItem.updatedAt) {
+      itemServerUpdatedAtRef.current.set(serverItem.id, serverItem.updatedAt);
+    }
+    setItemConflictQueue((q) => q.slice(1));
+    const ent = graphRef.current.entities[serverItem.id];
+    if (ent && ent.kind === "content" && persistNeonRef.current && isUuidLike(serverItem.id)) {
+      const patch: Record<string, unknown> = {
+        title: ent.title,
+        contentText: contentPlainTextForEntity(ent),
+        contentJson: buildContentJsonForContentEntity(ent),
+      };
+      void patchItemWithVersion(serverItem.id, patch);
+    }
+  }, [clearOptimisticProtectedId, patchItemWithVersion]);
+
+  const dismissConflictHead = useCallback(() => {
+    const serverItem = itemConflictQueueRef.current[0];
+    if (serverItem?.updatedAt) {
+      itemServerUpdatedAtRef.current.set(serverItem.id, serverItem.updatedAt);
+    }
+    setItemConflictQueue((q) => q.slice(1));
+    if (serverItem && persistNeonRef.current && isUuidLike(serverItem.id)) {
+      clearOptimisticProtectedId(serverItem.id);
+      const ent = graphRef.current.entities[serverItem.id];
+      if (ent && ent.kind === "content") {
+        schedulePersistContentBody(serverItem.id);
+      }
+    }
+  }, [clearOptimisticProtectedId, schedulePersistContentBody]);
 
   /** After item layout PATCH, align each folder's inner `spaces.parent_space_id` with the space that holds the folder card. */
   const persistNeonFolderInnerSpaceParentsAfterLayout = useCallback(
@@ -5971,9 +6043,13 @@ export function ArchitecturalCanvasApp({
       });
       if (persistNeonRef.current && isUuidLike(activeNodeId)) {
         const aid = activeNodeId;
+        markOptimisticProtectedId(aid, 15_000);
         queueMicrotask(() => {
           const ent = graphRef.current.entities[aid];
-          if (!ent || ent.kind !== "content") return;
+          if (!ent || ent.kind !== "content") {
+            clearOptimisticProtectedId(aid);
+            return;
+          }
           const { bodyHtml: nextBody, title: nextTitle } = deriveLoreFocusResolvedBodyAndTitle(
             ent,
             normalizedFocusBody,
@@ -6008,11 +6084,13 @@ export function ArchitecturalCanvasApp({
     setActiveNodeId(null);
   }, [
     activeNodeId,
+    clearOptimisticProtectedId,
     deriveLoreFocusResolvedBodyAndTitle,
     focusBody,
     focusBodyDoc,
     focusBaselineBodyDocKey,
     focusTitle,
+    markOptimisticProtectedId,
     patchItemWithVersion,
     recordUndoBeforeMutation,
   ]);
@@ -6175,24 +6253,6 @@ export function ArchitecturalCanvasApp({
       protectedTimers.clear();
       protectedIds.clear();
     };
-  }, []);
-
-  const markOptimisticProtectedId = useCallback((id: string, ttlMs = 3500) => {
-    optimisticProtectedIdsRef.current.add(id);
-    const prevTimer = optimisticProtectedTimerRef.current.get(id);
-    if (prevTimer) clearTimeout(prevTimer);
-    const nextTimer = setTimeout(() => {
-      optimisticProtectedTimerRef.current.delete(id);
-      optimisticProtectedIdsRef.current.delete(id);
-    }, ttlMs);
-    optimisticProtectedTimerRef.current.set(id, nextTimer);
-  }, []);
-
-  const clearOptimisticProtectedId = useCallback((id: string) => {
-    const prevTimer = optimisticProtectedTimerRef.current.get(id);
-    if (prevTimer) clearTimeout(prevTimer);
-    optimisticProtectedTimerRef.current.delete(id);
-    optimisticProtectedIdsRef.current.delete(id);
   }, []);
 
   const onAfterSpaceChangeMerge = useCallback(
@@ -12659,11 +12719,14 @@ export function ArchitecturalCanvasApp({
       {itemConflictQueue.length > 0 ? (
         <div className={styles.collabConflictBanner} role="alert">
           <span>
-            {`Another session updated "${(itemConflictQueue[0]?.title ?? "").trim() || "this card"}" while you were editing. Load the server copy or dismiss to keep your draft.`}
+            {`Edit conflict on "${(itemConflictQueue[0]?.title ?? "").trim() || "this card"}" — the server has a newer version.`}
             {itemConflictQueue.length > 1
               ? ` (${itemConflictQueue.length - 1} more in queue)`
               : ""}
           </span>
+          <ArchitecturalButton type="button" size="menu" tone="glass" onClick={keepLocalVersionForConflict}>
+            Keep my version
+          </ArchitecturalButton>
           <ArchitecturalButton type="button" size="menu" tone="glass" onClick={applyItemConflictFromServer}>
             Use server version
           </ArchitecturalButton>
