@@ -123,8 +123,10 @@ function hash11(value: number): number {
   return p - Math.floor(p);
 }
 
-function computeBreathAmp(usePillOverlay: boolean, simStatus: "active" | "idle" | "frozen"): number {
-  if (usePillOverlay) return 0;
+function computeSharedBreathAmp(usePillOverlay: boolean, simStatus: "active" | "idle" | "frozen"): number {
+  // Keep a subtle ambient motion in pill mode while maintaining lockstep across
+  // connectors, dots, and pills.
+  if (usePillOverlay) return simStatus === "active" ? 0.018 : 0.06;
   return simStatus === "active" ? 0.18 : 1.1;
 }
 
@@ -146,6 +148,7 @@ function applyBreathOffset(
     z: z + Math.sin(omega * 0.87 + pa) * 0.4 * amp,
   };
 }
+
 
 
 export function EntityGraphThreeCanvas({
@@ -496,7 +499,7 @@ export function EntityGraphThreeCanvas({
     const renderLoop = () => {
       const t = (performance.now() - startTime) / 1000;
       breathTimeRef.current = t;
-      const breathAmp = computeBreathAmp(usePillOverlayRef.current, simStatusRef.current);
+      const breathAmp = computeSharedBreathAmp(usePillOverlayRef.current, simStatusRef.current);
       const nowMesh = nodeMeshRef.current;
       if (nowMesh) {
         const mat = nowMesh.material as THREE.ShaderMaterial;
@@ -607,9 +610,8 @@ export function EntityGraphThreeCanvas({
       {
         width: worldWidth,
         height: worldHeight,
-        // Emit more frequently on smaller graphs so pill overlays track motion
-        // smoothly instead of stepping across sparse worker ticks.
-        progressEvery: nodes.length >= 10000 ? 8 : nodes.length >= 4000 ? 4 : 2,
+        // Emit more frequently so node motion appears continuous.
+        progressEvery: nodes.length >= 10000 ? 6 : nodes.length >= 4000 ? 2 : 1,
         alphaThreshold: 0.003,
         warmNodeThreshold: 4000,
         initialTicks: nodes.length >= 10000 ? 20 : nodes.length >= 4000 ? 26 : 32,
@@ -1077,15 +1079,7 @@ export function EntityGraphThreeCanvas({
         const worldX = positions[i * 3] ?? 0;
         const worldY = positions[i * 3 + 1] ?? 0;
         const worldZ = positions[i * 3 + 2] ?? 0;
-        const breath = applyBreathOffset(
-          worldX,
-          worldY,
-          worldZ,
-          i,
-          breathTimeRef.current,
-          computeBreathAmp(true, simStatusRef.current),
-        );
-        const screen = projectToScreen(breath.x, breath.y, breath.z, camera, viewport);
+        const screen = projectToScreen(worldX, worldY, worldZ, camera, viewport);
         if (
           screen.x < -140 ||
           screen.y < -80 ||
@@ -1213,26 +1207,21 @@ export function EntityGraphThreeCanvas({
       estWidth: number;
       estHeight: number;
     }> = [];
+    const breathAmp = computeSharedBreathAmp(usePillOverlay, simStatusRef.current);
     for (const entry of packed) {
       const idx = entry.nodeIndex;
       if (idx < 0) continue;
       const worldX = positions[idx * 3] ?? entry.worldX;
       const worldY = positions[idx * 3 + 1] ?? entry.worldY;
       const worldZ = positions[idx * 3 + 2] ?? entry.worldZ;
-      const breath = applyBreathOffset(
-        worldX,
-        worldY,
-        worldZ,
-        idx,
-        breathTimeRef.current,
-        computeBreathAmp(true, simStatusRef.current),
-      );
-      const screen = projectToScreen(breath.x, breath.y, breath.z, camera, viewport);
+      const baseScreen = projectToScreen(worldX, worldY, worldZ, camera, viewport);
+      const breathed = applyBreathOffset(worldX, worldY, worldZ, idx, breathTimeRef.current, breathAmp);
+      const breathScreen = projectToScreen(breathed.x, breathed.y, breathed.z, camera, viewport);
       if (
-        screen.x < -140 ||
-        screen.y < -80 ||
-        screen.x > viewport.width + 140 ||
-        screen.y > viewport.height + 80
+        baseScreen.x < -140 ||
+        baseScreen.y < -80 ||
+        baseScreen.x > viewport.width + 140 ||
+        baseScreen.y > viewport.height + 80
       ) {
         continue;
       }
@@ -1240,8 +1229,8 @@ export function EntityGraphThreeCanvas({
         id: entry.id,
         title: entry.title,
         entityType: entry.entityType,
-        screenX: screen.x,
-        screenY: screen.y,
+        screenX: breathScreen.x,
+        screenY: breathScreen.y,
         selected: entry.selected,
         neighbor: entry.neighbor,
         estWidth: entry.estWidth,
@@ -1287,10 +1276,12 @@ export function EntityGraphThreeCanvas({
                   .filter(Boolean)
                   .join(" ")}
                 style={{
-                  left: node.screenX,
-                  top: node.screenY,
+                  left: 0,
+                  top: 0,
+                  transform: `translate3d(${node.screenX}px, ${node.screenY}px, 0) translate(-50%, -50%)`,
                   paddingInline: "12px",
                   "--pill-phase": phase,
+                  willChange: "transform",
                 } as React.CSSProperties}
                 title={node.title}
                 onClick={(event) => {
