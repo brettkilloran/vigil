@@ -3,7 +3,10 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import type { tryGetDb } from "@/src/db/index";
 import { spaceGraphLayoutCache } from "@/src/db/schema";
 import type { GraphLayoutPositions } from "@/src/lib/graph-layout-cache-contract";
-import { GRAPH_LAYOUT_CACHE_LAYOUT_VERSION } from "@/src/lib/graph-layout-cache-contract";
+import {
+  GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
+  sanitizeGraphLayoutPositions,
+} from "@/src/lib/graph-layout-cache-contract";
 
 type VigilDb = NonNullable<ReturnType<typeof tryGetDb>>;
 
@@ -43,10 +46,12 @@ export async function readSpaceGraphLayoutCache(
     )
     .limit(1);
   if (!row) return null;
+  const sanitized = sanitizeGraphLayoutPositions(row.positions);
+  if (!sanitized) return null;
   return {
     graphRevision: row.graphRevision,
     layoutVersion: row.layoutVersion,
-    positions: row.positions,
+    positions: sanitized,
     nodeCount: row.nodeCount,
     savedAt: row.savedAt,
     updatedAt: row.updatedAt,

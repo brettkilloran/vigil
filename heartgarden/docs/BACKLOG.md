@@ -327,6 +327,38 @@ Phase 5 unifies under a single intelligence surface — one `⌘K` modal that ex
   - Risk: low — additive, no production code change.
   - Source: `docs/REVIEW_2026-04-25_1835.md` (LOW #2).
 
+### From `REVIEW_2026-04-26_0318.md` (graph-layout-cache follow-ups)
+
+- **Graph layout cache observability (hit/miss/save + payload metrics)** — *MEDIUM · NET_NEW · S/M*
+  - User-facing impact: Without visibility, cache regressions are hard to diagnose and warm-start improvements are guesswork.
+  - Evidence: `heartgarden/src/components/product-ui/canvas/LinkGraphOverlay.tsx:341`, `heartgarden/app/api/spaces/[spaceId]/graph/route.ts:189`.
+  - Approach:
+    - Add lightweight counters for graph cache hit/miss/save outcomes.
+    - Include payload-size and node-count telemetry on saves.
+    - Expose a simple debug surface (dev panel or logs) for warm/cold behavior by space.
+  - Risk: medium — adds instrumentation surface but low behavior risk.
+  - Source: `docs/REVIEW_2026-04-26_0318.md` (Next session ideas).
+
+- **Unify dev + production graph layout cache adapters behind one shared contract** — *MEDIUM · RISKY · M*
+  - User-facing impact: Divergent cache logic can cause inconsistent restore behavior between lab and production graphs.
+  - Evidence: `heartgarden/src/lib/entity-graph-layout-cache.ts:1`, `heartgarden/src/lib/space-graph-layout-cache.ts:1`.
+  - Approach:
+    - Extract common read/write helpers and revision handling into a shared adapter interface.
+    - Keep environment-specific storage backends (localStorage vs DB API) behind thin wrappers.
+    - Add parity tests for restore and invalid-cache fallback behavior.
+  - Risk: medium — refactor across multiple graph surfaces.
+  - Source: `docs/REVIEW_2026-04-26_0318.md` (Next session ideas).
+
+- **Server-side stale-write guard for `PUT /graph-layout-cache`** — *HIGH · RISKY · M*
+  - User-facing impact: A client can persist positions for an outdated revision if it races with link/item changes.
+  - Evidence: `heartgarden/app/api/spaces/[spaceId]/graph-layout-cache/route.ts:45`.
+  - Approach:
+    - Recompute current server revision during PUT and reject stale `graphRevision` writes.
+    - Return explicit conflict metadata so clients can refetch and retry.
+    - Add tests for stale-write rejection and conflict recovery.
+  - Risk: high — public API contract change (`PUT` can return conflict states).
+  - Source: `docs/REVIEW_2026-04-26_0318.md` (Next session ideas).
+
 ---
 
 ## Archive (DNF / out-of-scope)

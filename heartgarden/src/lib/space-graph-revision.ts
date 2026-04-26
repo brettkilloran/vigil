@@ -49,7 +49,8 @@ export async function computeSpaceGraphRevisionForSpace(
   itemLinksRevision?: string,
 ): Promise<string> {
   const now = Date.now();
-  const cached = spaceGraphRevisionCache.get(spaceId);
+  const canUseCachedValue = itemLinksRevision == null;
+  const cached = canUseCachedValue ? spaceGraphRevisionCache.get(spaceId) : undefined;
   if (cached && cached.expiresAt > now) return cached.value;
   const [itemsRevision, linksRevision] = await Promise.all([
     computeItemsRevisionForSpace(db, spaceId),

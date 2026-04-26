@@ -54,11 +54,24 @@ function LinkGraphInteractiveSvg({
   const dragRef = useRef<{ id: string; ox: number; oy: number } | null>(null);
   const movedRef = useRef(false);
   const lastPersistKeyRef = useRef<string>("");
+  const latestLayoutRef = useRef(layout);
+  const layoutDirtyRef = useRef(false);
+  const layoutChangedAtRef = useRef(0);
+
+  useEffect(() => {
+    latestLayoutRef.current = layout;
+    layoutDirtyRef.current = true;
+    layoutChangedAtRef.current = Date.now();
+  }, [layout]);
 
   useEffect(() => {
     if (!graphRevision || nodes.length === 0) return;
-    const timer = window.setTimeout(() => {
-      const positions = graphLayoutPositionsFromMap(layout);
+    const flushQuietWindowMs = 700;
+    const tickMs = 250;
+    const timer = window.setInterval(() => {
+      if (!layoutDirtyRef.current) return;
+      if (Date.now() - layoutChangedAtRef.current < flushQuietWindowMs) return;
+      const positions = graphLayoutPositionsFromMap(latestLayoutRef.current);
       const nodeCount = Object.keys(positions).length;
       if (nodeCount === 0) return;
       let sample = 2166136261;
@@ -78,6 +91,7 @@ function LinkGraphInteractiveSvg({
       const persistKey = `${graphRevision}:${layoutVersion}:${nodeCount}:${sample >>> 0}`;
       if (persistKey === lastPersistKeyRef.current) return;
       lastPersistKeyRef.current = persistKey;
+      layoutDirtyRef.current = false;
       void fetch(`/api/spaces/${encodeURIComponent(spaceId)}/graph-layout-cache`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -90,9 +104,9 @@ function LinkGraphInteractiveSvg({
       }).catch(() => {
         /* non-fatal cache write miss */
       });
-    }, 1200);
-    return () => window.clearTimeout(timer);
-  }, [graphRevision, layout, layoutVersion, nodes.length, spaceId]);
+    }, tickMs);
+    return () => window.clearInterval(timer);
+  }, [graphRevision, layoutVersion, nodes.length, spaceId]);
 
   return (
     <svg

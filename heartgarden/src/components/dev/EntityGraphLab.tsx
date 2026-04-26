@@ -9,7 +9,7 @@ import type {
   GraphCanvasSharedProps,
   GraphEdgeHover,
   LayoutMap,
-} from "@/src/components/dev/entity-graph-renderer-types";
+} from "@/src/lib/graph-canvas-types";
 import styles from "@/src/components/dev/entity-graph-lab.module.css";
 import { Button } from "@/src/components/ui/Button";
 import {
@@ -34,7 +34,7 @@ import {
 import { cx } from "@/src/lib/cx";
 
 const EntityGraphThreeCanvas = dynamic<GraphCanvasSharedProps>(
-  () => import("@/src/components/dev/EntityGraphThreeCanvas").then((mod) => mod.EntityGraphThreeCanvas),
+  () => import("@/src/components/product-ui/canvas/EntityGraphThreeCanvas").then((mod) => mod.EntityGraphThreeCanvas),
   { ssr: false },
 );
 
@@ -527,6 +527,10 @@ export function EntityGraphLab({
                 neighborIds={selectedVisible ? neighborIdSet : new Set<string>()}
                 activeEdgeIds={selectedVisible ? activeEdgeIds : new Set<string>()}
                 degreeByNode={model.degreeByNode}
+                rightPanelOcclusionPx={selectedNode ? 360 : 0}
+                showStatsFooter
+                enableNodeOverlayCard
+                statsFooterLabel="three.js · worker force3d"
                 onSelect={(id) => applyFocus(id, selectedEdgeId)}
                 onLayoutChange={applyLayoutForScenario}
                 onNodePin={handlePinNode}

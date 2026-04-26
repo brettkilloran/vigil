@@ -1,5 +1,5 @@
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
-import type { LayoutMap } from "@/src/components/dev/entity-graph-renderer-types";
+import type { LayoutMap } from "@/src/lib/graph-canvas-types";
 import {
   GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
   graphLayoutPositionsFromMap,

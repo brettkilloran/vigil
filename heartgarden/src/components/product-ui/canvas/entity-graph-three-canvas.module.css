@@ -1,0 +1,180 @@
+.graphRoot {
+  --entity-graph-accent: var(--vigil-snap);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  background: #000;
+}
+
+.webglHtmlOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.webglHtmlOverlay .pillNode {
+  pointer-events: auto;
+}
+
+.physicsActive .pillNode {
+  animation-play-state: paused;
+}
+
+.blurDisabled .pillNode {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: color-mix(in srgb, white 14%, transparent);
+}
+
+.blurDisabled .edgeTooltip,
+.blurDisabled .threeOverlayCard {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.edgeTooltip {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+  font-size: 11px;
+  color: var(--sem-text-primary);
+  border: 1px solid var(--sem-border-subtle);
+  background: color-mix(in srgb, white 18%, transparent);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.hoverPill {
+  pointer-events: none;
+  z-index: var(--layer-ui-chrome);
+  background: color-mix(in srgb, white 26%, transparent);
+  border-color: color-mix(in srgb, white 48%, var(--sem-border-subtle) 52%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 8px 20px rgba(0, 0, 0, 0.28);
+  animation: none;
+}
+
+.pillNode {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0.5px solid color-mix(in srgb, white 28%, var(--sem-border-subtle) 72%);
+  border-radius: 999px;
+  background: color-mix(in srgb, white 18%, transparent);
+  color: var(--sem-text-primary);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    opacity 0.45s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 4px 14px rgba(0, 0, 0, 0.18);
+  backface-visibility: hidden;
+}
+
+.pillTypeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.pillNode:hover {
+  background: color-mix(in srgb, white 28%, transparent);
+  color: var(--sem-text-primary);
+  border-color: color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 7px 16px rgba(0, 0, 0, 0.24);
+}
+
+.pillNodeSelected {
+  background: color-mix(in srgb, white 97%, var(--sem-surface-elevated) 3%);
+  color: color-mix(in srgb, black 90%, #0b0b0c 10%);
+  border-color: color-mix(in srgb, var(--entity-graph-accent) 60%, white 40%);
+  font-weight: 700;
+  box-shadow:
+    0 0 0 0.5px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
+    0 10px 24px color-mix(in srgb, var(--entity-graph-accent) 26%, transparent);
+}
+
+.pillNodeSelected:hover {
+  background: color-mix(in srgb, white 99%, var(--sem-surface-elevated) 1%);
+  color: color-mix(in srgb, black 92%, #09090a 8%);
+}
+
+.pillNodeNeighbor {
+  background: color-mix(in srgb, white 24%, transparent);
+  border-color: color-mix(in srgb, white 32%, var(--sem-border-subtle) 68%);
+}
+
+.threeOverlayCard {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: min(380px, calc(100% - 28px));
+  z-index: var(--layer-ui-chrome);
+  border: 1px solid color-mix(in srgb, white 30%, var(--sem-border-subtle) 70%);
+  border-radius: 14px;
+  background: color-mix(in srgb, white 16%, transparent);
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  padding: 12px 13px;
+}
+
+.threeOverlayMeta {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sem-text-secondary);
+}
+
+.threeOverlayTitle {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sem-text-primary);
+}
+
+.threeOverlayBody {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sem-text-secondary);
+}
+
+.threeOverlayClose {
+  margin-top: 10px;
+  border: 1px solid var(--sem-border-subtle);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--sem-text-primary);
+  background: color-mix(in srgb, white 8%, transparent);
+}

@@ -2,15 +2,16 @@
 
 The bake-off is retired. The renderer decision is now final:
 
-- `three.js` is the canonical and only supported renderer for the lab route.
+- `three.js` is the canonical renderer for panel-path graph experiences.
 - The HTML renderer path is deprecated and no longer exposed in UI controls.
-- The route canonicalizes to `?renderer=three` for stable deep links.
-- Blur/bloom effects are canonized on in the lab route (no runtime toggle).
+- The in-shell canonical entry stays `Alt-hover` -> `Alt-click` -> `Graph panel`.
+- A dedicated UI-refinement route exists at `/dev/entity-graph-panel`.
 
 ## Canonical route contract
 
-- Primary route: `/dev/entity-graph`
-- Canonical query form: `/dev/entity-graph?renderer=three`
+- Primary product entry: in-shell `GraphPanel` inside `ArchitecturalCanvasApp`.
+- UI-refinement dev route: `/dev/entity-graph-panel`
+- Legacy lab route: `/dev/entity-graph?renderer=three`
 - Legacy `renderer=html` links must be treated as backward-compatible inputs that resolve to the Three.js experience.
 
 ## Carry-forward checklist

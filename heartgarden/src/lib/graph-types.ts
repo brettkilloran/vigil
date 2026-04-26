@@ -32,6 +32,10 @@ export type SpaceGraphResponse = {
   ok?: boolean;
   nodes?: GraphNode[];
   edges?: GraphEdge[];
+  total_nodes?: number;
+  limit?: number;
+  offset?: number;
+  note?: string;
   itemLinksRevision?: string;
   graphRevision?: string;
   layoutVersion?: string;

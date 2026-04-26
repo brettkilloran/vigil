@@ -7,7 +7,7 @@ import type {
   GraphCanvasSharedProps,
   GraphEdgeHover,
   LayoutMap,
-} from "@/src/components/dev/entity-graph-renderer-types";
+} from "@/src/lib/graph-canvas-types";
 import { estimatePillGeometry } from "@/src/lib/entity-graph-pill-geometry";
 import { getEntityTypeStyle } from "@/src/lib/entity-graph-type-style";
 import { getRelationStyle } from "@/src/lib/entity-graph-relation-style";

@@ -7,8 +7,8 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { BatchedText, Text } from "troika-three-text";
 
-import styles from "@/src/components/dev/entity-graph-lab.module.css";
-import type { GraphCanvasSharedProps } from "@/src/components/dev/entity-graph-renderer-types";
+import styles from "@/src/components/product-ui/canvas/entity-graph-three-canvas.module.css";
+import type { GraphCanvasSharedProps } from "@/src/lib/graph-canvas-types";
 import { getEntityTypeStyle } from "@/src/lib/entity-graph-type-style";
 import type { GraphNode } from "@/src/lib/graph-types";
 import { initForce3dSim, type Force3dSession } from "@/src/lib/entity-graph-force3d-client";
@@ -106,24 +106,6 @@ function projectToScreen(
   };
 }
 
-function getRightPanelOcclusionPx(root: HTMLElement): number {
-  const shell = root.closest(`.${styles.shell}`) as HTMLElement | null;
-  if (!shell) return 0;
-  const panel = shell.querySelector<HTMLElement>(`.${styles.panel}.${styles.panelVisible}`);
-  if (!panel) return 0;
-  const rootRect = root.getBoundingClientRect();
-  const panelRect = panel.getBoundingClientRect();
-  const overlapY = Math.max(0, Math.min(rootRect.bottom, panelRect.bottom) - Math.max(rootRect.top, panelRect.top));
-  if (overlapY <= 0) return 0;
-  const rootCenterX = rootRect.left + rootRect.width * 0.5;
-  const panelCenterX = panelRect.left + panelRect.width * 0.5;
-  // On narrow/mobile layouts the inspector can become bottom/full-width; do
-  // not apply right-side framing compensation in those cases.
-  if (panelCenterX <= rootCenterX + 1) return 0;
-  const overlapX = Math.max(0, rootRect.right - panelRect.left);
-  return overlapX;
-}
-
 function seedFromId(id: string): number {
   let hash = 2166136261;
   for (let i = 0; i < id.length; i += 1) {
@@ -195,6 +177,10 @@ export function EntityGraphThreeCanvas({
   worldHeight,
   cameraActionKey,
   cameraActionType,
+  rightPanelOcclusionPx = 0,
+  showStatsFooter = false,
+  enableNodeOverlayCard = false,
+  statsFooterLabel = "three.js · worker force3d",
   onSelect,
   onLayoutChange,
 }: GraphCanvasSharedProps) {
@@ -924,8 +910,7 @@ export function EntityGraphThreeCanvas({
       const ids = nodeOrderRef.current;
       const idx = ids.findIndex((id) => id === selectedIdRef.current);
       if (idx >= 0) {
-        const root = rootRef.current;
-        const rightOcclusionPx = root ? getRightPanelOcclusionPx(root) : 0;
+        const rightOcclusionPx = rightPanelOcclusionPx;
         const x = positionsRef.current[idx * 3] ?? camera.position.x;
         const y = positionsRef.current[idx * 3 + 1] ?? camera.position.y;
         const nextZoom = Math.min(2.2, Math.max(1.2, camera.zoom));
@@ -936,7 +921,7 @@ export function EntityGraphThreeCanvas({
         setCameraRevision((current) => current + 1);
       }
     }
-  }, [cameraActionKey, cameraActionType, worldHeight, worldWidth]);
+  }, [cameraActionKey, cameraActionType, rightPanelOcclusionPx, worldHeight, worldWidth]);
 
   useEffect(() => {
     const camera = cameraRef.current;
@@ -970,8 +955,7 @@ export function EntityGraphThreeCanvas({
 
     const boxW = Math.max(80, maxX - minX);
     const boxH = Math.max(80, maxY - minY);
-    const root = rootRef.current;
-    const rightOcclusionPx = root ? getRightPanelOcclusionPx(root) : 0;
+    const rightOcclusionPx = rightPanelOcclusionPx;
     const fitWidthPx = Math.max(220, viewport.width - rightOcclusionPx - 24);
     const nextZoom = Math.min(
       2.2,
@@ -1001,7 +985,7 @@ export function EntityGraphThreeCanvas({
       cameraTweenFrameRef.current = window.requestAnimationFrame(animate);
     };
     cameraTweenFrameRef.current = window.requestAnimationFrame(animate);
-  }, [neighborIds, selectedId, viewport.height, viewport.width]);
+  }, [neighborIds, rightPanelOcclusionPx, selectedId, viewport.height, viewport.width]);
 
   useEffect(() => {
     const session = sessionRef.current;
@@ -1144,11 +1128,15 @@ export function EntityGraphThreeCanvas({
       const node = nodeById.get(id);
       if (!id || !node) return;
       onSelect(id);
-      setOverlay({
-        nodeId: id,
-        title: node.title,
-        body: bodyForNode(node.title),
-      });
+      if (enableNodeOverlayCard) {
+        setOverlay({
+          nodeId: id,
+          title: node.title,
+          body: bodyForNode(node.title),
+        });
+      } else {
+        setOverlay(null);
+      }
     };
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
@@ -1174,7 +1162,15 @@ export function EntityGraphThreeCanvas({
       root.removeEventListener("wheel", onWheel);
       root.removeEventListener("pointerleave", onPointerLeave);
     };
-  }, [nodeById, nodes.length, onSelect, selectedId, worldHeight, worldWidth]);
+  }, [
+    enableNodeOverlayCard,
+    nodeById,
+    nodes.length,
+    onSelect,
+    selectedId,
+    worldHeight,
+    worldWidth,
+  ]);
 
   const overlayNodes = useMemo(() => {
     if (!usePillOverlay) return [];
@@ -1489,10 +1485,12 @@ export function EntityGraphThreeCanvas({
           </div>
         );
       })() : null}
-      <div className={styles.edgeTooltip}>
-        three.js · worker force3d · {stats.nodes.toLocaleString()} nodes · {stats.edges.toLocaleString()} edges
-      </div>
-      {overlay ? (
+      {showStatsFooter ? (
+        <div className={styles.edgeTooltip}>
+          {statsFooterLabel} · {stats.nodes.toLocaleString()} nodes · {stats.edges.toLocaleString()} edges
+        </div>
+      ) : null}
+      {enableNodeOverlayCard && overlay ? (
         <div className={styles.threeOverlayCard}>
           <span className={styles.threeOverlayMeta}>{overlay.nodeId}</span>
           <h3 className={styles.threeOverlayTitle}>{overlay.title}</h3>
