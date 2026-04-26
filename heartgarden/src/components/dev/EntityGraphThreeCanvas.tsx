@@ -1029,7 +1029,7 @@ export function EntityGraphThreeCanvas({
 
     const highlightMaterial = activeLines.material as THREE.ShaderMaterial;
     // Write to lerp targets — the frame loop smoothly interpolates the actual uniforms.
-    edgeMutedOpacityTargetRef.current = hasSelection ? 0.06 : 0.38;
+    edgeMutedOpacityTargetRef.current = hasSelection ? 0.06 : hasHover ? 0.08 : 0.38;
     edgeActiveOpacityTargetRef.current = hasHover ? 0.92 : hasSelection ? 0.74 : 0.46;
     highlightMaterial.uniforms.uColor.value = colorFromStyle(
       hasHover && !hasSelection ? EDGE_HOVER_RGB : EDGE_ACTIVE_OKLCH,
@@ -1709,6 +1709,8 @@ export function EntityGraphThreeCanvas({
           {overlayNodes.map((node) => {
             const typeStyle = getEntityTypeStyle(node.entityType);
             const phase = ((seedFromId(node.id) % 1000) / 1000).toFixed(3);
+            const hasHoverOnly = !selectedId && !!hoveredNodeId;
+            const isDimmed = hasHoverOnly && node.id !== hoveredNodeId && !hoverNeighborIds.has(node.id);
             return (
               <button
                 key={node.id}
@@ -1717,6 +1719,7 @@ export function EntityGraphThreeCanvas({
                   styles.pillNode,
                   node.selected ? styles.pillNodeSelected : "",
                   !node.selected && node.neighbor ? styles.pillNodeNeighbor : "",
+                  isDimmed ? styles.pillNodeDimmed : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
