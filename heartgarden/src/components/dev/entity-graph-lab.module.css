@@ -203,6 +203,10 @@
   pointer-events: auto;
 }
 
+.physicsActive .pillNode {
+  animation-play-state: paused;
+}
+
 .blurDisabled .pillNode {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -255,6 +259,21 @@
   padding: 6px 10px;
 }
 
+@keyframes pillBreathe {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0);
+  }
+  33% {
+    transform: translate(-50%, -50%) translate(0.6px, -1.8px);
+  }
+  66% {
+    transform: translate(-50%, -50%) translate(-0.5px, -0.4px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(0, 0);
+  }
+}
+
 .pillNode {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -279,6 +298,8 @@
   text-overflow: ellipsis;
   cursor: pointer;
   user-select: none;
+  animation: pillBreathe 4.5s ease-in-out infinite;
+  animation-delay: calc(var(--pill-phase, 0) * -4.5s);
   transition:
     background-color 0.3s ease,
     color 0.3s ease,

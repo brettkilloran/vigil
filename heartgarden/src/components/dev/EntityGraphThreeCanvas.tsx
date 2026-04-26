@@ -11,7 +11,7 @@ import styles from "@/src/components/dev/entity-graph-lab.module.css";
 import type { GraphCanvasSharedProps } from "@/src/components/dev/entity-graph-renderer-types";
 import { getEntityTypeStyle } from "@/src/lib/entity-graph-type-style";
 import type { GraphNode } from "@/src/lib/graph-types";
-import { solveGraphForce3dInWorker } from "@/src/lib/entity-graph-force3d-client";
+import { initForce3dSim, type Force3dSession } from "@/src/lib/entity-graph-force3d-client";
 
 type OverlayState = {
   nodeId: string;
@@ -131,15 +131,20 @@ export function EntityGraphThreeCanvas({
   const nodeOrderRef = useRef<string[]>([]);
   const positionsRef = useRef<Float32Array>(new Float32Array());
   const selectedIdRef = useRef<string | null>(selectedId);
+  const sessionRef = useRef<Force3dSession | null>(null);
+  const simStatusRef = useRef<"active" | "idle" | "frozen">("idle");
+  const hoverPerturbRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
 
   const [overlay, setOverlay] = useState<OverlayState | null>(null);
   const [stats, setStats] = useState({ nodes: 0, edges: 0 });
   const [layoutRevision, setLayoutRevision] = useState(0);
   const [cameraRevision, setCameraRevision] = useState(0);
   const [viewport, setViewport] = useState({ width: 1000, height: 760 });
+  const [simStatus, setSimStatus] = useState<"active" | "idle" | "frozen">("idle");
   const sentiments = useMemo(() => nodes.map((node) => sentimentForNode(node.id)), [nodes]);
   const nodeById = useMemo(() => buildNodeIndex(nodes), [nodes]);
   const usePillOverlay = nodes.length <= 2500 || selectedId !== null;
+  const overlayNodeIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -203,6 +208,8 @@ export function EntityGraphThreeCanvas({
       depthWrite: false,
       uniforms: {
         uSelectedIndex: { value: -1 },
+        uTime: { value: 0 },
+        uBreathAmp: { value: 1.1 },
       },
       vertexShader: `
         attribute float instanceSentiment;
@@ -214,6 +221,17 @@ export function EntityGraphThreeCanvas({
         varying float vSelectionMix;
         varying vec2 vUv;
         uniform float uSelectedIndex;
+        uniform float uTime;
+        uniform float uBreathAmp;
+
+        // Cheap per-instance hash (Dave Hoskins).
+        float hash11(float p) {
+          p = fract(p * 0.1031);
+          p *= p + 33.33;
+          p *= p + p;
+          return fract(p);
+        }
+
         void main() {
           vSentiment = instanceSentiment;
           vBaseColor = instanceBaseColor;
@@ -222,7 +240,21 @@ export function EntityGraphThreeCanvas({
           float t = clamp(instanceSentiment * 0.5 + 0.5, 0.0, 1.0);
           float scale = mix(4.2, 8.2, t);
           vec3 scaled = position * scale;
-          vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(scaled, 1.0);
+          vec4 worldPos = instanceMatrix * vec4(scaled, 1.0);
+          // Subtle "alive" breath. Amplitude is sub-pixel at typical zoom, so
+          // picking offsets stay imperceptible while edges (anchored to layout
+          // positions) provide the steady visual frame.
+          float fid = float(gl_InstanceID);
+          float pa = hash11(fid + 0.13) * 6.2831853;
+          float pb = hash11(fid + 0.71) * 6.2831853;
+          float omega = uTime * 1.382;
+          vec3 breath = vec3(
+            sin(omega + pa),
+            cos(omega * 1.13 + pb),
+            sin(omega * 0.87 + pa) * 0.4
+          ) * uBreathAmp;
+          worldPos.xyz += breath;
+          vec4 mvPosition = modelViewMatrix * worldPos;
           gl_Position = projectionMatrix * mvPosition;
           vSelectionMix = float(abs(float(gl_InstanceID) - uSelectedIndex) < 0.5);
         }
@@ -256,12 +288,50 @@ export function EntityGraphThreeCanvas({
     scene.add(nodeMesh);
     nodeMeshRef.current = nodeMesh;
 
+    const edgeBreathVertex = `
+      attribute float aNodeIdx;
+      uniform float uTime;
+      uniform float uBreathAmp;
+      float hash11(float p) {
+        p = fract(p * 0.1031);
+        p *= p + 33.33;
+        p *= p + p;
+        return fract(p);
+      }
+      void main() {
+        float fid = aNodeIdx;
+        float pa = hash11(fid + 0.13) * 6.2831853;
+        float pb = hash11(fid + 0.71) * 6.2831853;
+        float omega = uTime * 1.382;
+        vec3 breath = vec3(
+          sin(omega + pa),
+          cos(omega * 1.13 + pb),
+          sin(omega * 0.87 + pa) * 0.4
+        ) * uBreathAmp;
+        vec3 pos = position + breath;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `;
+
+    const edgeVertCount = Math.max(2, edges.length * 2);
     const edgeGeometry = new THREE.BufferGeometry();
-    edgeGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(Math.max(2, edges.length * 6)), 3));
-    const edgeMaterial = new THREE.LineBasicMaterial({
-      color: 0x6f7b8c,
+    edgeGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(edgeVertCount * 3), 3));
+    edgeGeometry.setAttribute("aNodeIdx", new THREE.BufferAttribute(new Float32Array(edgeVertCount), 1));
+    const edgeMaterial = new THREE.ShaderMaterial({
       transparent: true,
-      opacity: 0.34,
+      depthWrite: false,
+      uniforms: {
+        uTime: { value: 0 },
+        uBreathAmp: { value: 1.1 },
+        uOpacity: { value: 0.34 },
+        uColor: { value: new THREE.Color(0x6f7b8c) },
+      },
+      vertexShader: edgeBreathVertex,
+      fragmentShader: `
+        uniform float uOpacity;
+        uniform vec3 uColor;
+        void main() { gl_FragColor = vec4(uColor, uOpacity); }
+      `,
     });
     const lines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
     lines.frustumCulled = true;
@@ -269,11 +339,23 @@ export function EntityGraphThreeCanvas({
     edgeLineRef.current = lines;
 
     const edgeActiveGeometry = new THREE.BufferGeometry();
-    edgeActiveGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(Math.max(2, edges.length * 6)), 3));
-    const edgeActiveMaterial = new THREE.LineBasicMaterial({
-      color: 0xf7be72,
+    edgeActiveGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(edgeVertCount * 3), 3));
+    edgeActiveGeometry.setAttribute("aNodeIdx", new THREE.BufferAttribute(new Float32Array(edgeVertCount), 1));
+    const edgeActiveMaterial = new THREE.ShaderMaterial({
       transparent: true,
-      opacity: 0.68,
+      depthWrite: false,
+      uniforms: {
+        uTime: { value: 0 },
+        uBreathAmp: { value: 1.1 },
+        uOpacity: { value: 0.68 },
+        uColor: { value: new THREE.Color(0xf7be72) },
+      },
+      vertexShader: edgeBreathVertex,
+      fragmentShader: `
+        uniform float uOpacity;
+        uniform vec3 uColor;
+        void main() { gl_FragColor = vec4(uColor, uOpacity); }
+      `,
     });
     const activeLines = new THREE.LineSegments(edgeActiveGeometry, edgeActiveMaterial);
     activeLines.frustumCulled = true;
@@ -305,7 +387,28 @@ export function EntityGraphThreeCanvas({
     observer.observe(root);
     resizeObserverRef.current = observer;
 
+    const startTime = performance.now();
     const renderLoop = () => {
+      const t = (performance.now() - startTime) / 1000;
+      const breathAmp = simStatusRef.current === "active" ? 0.18 : 1.1;
+      const nowMesh = nodeMeshRef.current;
+      if (nowMesh) {
+        const mat = nowMesh.material as THREE.ShaderMaterial;
+        if (mat?.uniforms?.uTime) mat.uniforms.uTime.value = t;
+        if (mat?.uniforms?.uBreathAmp) mat.uniforms.uBreathAmp.value = breathAmp;
+      }
+      const el = edgeLineRef.current;
+      if (el) {
+        const mat = el.material as THREE.ShaderMaterial;
+        if (mat?.uniforms?.uTime) mat.uniforms.uTime.value = t;
+        if (mat?.uniforms?.uBreathAmp) mat.uniforms.uBreathAmp.value = breathAmp;
+      }
+      const al = edgeActiveLineRef.current;
+      if (al) {
+        const mat = al.material as THREE.ShaderMaterial;
+        if (mat?.uniforms?.uTime) mat.uniforms.uTime.value = t;
+        if (mat?.uniforms?.uBreathAmp) mat.uniforms.uBreathAmp.value = breathAmp;
+      }
       composer.render();
       frameRef.current = window.requestAnimationFrame(renderLoop);
     };
@@ -342,9 +445,23 @@ export function EntityGraphThreeCanvas({
   }, [blurEffectsEnabled]);
 
   useEffect(() => {
-    let cancelled = false;
-    // Immediate first paint: show deterministic seeded positions right away,
-    // then refine asynchronously from worker physics.
+    const applyTick = (ids: string[], positions: Float32Array, emitLayout: boolean) => {
+      if (ids.length === 0 || positions.length === 0) return;
+      nodeOrderRef.current = ids;
+      positionsRef.current = positions;
+      if (emitLayout) {
+        const nextLayout = new Map<string, { x: number; y: number }>();
+        for (let i = 0; i < ids.length; i += 1) {
+          const id = ids[i];
+          if (!id) continue;
+          nextLayout.set(id, { x: positions[i * 3] ?? 0, y: positions[i * 3 + 1] ?? 0 });
+        }
+        onLayoutChangeRef.current?.(nextLayout);
+      }
+      setStats({ nodes: ids.length, edges: edges.length });
+      setLayoutRevision((current) => current + 1);
+    };
+
     const ids = nodes.map((node) => node.id);
     const quick = new Float32Array(ids.length * 3);
     const radius = 220 + Math.sqrt(Math.max(1, ids.length)) * 40;
@@ -357,41 +474,34 @@ export function EntityGraphThreeCanvas({
       quick[i * 3 + 1] = worldHeight * 0.5 + Math.sin(a) * r;
       quick[i * 3 + 2] = (seededUnit(seed + 47) - 0.5) * 24;
     }
-    nodeOrderRef.current = ids;
-    positionsRef.current = quick;
-    const seededLayout = new Map<string, { x: number; y: number }>();
-    for (let i = 0; i < ids.length; i += 1) {
-      const id = ids[i];
-      if (!id) continue;
-      seededLayout.set(id, { x: quick[i * 3] ?? 0, y: quick[i * 3 + 1] ?? 0 });
-    }
-    onLayoutChangeRef.current?.(seededLayout);
-    setStats({ nodes: ids.length, edges: edges.length });
-    setLayoutRevision((current) => current + 1);
+    applyTick(ids, quick, true);
 
-    void solveGraphForce3dInWorker(nodes, edges, {
-      width: worldWidth,
-      height: worldHeight,
-      iterations: nodes.length >= 10000 ? 32 : nodes.length >= 4000 ? 56 : nodes.length >= 1000 ? 90 : 130,
-    }).then((result) => {
-      if (cancelled) return;
-      nodeOrderRef.current = result.ids;
-      positionsRef.current = result.positions;
-      const nextLayout = new Map<string, { x: number; y: number }>();
-      for (let i = 0; i < result.ids.length; i += 1) {
-        const id = result.ids[i];
-        if (!id) continue;
-        nextLayout.set(id, {
-          x: result.positions[i * 3] ?? 0,
-          y: result.positions[i * 3 + 1] ?? 0,
-        });
-      }
-      onLayoutChangeRef.current?.(nextLayout);
-      setStats({ nodes: result.ids.length, edges: edges.length });
-      setLayoutRevision((current) => current + 1);
-    });
+    sessionRef.current?.stop();
+    sessionRef.current = initForce3dSim(
+      nodes,
+      edges,
+      {
+        width: worldWidth,
+        height: worldHeight,
+        progressEvery: nodes.length >= 10000 ? 8 : nodes.length >= 4000 ? 6 : 4,
+        alphaThreshold: 0.003,
+        warmNodeThreshold: 4000,
+        initialTicks: nodes.length >= 10000 ? 20 : nodes.length >= 4000 ? 26 : 32,
+      },
+      (tick) => {
+        applyTick(tick.ids, tick.positions, true);
+      },
+      (nextStatus) => {
+        simStatusRef.current = nextStatus;
+        setSimStatus(nextStatus);
+      },
+    );
+
     return () => {
-      cancelled = true;
+      sessionRef.current?.stop();
+      sessionRef.current = null;
+      simStatusRef.current = "idle";
+      setSimStatus("idle");
     };
   }, [edges, nodes, worldHeight, worldWidth]);
 
@@ -440,7 +550,8 @@ export function EntityGraphThreeCanvas({
       const nodeSelected = selectedId === id;
       const nodeNeighbor = neighborIds.has(id);
       const dimmed = selectedId !== null && !nodeSelected && !nodeNeighbor;
-      const alpha = dimmed ? 0.16 : nodeSelected ? 1 : nodeNeighbor ? 0.9 : 0.72;
+      const hasPill = usePillOverlay && overlayNodeIdsRef.current.has(id);
+      const alpha = hasPill ? 0 : dimmed ? 0.16 : nodeSelected ? 1 : nodeNeighbor ? 0.9 : 0.72;
       if (sentimentAttr && i < sentimentAttr.count) {
         sentimentAttr.setX(i, sentiment);
       }
@@ -462,7 +573,9 @@ export function EntityGraphThreeCanvas({
     nodeMesh.geometry.boundingSphere = new THREE.Sphere(center, radius);
 
     const edgePositions = lines.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const edgeNodeIdx = lines.geometry.getAttribute("aNodeIdx") as THREE.BufferAttribute;
     const activeEdgePositions = activeLines.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const activeEdgeNodeIdx = activeLines.geometry.getAttribute("aNodeIdx") as THREE.BufferAttribute;
     let edgeCursor = 0;
     let activeCursor = 0;
     for (const edge of edges) {
@@ -478,27 +591,33 @@ export function EntityGraphThreeCanvas({
       const isActive = activeEdgeIds.has(edge.id);
       if (!isActive) {
         edgePositions.setXYZ(edgeCursor, sourceX, sourceY, sourceZ);
+        edgeNodeIdx.setX(edgeCursor, sourceIdx);
         edgeCursor += 1;
         edgePositions.setXYZ(edgeCursor, targetX, targetY, targetZ);
+        edgeNodeIdx.setX(edgeCursor, targetIdx);
         edgeCursor += 1;
         continue;
       }
       activeEdgePositions.setXYZ(activeCursor, sourceX, sourceY, sourceZ);
+      activeEdgeNodeIdx.setX(activeCursor, sourceIdx);
       activeCursor += 1;
       activeEdgePositions.setXYZ(activeCursor, targetX, targetY, targetZ);
+      activeEdgeNodeIdx.setX(activeCursor, targetIdx);
       activeCursor += 1;
     }
     lines.geometry.setDrawRange(0, edgeCursor);
     edgePositions.needsUpdate = true;
+    edgeNodeIdx.needsUpdate = true;
     lines.geometry.boundingSphere = new THREE.Sphere(center, radius + 120);
     activeLines.geometry.setDrawRange(0, activeCursor);
     activeEdgePositions.needsUpdate = true;
+    activeEdgeNodeIdx.needsUpdate = true;
     activeLines.geometry.boundingSphere = new THREE.Sphere(center, radius + 120);
 
-    const mutedMaterial = lines.material as THREE.LineBasicMaterial;
-    const highlightMaterial = activeLines.material as THREE.LineBasicMaterial;
-    mutedMaterial.opacity = selectedId ? 0.14 : 0.32;
-    highlightMaterial.opacity = selectedId ? 0.74 : 0.46;
+    const mutedMaterial = lines.material as THREE.ShaderMaterial;
+    const highlightMaterial = activeLines.material as THREE.ShaderMaterial;
+    mutedMaterial.uniforms.uOpacity.value = selectedId ? 0.14 : 0.32;
+    highlightMaterial.uniforms.uOpacity.value = selectedId ? 0.74 : 0.46;
 
     labels.clear?.();
     if (!usePillOverlay) {
@@ -558,6 +677,29 @@ export function EntityGraphThreeCanvas({
   }, [cameraActionKey, cameraActionType, worldHeight, worldWidth]);
 
   useEffect(() => {
+    const session = sessionRef.current;
+    if (!session) return;
+    if (!selectedId || nodes.length > 4000) {
+      session.reheat({ alpha: 0.04, options: { width: worldWidth, height: worldHeight } });
+      return;
+    }
+    const ids = nodeOrderRef.current;
+    const idx = ids.findIndex((id) => id === selectedId);
+    if (idx < 0) {
+      session.reheat({ alpha: 0.06, options: { width: worldWidth, height: worldHeight } });
+      return;
+    }
+    const x = positionsRef.current[idx * 3] ?? worldWidth * 0.5;
+    const y = positionsRef.current[idx * 3 + 1] ?? worldHeight * 0.5;
+    const z = positionsRef.current[idx * 3 + 2] ?? 0;
+    session.reheat({
+      alpha: 0.08,
+      options: { width: worldWidth, height: worldHeight },
+      fixedNodes: [{ id: selectedId, x, y, z, ttlTicks: 40 }],
+    });
+  }, [nodes.length, selectedId, worldHeight, worldWidth]);
+
+  useEffect(() => {
     const root = rootRef.current;
     const camera = cameraRef.current;
     const nodeMesh = nodeMeshRef.current;
@@ -567,15 +709,38 @@ export function EntityGraphThreeCanvas({
       dragRef.current = { active: true, x: event.clientX, y: event.clientY, moved: false };
     };
     const onPointerMove = (event: PointerEvent) => {
-      if (!dragRef.current.active) return;
-      const dx = event.clientX - dragRef.current.x;
-      const dy = event.clientY - dragRef.current.y;
-      if (Math.abs(dx) + Math.abs(dy) > 2) dragRef.current.moved = true;
-      camera.position.x -= dx / camera.zoom;
-      camera.position.y += dy / camera.zoom;
-      dragRef.current.x = event.clientX;
-      dragRef.current.y = event.clientY;
-      setCameraRevision((current) => current + 1);
+      if (dragRef.current.active) {
+        const dx = event.clientX - dragRef.current.x;
+        const dy = event.clientY - dragRef.current.y;
+        if (Math.abs(dx) + Math.abs(dy) > 2) dragRef.current.moved = true;
+        camera.position.x -= dx / camera.zoom;
+        camera.position.y += dy / camera.zoom;
+        dragRef.current.x = event.clientX;
+        dragRef.current.y = event.clientY;
+        setCameraRevision((current) => current + 1);
+        return;
+      }
+      if (nodes.length > 4000) return;
+      const now = performance.now();
+      if (now - hoverPerturbRef.current.at < 140) return;
+      const rect = root.getBoundingClientRect();
+      pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointerRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycasterRef.current.setFromCamera(pointerRef.current, camera);
+      const hit = raycasterRef.current.intersectObject(nodeMesh, false)[0];
+      const hitInstance = hit?.instanceId;
+      if (hitInstance === undefined) return;
+      const hitId = nodeOrderRef.current[hitInstance] ?? null;
+      if (!hitId || hoverPerturbRef.current.id === hitId) return;
+      hoverPerturbRef.current = { id: hitId, at: now };
+      const x = positionsRef.current[hitInstance * 3] ?? worldWidth * 0.5;
+      const y = positionsRef.current[hitInstance * 3 + 1] ?? worldHeight * 0.5;
+      const z = positionsRef.current[hitInstance * 3 + 2] ?? 0;
+      sessionRef.current?.reheat({
+        alpha: 0.03,
+        options: { width: worldWidth, height: worldHeight },
+        fixedNodes: [{ id: hitId, x, y, z, ttlTicks: 12 }],
+      });
     };
     const onPointerUp = (event: PointerEvent) => {
       if (!dragRef.current.active) return;
@@ -622,7 +787,7 @@ export function EntityGraphThreeCanvas({
       window.removeEventListener("pointerup", onPointerUp);
       root.removeEventListener("wheel", onWheel);
     };
-  }, [nodeById, onSelect]);
+  }, [nodeById, nodes.length, onSelect, worldHeight, worldWidth]);
 
   const overlayNodes = useMemo(() => {
     if (!usePillOverlay) return [];
@@ -837,6 +1002,8 @@ export function EntityGraphThreeCanvas({
       });
     }
     out.sort((a, b) => Number(a.selected) - Number(b.selected));
+    const idSet = new Set(out.map((entry) => entry.id));
+    overlayNodeIdsRef.current = idSet;
     return out;
   }, [
     cameraRevision,
@@ -851,7 +1018,7 @@ export function EntityGraphThreeCanvas({
   return (
     <div
       ref={rootRef}
-      className={`${styles.graphRoot} ${!blurEffectsEnabled ? styles.blurDisabled : ""}`}
+      className={`${styles.graphRoot} ${!blurEffectsEnabled ? styles.blurDisabled : ""} ${simStatus === "active" ? styles.physicsActive : ""}`}
       role="presentation"
       aria-label="threejs entity graph"
     >
@@ -859,6 +1026,7 @@ export function EntityGraphThreeCanvas({
         <div className={styles.webglHtmlOverlay}>
           {overlayNodes.map((node) => {
             const typeStyle = getEntityTypeStyle(node.entityType);
+            const phase = ((seedFromId(node.id) % 1000) / 1000).toFixed(3);
             return (
               <button
                 key={node.id}
@@ -874,7 +1042,8 @@ export function EntityGraphThreeCanvas({
                   left: node.screenX,
                   top: node.screenY,
                   paddingInline: "12px",
-                }}
+                  "--pill-phase": phase,
+                } as React.CSSProperties}
                 title={node.title}
                 onClick={(event) => {
                   event.stopPropagation();

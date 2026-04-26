@@ -130,6 +130,13 @@ export function buildSyntheticScenario(
     if (idx === undefined) continue;
     clusters[i % clusterCount]?.push(idx);
   }
+  // Stamp cluster hints onto nodes so downstream layout can detect bridges.
+  for (let c = 0; c < clusters.length; c += 1) {
+    for (const idx of clusters[c] ?? []) {
+      const node = nodes[idx];
+      if (node) node.clusterHint = `${key}-c-${c}`;
+    }
+  }
   const clusterPos = buildClusterCenters(clusterCount, rng);
   const nodePos: Point2[] = Array.from({ length: nodeCount }, () => ({ x: 0, y: 0 }));
   for (let c = 0; c < clusters.length; c += 1) {

@@ -5,6 +5,13 @@ export type GraphNode = {
   entityType: string | null;
   external?: boolean;
   foreignSpaceId?: string | null;
+  /**
+   * Optional precomputed community/cluster hint used by force layouts and
+   * downstream visuals. When two adjacent nodes share a hint the connecting
+   * edge is treated as intra-cluster (short, firm spring); when hints differ
+   * the edge is treated as a longer, softer bridge.
+   */
+  clusterHint?: string | null;
 };
 
 export type GraphEdge = {
