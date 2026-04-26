@@ -54,11 +54,11 @@ export function StarfieldSnippetClient() {
         float core = smoothstep(0.5, 0.1, dist);
         float halo = smoothstep(0.5, 0.3, dist) * 0.5;
         float strength = core + halo;
-        gl_FragColor = vec4(1.0, 1.0, 1.0, strength * vAlpha);
+        gl_FragColor = vec4(1.0, 1.0, 1.0, strength * vAlpha * 0.35);
       }
     `;
 
-    const particleCount = 8000;
+    const particleCount = 6000;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const sizes = new Float32Array(particleCount);

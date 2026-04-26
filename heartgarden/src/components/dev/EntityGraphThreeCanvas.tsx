@@ -32,7 +32,7 @@ const MAX_CAMERA_ZOOM = 2.2;
 const MIN_CAMERA_ZOOM = 0.22;
 const CAMERA_ZOOM_STEP = 1.35;
 // --sys-color-accent-500: oklch(0.74 0.31 50)
-const EDGE_MUTED_OKLCH = "oklch(0.18 0.005 252 / 0.35)";
+const EDGE_MUTED_OKLCH = "oklch(0.72 0.003 252 / 0.28)";
 const EDGE_ACTIVE_OKLCH = "oklch(0.74 0.31 50 / 0.95)";
 const EDGE_HOVER_RGB = "oklch(0.74 0.31 50 / 1.0)";
 const PILL_OVERLAY_NODE_LIMIT = 12000;
@@ -520,7 +520,7 @@ export function EntityGraphThreeCanvas({
       uniforms: {
         uTime: { value: 0 },
         uBreathAmp: { value: 1.1 },
-        uOpacity: { value: 0.34 },
+        uOpacity: { value: 0.38 },
         uColor: { value: colorFromStyle(EDGE_MUTED_OKLCH) },
       },
       vertexShader: edgeBreathVertex,
@@ -646,10 +646,9 @@ export function EntityGraphThreeCanvas({
     const root = rootRef.current;
     if (!canvas || !root) return;
 
-    const PARTICLE_COUNT = 35000;
-    const SPHERE_RADIUS = 1200;
-    const BG_COLOR = new THREE.Color(0x030304);
-    const PARALLAX = 0.0025;
+    const PARTICLE_COUNT = 6000;
+    const SPHERE_RADIUS = 1000;
+    const BG_COLOR = new THREE.Color(0x020202);
 
     const starScene = new THREE.Scene();
     starScene.background = BG_COLOR;
@@ -660,72 +659,75 @@ export function EntityGraphThreeCanvas({
 
     const starRenderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: false,
+      antialias: true,
       alpha: false,
-      powerPreference: "high-performance",
     });
     starRenderer.setSize(root.clientWidth, root.clientHeight);
-    starRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    starRenderer.setPixelRatio(window.devicePixelRatio);
     starRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    starRenderer.setClearColor(0x020202, 1);
 
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     const sizes = new Float32Array(PARTICLE_COUNT);
     const phases = new Float32Array(PARTICLE_COUNT);
+    const twinklingSpeeds = new Float32Array(PARTICLE_COUNT);
+    // Power-law brightness: most stars are very dim, a tail reaches full brightness.
+    // Exponent 2.4 puts ~80% of stars below 0.25 brightness while ~8% exceed 0.75.
     const brightnesses = new Float32Array(PARTICLE_COUNT);
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const radius = 100 + Math.random() * Math.random() * SPHERE_RADIUS;
+      const radius = SPHERE_RADIUS * Math.cbrt(Math.random());
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(Math.random() * 2 - 1);
       positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
       positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = radius * Math.cos(phi);
-      sizes[i] = Math.pow(Math.random(), 5) * 4.5 + 0.2;
+      sizes[i] = Math.random() * 1.1 + 0.35;
       phases[i] = Math.random() * Math.PI * 2;
-      brightnesses[i] = Math.pow(Math.random(), 3) * 0.9 + 0.1;
+      twinklingSpeeds[i] = Math.random() * 2.2 + 0.9;
+      brightnesses[i] = Math.pow(Math.random(), 2.4);
     }
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
-    geometry.setAttribute("aPhase", new THREE.BufferAttribute(phases, 1));
-    geometry.setAttribute("aBrightness", new THREE.BufferAttribute(brightnesses, 1));
+    geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+    geometry.setAttribute("phase", new THREE.BufferAttribute(phases, 1));
+    geometry.setAttribute("twinklingSpeed", new THREE.BufferAttribute(twinklingSpeeds, 1));
+    geometry.setAttribute("brightness", new THREE.BufferAttribute(brightnesses, 1));
 
     const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: new THREE.Color(0xffffff) },
-      },
+      uniforms: { time: { value: 0.0 } },
       vertexShader: `
-        uniform float uTime;
-        attribute float aSize;
-        attribute float aPhase;
-        attribute float aBrightness;
+        attribute float size;
+        attribute float phase;
+        attribute float twinklingSpeed;
+        attribute float brightness;
         varying float vAlpha;
+        varying float vGlow;
+        varying float vBrightness;
+        uniform float time;
 
         void main() {
-          vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-          vec4 viewPosition = viewMatrix * modelPosition;
-          vec4 projectedPosition = projectionMatrix * viewPosition;
-
-          float twinkle = sin(uTime * 0.4 + aPhase) * 0.5 + 0.5;
-          float secondaryTwinkle = sin(uTime * 0.15 - aPhase * 2.0) * 0.5 + 0.5;
-          float combinedTwinkle = (twinkle * secondaryTwinkle) * 0.7 + 0.3;
-          float depthFade = smoothstep(1500.0, 200.0, -viewPosition.z);
-
-          vAlpha = combinedTwinkle * aBrightness * depthFade;
-          gl_PointSize = aSize * (800.0 / -viewPosition.z);
-          gl_Position = projectedPosition;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = clamp(size * (300.0 / -mvPosition.z), 0.5, 2.8);
+          gl_Position = projectionMatrix * mvPosition;
+          float blink = (sin(time * twinklingSpeed + phase) + 1.0) / 2.0;
+          vAlpha = 0.1 + (blink * 0.9);
+          vGlow = size;
+          vBrightness = brightness;
         }
       `,
       fragmentShader: `
-        uniform vec3 uColor;
         varying float vAlpha;
+        varying float vGlow;
+        varying float vBrightness;
 
         void main() {
           vec2 center = gl_PointCoord - vec2(0.5);
           float dist = length(center);
-          float alpha = exp(-dist * dist * 18.0);
-          if (alpha * vAlpha < 0.005) discard;
-          gl_FragColor = vec4(uColor, alpha * vAlpha);
+          if (dist > 0.5) discard;
+          float core = smoothstep(0.5, 0.1, dist);
+          float halo = smoothstep(0.5, 0.3, dist) * 0.5;
+          float strength = core + halo;
+          gl_FragColor = vec4(1.0, 1.0, 1.0, strength * vAlpha * vBrightness * 0.35);
         }
       `,
       transparent: true,
@@ -736,63 +738,46 @@ export function EntityGraphThreeCanvas({
     const particles = new THREE.Points(geometry, material);
     starScene.add(particles);
 
-    const starComposer = new EffectComposer(starRenderer);
-    const starRenderPass = new RenderPass(starScene, starCamera);
-    const starBloomPass = new UnrealBloomPass(
-      new THREE.Vector2(root.clientWidth, root.clientHeight),
-      1.8,
-      1.2,
-      0.0,
-    );
-    starComposer.addPass(starRenderPass);
-    starComposer.addPass(starBloomPass);
-
-    let mouseX = 0;
-    let mouseY = 0;
-    let targetX = 0;
-    let targetY = 0;
-    let halfX = root.clientWidth * 0.5;
-    let halfY = root.clientHeight * 0.5;
-
-    const onMouseMove = (event: MouseEvent) => {
-      const rect = root.getBoundingClientRect();
-      mouseX = (event.clientX - rect.left - halfX) * 0.5;
-      mouseY = (event.clientY - rect.top - halfY) * 0.5;
-    };
-
     const onResize = () => {
       const width = Math.max(1, root.clientWidth);
       const height = Math.max(1, root.clientHeight);
-      halfX = width * 0.5;
-      halfY = height * 0.5;
       starCamera.aspect = width / height;
       starCamera.updateProjectionMatrix();
       starRenderer.setSize(width, height);
-      starComposer.setSize(width, height);
     };
 
-    root.addEventListener("mousemove", onMouseMove);
     const observer = new ResizeObserver(onResize);
     observer.observe(root);
 
     const clock = new THREE.Clock();
     let rafId: number | null = null;
+    // How much the starfield parallax-drifts per world-unit of graph pan.
+    // Stars are "infinitely far" so the ratio is tiny — just enough to feel
+    // like depth without being distracting.
+    const PARALLAX = 0.048;
+    // FOV exponent: zoom-in tightens the star field slightly (< 1 = very subtle).
+    const FOV_ZOOM_EXP = 0.11;
     const animate = () => {
       rafId = window.requestAnimationFrame(animate);
       const elapsedTime = clock.getElapsedTime();
-      material.uniforms.uTime.value = elapsedTime;
-      particles.rotation.y = elapsedTime * 0.02;
-      particles.rotation.z = elapsedTime * 0.01;
+      material.uniforms.time.value = elapsedTime;
 
-      const graphCamera = cameraRef.current;
-      const graphOffsetX = graphCamera ? graphCamera.position.x - worldWidth * 0.5 : 0;
-      const graphOffsetY = graphCamera ? graphCamera.position.y - worldHeight * 0.5 : 0;
-      targetX = mouseX * 0.2 + graphOffsetX * PARALLAX;
-      targetY = mouseY * 0.2 + graphOffsetY * PARALLAX;
-      starCamera.position.x += (targetX - starCamera.position.x) * 0.02;
-      starCamera.position.y += (-targetY - starCamera.position.y) * 0.02;
-      starCamera.lookAt(starScene.position);
-      starComposer.render();
+      // Drive the star camera from the graph camera so stars respond to pan/zoom
+      // as if they sit at infinity behind the graph canvas.
+      const graphCam = cameraRef.current;
+      if (graphCam) {
+        const panX = (graphCam.position.x - worldWidth * 0.5) * PARALLAX;
+        const panY = (graphCam.position.y - worldHeight * 0.5) * PARALLAX;
+        // lookAt offset: panning the graph right tilts stars left (parallax depth).
+        starCamera.lookAt(panX, panY, 0);
+        // Subtle FOV response: graph zoom-in slightly narrows the starfield FOV.
+        starCamera.fov = 60 / Math.pow(graphCam.zoom / DEFAULT_CAMERA_ZOOM, FOV_ZOOM_EXP);
+        starCamera.updateProjectionMatrix();
+      } else {
+        starCamera.lookAt(0, 0, 0);
+      }
+
+      starRenderer.render(starScene, starCamera);
     };
 
     onResize();
@@ -801,8 +786,6 @@ export function EntityGraphThreeCanvas({
     return () => {
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       observer.disconnect();
-      root.removeEventListener("mousemove", onMouseMove);
-      starComposer.dispose();
       geometry.dispose();
       material.dispose();
       starRenderer.dispose();
@@ -1034,7 +1017,7 @@ export function EntityGraphThreeCanvas({
 
     const mutedMaterial = lines.material as THREE.ShaderMaterial;
     const highlightMaterial = activeLines.material as THREE.ShaderMaterial;
-    mutedMaterial.uniforms.uOpacity.value = hasSelection || hasHover ? 0.08 : 0.18;
+    mutedMaterial.uniforms.uOpacity.value = hasSelection ? 0.06 : 0.38;
     highlightMaterial.uniforms.uOpacity.value = hasHover ? 0.92 : hasSelection ? 0.74 : 0.46;
     highlightMaterial.uniforms.uColor.value = colorFromStyle(
       hasHover && !hasSelection ? EDGE_HOVER_RGB : EDGE_ACTIVE_OKLCH,
@@ -1151,10 +1134,13 @@ export function EntityGraphThreeCanvas({
       // Recenter is a one-shot intent, not a sticky mode.
       forceClusterFocusActionKeyRef.current = null;
     }
-    if (cameraTweenFrameRef.current !== null) {
-      window.cancelAnimationFrame(cameraTweenFrameRef.current);
-      cameraTweenFrameRef.current = null;
-    }
+
+    // If a smooth tween is already running and this is just a layout-revision
+    // re-fire (not a user-requested focus), let the tween finish undisturbed.
+    // Cancelling mid-tween and snapping via a blend step is what causes the
+    // end-of-animation jitter.
+    if (!forceFocus && cameraTweenFrameRef.current !== null) return;
+
     const ids = nodeOrderRef.current;
     const positions = positionsRef.current;
     if (ids.length === 0 || positions.length === 0) return;
@@ -1194,9 +1180,9 @@ export function EntityGraphThreeCanvas({
     const centerX = (minX + maxX) * 0.5 + centerShiftWorldX;
     const centerY = (minY + maxY) * 0.5 - centerShiftWorldY;
     if (!forceFocus) {
-      // Keep the selected cluster centered as simulation/layout evolves, but do
-      // it incrementally so motion stays stable instead of "fighting back".
-      const blend = 0.22;
+      // Keep the selected cluster centered as simulation/layout evolves. Use a
+      // gentle blend so the camera drifts rather than snaps when physics ticks.
+      const blend = 0.10;
       camera.position.x = camera.position.x + (centerX - camera.position.x) * blend;
       camera.position.y = camera.position.y + (centerY - camera.position.y) * blend;
       camera.zoom = camera.zoom + (nextZoom - camera.zoom) * blend;
@@ -1204,15 +1190,23 @@ export function EntityGraphThreeCanvas({
       setCameraRevision((current) => current + 1);
       return;
     }
+    // forceFocus: cancel any prior tween then start a fresh one.
+    if (cameraTweenFrameRef.current !== null) {
+      window.cancelAnimationFrame(cameraTweenFrameRef.current);
+      cameraTweenFrameRef.current = null;
+    }
     const startX = camera.position.x;
     const startY = camera.position.y;
     const startZoom = camera.zoom;
-    const durationMs = 720;
+    const durationMs = 680;
     const startedAt = performance.now();
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    // easeInOutCubic gives a smoother deceleration tail than easeOutCubic,
+    // which avoids the micro-jitter that appears as t→1 under rAF scheduling.
+    const ease = (t: number) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     const animate = (now: number) => {
       const t = Math.max(0, Math.min(1, (now - startedAt) / durationMs));
-      const e = easeOutCubic(t);
+      const e = ease(t);
       camera.position.x = startX + (centerX - startX) * e;
       camera.position.y = startY + (centerY - startY) * e;
       camera.zoom = startZoom + (nextZoom - startZoom) * e;

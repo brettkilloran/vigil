@@ -33,7 +33,11 @@ function formatEntityLabel(node: GraphNode): string {
 export function EntityGraphPanelLab() {
   const [layout, setLayout] = useState<LayoutMap>(new Map());
   const [layoutLoading, setLayoutLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(PANEL_SCENARIO.nodes[0]?.id ?? null);
+  const initialNodeId = PANEL_SCENARIO.nodes[0]?.id ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(initialNodeId);
+  // Always holds the most recent non-null selection so recenter has a target
+  // even after the user dismisses the bottom sheet.
+  const lastSelectedIdRef = useRef<string | null>(initialNodeId);
   const [cameraAction, setCameraAction] = useState<{ key: number; type: CameraAction }>({
     key: 0,
     type: "frame-selection",
@@ -101,6 +105,10 @@ export function EntityGraphPanelLab() {
     if (graphNodeIdSet.has(selectedId)) return;
     setSelectedId(null);
   }, [graphNodeIdSet, selectedId]);
+
+  useEffect(() => {
+    if (selectedId) lastSelectedIdRef.current = selectedId;
+  }, [selectedId]);
 
   useEffect(() => {
     const node = bottomSheetRef.current;
@@ -174,11 +182,15 @@ export function EntityGraphPanelLab() {
             showRecenter
             onZoomIn={() => setCameraAction((c) => nextAction(c.key, "zoom-in"))}
             onZoomOut={() => setCameraAction((c) => nextAction(c.key, "zoom-out"))}
-            onRecenter={() =>
-              setCameraAction((c) =>
-                nextAction(c.key, selectedId ? "frame-selection" : "frame-all"),
-              )
-            }
+            onRecenter={() => {
+              const target = selectedId ?? lastSelectedIdRef.current;
+              if (target) {
+                if (!selectedId) setSelectedId(target);
+                setCameraAction((c) => nextAction(c.key, "frame-selection"));
+              } else {
+                setCameraAction((c) => nextAction(c.key, "frame-all"));
+              }
+            }}
           />
 
           {/* Details panel — matches .threeOverlayCard vocabulary */}
@@ -244,46 +256,31 @@ export function EntityGraphPanelLab() {
                         </div>
                     </div>
 
-                    {/* Neighbor chips — pill node vocabulary */}
+                    {/* Neighbor chips */}
                     {neighborPreview.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                         {neighborPreview.map((node) => (
                           <button
                             key={node.id}
-                            className="truncate"
                             style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              maxWidth: 180,
-                              borderRadius: 999,
-                              padding: "5px 10px",
-                              fontSize: 10,
-                              fontWeight: 600,
-                              textTransform: "uppercase",
-                              letterSpacing: "0.07em",
-                              border: "0.5px solid color-mix(in srgb, white 28%, var(--sem-border-subtle) 72%)",
-                              background: "color-mix(in srgb, white 18%, transparent)",
-                              color: "var(--sem-text-primary)",
-                              backdropFilter: "blur(8px)",
-                              WebkitBackdropFilter: "blur(8px)",
-                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 10px rgba(0,0,0,0.18)",
+                              display: "inline-block",
+                              maxWidth: 160,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              borderRadius: 6,
+                              padding: "3px 8px",
+                              fontSize: 11,
+                              fontWeight: 500,
+                              border: "0.5px solid color-mix(in srgb, white 16%, transparent)",
+                              background: "color-mix(in srgb, white 8%, transparent)",
+                              color: "var(--sem-text-secondary)",
                               cursor: "pointer",
                             }}
                             title={node.title}
                             onClick={() => setSelectedId(node.id)}
                           >
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: 6,
-                                height: 6,
-                                flexShrink: 0,
-                                borderRadius: 999,
-                                background: "var(--vigil-snap)",
-                              }}
-                            />
-                            <span className="truncate">{node.title}</span>
+                            {node.title}
                           </button>
                         ))}
                       </div>
