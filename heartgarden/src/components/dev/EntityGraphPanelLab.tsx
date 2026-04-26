@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Crosshair, Minus, Plus } from "@phosphor-icons/react";
+import { Crosshair } from "@phosphor-icons/react";
 
 import { EntityGraphThreeCanvas } from "@/src/components/product-ui/canvas/EntityGraphThreeCanvas";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
 import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
+import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import type { CameraAction, LayoutMap } from "@/src/lib/graph-canvas-types";
 import { solveStableLayoutStreamingInWorker } from "@/src/lib/entity-graph-layout-client";
 import { buildEntityGraphModel } from "@/src/lib/entity-graph-model";
@@ -135,7 +136,7 @@ export function EntityGraphPanelLab() {
           boxShadow: "0 0 0 1px oklch(0 0 0 / 0.4), 0 24px 64px oklch(0 0 0 / 0.7), 0 8px 24px oklch(0 0 0 / 0.5)",
         }}
       >
-        <div className="relative min-h-0 flex-1" style={{ background: "oklch(0.145 0 0)" }}>
+        <div className="relative min-h-0 flex-1" data-graph-panel style={{ background: "oklch(0.145 0 0)" }}>
           {layout.size > 0 ? (
             <EntityGraphThreeCanvas
               nodes={graphNodes}
@@ -168,61 +169,22 @@ export function EntityGraphPanelLab() {
             </div>
           )}
 
-          {/* Camera controls — exact .sideToolsMainPanel recipe */}
-          <div
-            className="pointer-events-none absolute right-3 top-3 z-20 flex flex-col items-center"
-            style={{
-              gap: 2,
-              padding: "4px 2px",
-              width: "var(--chrome-tool-rail-strip-width)",
-              borderRadius: "var(--chrome-panel-radius)",
-              border: "1px solid var(--ui-glass-border)",
-              background: "var(--ui-glass-bg)",
-              backdropFilter: "var(--chrome-glass-filter)",
-              WebkitBackdropFilter: "var(--chrome-glass-filter)",
-              boxShadow: "var(--chrome-glass-shadow)",
-            }}
-          >
-            <ArchitecturalTooltip content="Zoom in" side="left" delayMs={420}>
-              <ArchitecturalButton
-                size="icon"
-                tone="glass"
-                disabled={zoomInDisabled}
-                aria-label="Zoom in"
-                className="pointer-events-auto"
-                onClick={() => setCameraAction((c) => nextAction(c.key, "zoom-in"))}
-              >
-                <Plus size={18} />
-              </ArchitecturalButton>
-            </ArchitecturalTooltip>
-
-            <ArchitecturalTooltip content="Zoom out" side="left" delayMs={420}>
-              <ArchitecturalButton
-                size="icon"
-                tone="glass"
-                aria-label="Zoom out"
-                className="pointer-events-auto"
-                onClick={() => setCameraAction((c) => nextAction(c.key, "zoom-out"))}
-              >
-                <Minus size={18} />
-              </ArchitecturalButton>
-            </ArchitecturalTooltip>
-
-            <div style={{ width: "100%", height: 1, background: "color-mix(in srgb, white 10%, transparent)" }} />
-
-            <ArchitecturalTooltip content="Recenter on selection" side="left" delayMs={420}>
-              <ArchitecturalButton
-                size="icon"
-                tone="glass"
-                disabled={!selectedId}
-                aria-label="Recenter"
-                className="pointer-events-auto"
-                onClick={() => setCameraAction((c) => nextAction(c.key, "frame-selection"))}
-              >
-                <Crosshair size={18} />
-              </ArchitecturalButton>
-            </ArchitecturalTooltip>
-          </div>
+          {/* Camera controls — canonical ArchitecturalToolRail, view-only */}
+          <ArchitecturalToolRail
+            activeTool="select"
+            onSetTool={() => {}}
+            showSelectPan={false}
+            showConnectionModes={false}
+            showZoom
+            showRecenter
+            onZoomIn={() => setCameraAction((c) => nextAction(c.key, "zoom-in"))}
+            onZoomOut={() => setCameraAction((c) => nextAction(c.key, "zoom-out"))}
+            onRecenter={() =>
+              setCameraAction((c) =>
+                nextAction(c.key, selectedId ? "frame-selection" : "frame-all"),
+              )
+            }
+          />
 
           {/* Details panel — matches .threeOverlayCard vocabulary */}
           <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-20">
@@ -233,7 +195,6 @@ export function EntityGraphPanelLab() {
               }`}
               style={{
                 borderRadius: "var(--chrome-panel-radius)",
-                border: "1px solid var(--ui-glass-border)",
                 background: "var(--ui-glass-bg)",
                 backdropFilter: "var(--chrome-glass-filter)",
                 WebkitBackdropFilter: "var(--chrome-glass-filter)",

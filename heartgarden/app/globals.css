@@ -422,8 +422,6 @@ body {
 
 * {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 a {
@@ -945,6 +943,23 @@ a {
 .hg-tooltip-hitbox .vigil-btn:disabled,
 .hg-tooltip-hitbox .vigil-btn[data-disabled="true"] {
   pointer-events: none;
+}
+
+/* Glass button scoping for canvas panels that aren't wrapped in .shell */
+[data-graph-panel] .vigil-btn[data-tone="glass"],
+[data-graph-panel] .vigil-btn[data-tone="menu"] {
+  color: var(--sys-color-neutral-400);
+}
+[data-graph-panel] .vigil-btn[data-tone="glass"]:hover:not(:disabled):not([data-disabled="true"]),
+[data-graph-panel] .vigil-btn[data-tone="menu"]:hover:not(:disabled):not([data-disabled="true"]) {
+  background: var(--sem-overlay-white-08);
+  color: var(--sys-color-neutral-100);
+}
+[data-graph-panel] .vigil-btn[data-tone="glass"]:active:not(:disabled):not([data-disabled="true"]),
+[data-graph-panel] .vigil-btn[data-tone="menu"]:active:not(:disabled):not([data-disabled="true"]) {
+  background: var(--sem-surface-muted-press);
+  color: var(--sys-color-neutral-100);
+  transform: translateY(0.5px);
 }
 
 .vigil-tooltip-surface {
