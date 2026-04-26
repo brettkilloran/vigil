@@ -9,6 +9,7 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 
+import { estimatePillGeometry } from "@/src/lib/entity-graph-pill-geometry";
 import type { GraphLayoutEdge, GraphLayoutNode } from "@/src/lib/graph-layout";
 
 type SimNode = GraphLayoutNode &
@@ -80,13 +81,18 @@ function deterministicSeedPoint(
   };
 }
 
-function estimatedPillCollisionRadius(title: string): number {
-  const visibleLen = Math.min(28, title.length);
-  const estCharPx = 6.4; // 10px uppercase Geist sans + tracking
-  const estWidth = Math.min(260, Math.max(64, visibleLen * estCharPx + 24));
-  const estHeight = 28;
-  const halfDiagonal = Math.hypot(estWidth / 2, estHeight / 2);
-  return halfDiagonal + 10;
+function organicSeedPoint(
+  node: GraphLayoutNode,
+  width: number,
+  height: number,
+): { x: number; y: number } {
+  const anchor = entityTypeCentroid(node.entityType, width, height);
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 48 + Math.random() * Math.min(width, height) * 0.2;
+  return {
+    x: anchor.x + Math.cos(angle) * radius,
+    y: anchor.y + Math.sin(angle) * radius,
+  };
 }
 
 function resolveResidualOverlaps(
@@ -162,18 +168,20 @@ export function computeStableLayout(
 
   const byId = new Map<string, SimNode>();
   const pinnedIds = new Set(options.pinned?.keys() ?? []);
+  const shouldUseDeterministicSeeds = nodes.length < 400;
   const simNodes: SimNode[] = nodes.map((node) => {
     const pinned = options.pinned?.get(node.id);
     const seeded = options.seed?.get(node.id);
+    const organic = organicSeedPoint(node, width, height);
     const deterministic = deterministicSeedPoint(node, width, height);
-    const start = pinned ?? seeded ?? deterministic;
+    const start = pinned ?? seeded ?? (shouldUseDeterministicSeeds ? deterministic : organic);
     const simNode: SimNode = {
       ...node,
       x: start.x,
       y: start.y,
       fx: pinned?.x ?? null,
       fy: pinned?.y ?? null,
-      collisionRadius: estimatedPillCollisionRadius(node.title),
+      collisionRadius: estimatePillGeometry(node.title).collisionRadius,
     };
     byId.set(node.id, simNode);
     return simNode;
@@ -188,6 +196,17 @@ export function computeStableLayout(
     })
     .filter((value): value is SimLink => value !== null);
 
+  const largeGraph = nodes.length >= 1200;
+  const linkDistanceBoost = largeGraph ? 1.3 : 1;
+  const chargeStrength = largeGraph
+    ? -Math.min(520, 260 + nodes.length * 0.018)
+    : -210;
+  const linkStrength = largeGraph ? 0.15 : 0.24;
+  const collideStrength = largeGraph ? 0.84 : 0.92;
+  const anchorStrength = largeGraph ? 0.04 : 0.1;
+  const globalStrength = largeGraph ? 0.008 : 0.015;
+  const tickCount = largeGraph ? 360 : 420;
+
   const sim = forceSimulation<SimNode, SimLink>(simNodes)
     .force(
       "link",
@@ -195,33 +214,42 @@ export function computeStableLayout(
         .distance((link) => {
           const source = link.source as SimNode;
           const target = link.target as SimNode;
-          return Math.max(96, source.collisionRadius + target.collisionRadius + 18);
+          return (
+            Math.max(112, source.collisionRadius + target.collisionRadius + 24) *
+            linkDistanceBoost
+          );
         })
-        .strength(0.24),
+        .strength(linkStrength),
     )
-    .force("charge", forceManyBody<SimNode>().strength(-210))
+    .force("charge", forceManyBody<SimNode>().strength(chargeStrength))
     .force(
       "collide",
       forceCollide<SimNode>()
         .radius((node) => node.collisionRadius)
-        .strength(0.92),
+        .strength(collideStrength),
     )
     .force(
       "anchorX",
-      forceX<SimNode>((node) => entityTypeCentroid(node.entityType, width, height).x).strength(0.1),
+      forceX<SimNode>((node) => entityTypeCentroid(node.entityType, width, height).x).strength(
+        anchorStrength,
+      ),
     )
     .force(
       "anchorY",
-      forceY<SimNode>((node) => entityTypeCentroid(node.entityType, width, height).y).strength(0.1),
+      forceY<SimNode>((node) => entityTypeCentroid(node.entityType, width, height).y).strength(
+        anchorStrength,
+      ),
     )
-    .force("globalX", forceX<SimNode>(cx).strength(0.015))
-    .force("globalY", forceY<SimNode>(cy).strength(0.015))
-    .alphaDecay(0.026)
-    .velocityDecay(0.45);
+    .force("globalX", forceX<SimNode>(cx).strength(globalStrength))
+    .force("globalY", forceY<SimNode>(cy).strength(globalStrength))
+    .alphaDecay(largeGraph ? 0.028 : 0.026)
+    .velocityDecay(largeGraph ? 0.5 : 0.45);
 
   sim.stop();
-  for (let i = 0; i < 420; i += 1) sim.tick();
-  resolveResidualOverlaps(simNodes, width, height, pinnedIds);
+  for (let i = 0; i < tickCount; i += 1) sim.tick();
+  if (simNodes.length <= 2500) {
+    resolveResidualOverlaps(simNodes, width, height, pinnedIds);
+  }
 
   const pad = 36;
   for (const node of simNodes) {

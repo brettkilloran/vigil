@@ -1,3 +1,5 @@
+import type { GraphLayoutPositions } from "@/src/lib/graph-layout-cache-contract";
+
 export type GraphNode = {
   id: string;
   title: string;
@@ -5,6 +7,13 @@ export type GraphNode = {
   entityType: string | null;
   external?: boolean;
   foreignSpaceId?: string | null;
+  /**
+   * Optional precomputed community/cluster hint used by force layouts and
+   * downstream visuals. When two adjacent nodes share a hint the connecting
+   * edge is treated as intra-cluster (short, firm spring); when hints differ
+   * the edge is treated as a longer, softer bridge.
+   */
+  clusterHint?: string | null;
 };
 
 export type GraphEdge = {
@@ -23,6 +32,15 @@ export type SpaceGraphResponse = {
   ok?: boolean;
   nodes?: GraphNode[];
   edges?: GraphEdge[];
+  total_nodes?: number;
+  limit?: number;
+  offset?: number;
+  note?: string;
   itemLinksRevision?: string;
+  graphRevision?: string;
+  layoutVersion?: string;
+  layoutCacheHit?: boolean;
+  layoutCacheSavedAt?: string;
+  layoutPositions?: GraphLayoutPositions;
   error?: string;
 };

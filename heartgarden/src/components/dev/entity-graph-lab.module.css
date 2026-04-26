@@ -39,6 +39,11 @@
   gap: 10px;
 }
 
+.summary {
+  font-size: 11px;
+  color: var(--sem-text-secondary);
+}
+
 .scenarioButtons {
   display: flex;
   align-items: center;
@@ -65,6 +70,11 @@
 }
 
 .counts {
+  font-size: 11px;
+  color: var(--sem-text-secondary);
+}
+
+.hintStrip {
   font-size: 11px;
   color: var(--sem-text-secondary);
 }
@@ -138,6 +148,17 @@
   gap: 8px;
 }
 
+.relationGroups {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.relationGroup {
+  display: grid;
+  gap: 6px;
+}
+
 .graphRoot {
   --entity-graph-accent: var(--vigil-snap);
   position: relative;
@@ -145,7 +166,7 @@
   height: 100%;
   overflow: hidden;
   cursor: grab;
-  background: var(--sem-bg-canvas, var(--vigil-canvas));
+  background: #000;
 }
 
 .graphRootDragging {
@@ -169,7 +190,33 @@
   position: absolute;
   inset: 0;
   overflow: visible;
+  pointer-events: auto;
+}
+
+.webglHtmlOverlay {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
+}
+
+.webglHtmlOverlay .pillNode {
+  pointer-events: auto;
+}
+
+.physicsActive .pillNode {
+  animation-play-state: paused;
+}
+
+.blurDisabled .pillNode {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: color-mix(in srgb, white 14%, transparent);
+}
+
+.blurDisabled .edgeTooltip,
+.blurDisabled .threeOverlayCard {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .edge {
@@ -190,10 +237,92 @@
   opacity: 0.95;
 }
 
+.edgeHit {
+  stroke: transparent;
+  stroke-width: 12;
+  cursor: pointer;
+}
+
+.edgeTooltip {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+  font-size: 11px;
+  color: var(--sem-text-primary);
+  border: 1px solid var(--sem-border-subtle);
+  background: color-mix(in srgb, white 18%, transparent);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.nodeHoverPreview {
+  position: absolute;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+  max-width: min(300px, calc(100% - 20px));
+  border: 1px solid color-mix(in srgb, white 30%, var(--sem-border-subtle) 70%);
+  border-radius: 10px;
+  background: color-mix(in srgb, white 20%, transparent);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  padding: 8px 10px;
+  display: grid;
+  gap: 3px;
+}
+
+.nodeHoverPreviewId {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sem-text-secondary);
+}
+
+.nodeHoverPreviewTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sem-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoverPill {
+  pointer-events: none;
+  z-index: var(--layer-ui-chrome);
+  background: color-mix(in srgb, white 26%, transparent);
+  border-color: color-mix(in srgb, white 48%, var(--sem-border-subtle) 52%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 8px 20px rgba(0, 0, 0, 0.28);
+  animation: none;
+}
+
+@keyframes pillBreathe {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0);
+  }
+  33% {
+    transform: translate(-50%, -50%) translate(0.6px, -1.8px);
+  }
+  66% {
+    transform: translate(-50%, -50%) translate(-0.5px, -0.4px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(0, 0);
+  }
+}
+
 .pillNode {
   position: absolute;
-  transform: translate(-50%, -50%);
-  border: 1px solid color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0.5px solid color-mix(in srgb, white 28%, var(--sem-border-subtle) 72%);
   border-radius: 999px;
   background: color-mix(in srgb, white 18%, transparent);
   color: var(--sem-text-primary);
@@ -220,27 +349,32 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 4px 14px rgba(0, 0, 0, 0.18);
+  backface-visibility: hidden;
+}
+
+.pillTypeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex: 0 0 auto;
 }
 
 .pillNode:hover {
   background: color-mix(in srgb, white 28%, transparent);
   color: var(--sem-text-primary);
-  border-color: color-mix(in srgb, white 58%, var(--sem-border-subtle) 42%);
+  border-color: color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 7px 16px rgba(0, 0, 0, 0.24);
 }
 
 .pillNodeSelected {
   background: color-mix(in srgb, white 97%, var(--sem-surface-elevated) 3%);
   color: color-mix(in srgb, black 90%, #0b0b0c 10%);
-  border-color: color-mix(in srgb, var(--entity-graph-accent) 74%, white 26%);
+  border-color: color-mix(in srgb, var(--entity-graph-accent) 60%, white 40%);
   font-weight: 700;
-  transform: translate(-50%, -50%) scale(1.12);
-  padding: 8px 14px;
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 58%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
+    0 0 0 0.5px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
     0 10px 24px color-mix(in srgb, var(--entity-graph-accent) 26%, transparent);
 }
 
@@ -251,7 +385,7 @@
 
 .pillNodeNeighbor {
   background: color-mix(in srgb, white 24%, transparent);
-  border-color: color-mix(in srgb, white 46%, var(--sem-border-subtle) 54%);
+  border-color: color-mix(in srgb, white 32%, var(--sem-border-subtle) 68%);
 }
 
 .pillNodeDimmed {
@@ -261,6 +395,64 @@
 
 .pillNodeDimmed:hover {
   opacity: 0.42;
+}
+
+.perfHud {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: var(--layer-ui-chrome);
+  border-radius: var(--chrome-panel-radius);
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--sem-text-secondary);
+}
+
+.threeOverlayCard {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: min(380px, calc(100% - 28px));
+  z-index: var(--layer-ui-chrome);
+  border: 1px solid color-mix(in srgb, white 30%, var(--sem-border-subtle) 70%);
+  border-radius: 14px;
+  background: color-mix(in srgb, white 16%, transparent);
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  padding: 12px 13px;
+}
+
+.threeOverlayMeta {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sem-text-secondary);
+}
+
+.threeOverlayTitle {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sem-text-primary);
+}
+
+.threeOverlayBody {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sem-text-secondary);
+}
+
+.threeOverlayClose {
+  margin-top: 10px;
+  border: 1px solid var(--sem-border-subtle);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--sem-text-primary);
+  background: color-mix(in srgb, white 8%, transparent);
 }
 
 @media (max-width: 1120px) {

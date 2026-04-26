@@ -5,6 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowCounterClockwise, Graph, X } from "@phosphor-icons/react";
 
 import { Button } from "@/src/components/ui/Button";
+import {
+  GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
+  graphLayoutPositionsFromMap,
+  graphLayoutPositionsToMap,
+  type GraphLayoutPositions,
+} from "@/src/lib/graph-layout-cache-contract";
 import { computeForceLayout } from "@/src/lib/graph-layout";
 import type { GraphEdge, GraphNode, SpaceGraphResponse } from "@/src/lib/graph-types";
 import {
@@ -23,20 +29,84 @@ function clientToSvgCoords(
 }
 
 function LinkGraphInteractiveSvg({
+  spaceId,
+  graphRevision,
+  layoutVersion,
+  initialPositions,
   nodes,
   edges,
   onPick,
 }: {
+  spaceId: string;
+  graphRevision: string | null;
+  layoutVersion: string;
+  initialPositions: GraphLayoutPositions | null;
   nodes: GraphNode[];
   edges: GraphEdge[];
   onPick: (id: string) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [layout, setLayout] = useState(
-    () => computeForceLayout(nodes, edges, 1000, 1000),
-  );
+  const [layout, setLayout] = useState(() => {
+    const seed = graphLayoutPositionsToMap(initialPositions);
+    if (seed.size > 0) return computeForceLayout(nodes, edges, 1000, 1000, seed);
+    return computeForceLayout(nodes, edges, 1000, 1000);
+  });
   const dragRef = useRef<{ id: string; ox: number; oy: number } | null>(null);
   const movedRef = useRef(false);
+  const lastPersistKeyRef = useRef<string>("");
+  const latestLayoutRef = useRef(layout);
+  const layoutDirtyRef = useRef(false);
+  const layoutChangedAtRef = useRef(0);
+
+  useEffect(() => {
+    latestLayoutRef.current = layout;
+    layoutDirtyRef.current = true;
+    layoutChangedAtRef.current = Date.now();
+  }, [layout]);
+
+  useEffect(() => {
+    if (!graphRevision || nodes.length === 0) return;
+    const flushQuietWindowMs = 700;
+    const tickMs = 250;
+    const timer = window.setInterval(() => {
+      if (!layoutDirtyRef.current) return;
+      if (Date.now() - layoutChangedAtRef.current < flushQuietWindowMs) return;
+      const positions = graphLayoutPositionsFromMap(latestLayoutRef.current);
+      const nodeCount = Object.keys(positions).length;
+      if (nodeCount === 0) return;
+      let sample = 2166136261;
+      let sampled = 0;
+      for (const [id, point] of Object.entries(positions)) {
+        for (let i = 0; i < id.length; i += 1) {
+          sample ^= id.charCodeAt(i);
+          sample = Math.imul(sample, 16777619);
+        }
+        sample ^= Math.trunc(point.x * 10);
+        sample = Math.imul(sample, 16777619);
+        sample ^= Math.trunc(point.y * 10);
+        sample = Math.imul(sample, 16777619);
+        sampled += 1;
+        if (sampled >= 96) break;
+      }
+      const persistKey = `${graphRevision}:${layoutVersion}:${nodeCount}:${sample >>> 0}`;
+      if (persistKey === lastPersistKeyRef.current) return;
+      lastPersistKeyRef.current = persistKey;
+      layoutDirtyRef.current = false;
+      void fetch(`/api/spaces/${encodeURIComponent(spaceId)}/graph-layout-cache`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          graphRevision,
+          layoutVersion,
+          nodeCount,
+          positions,
+        }),
+      }).catch(() => {
+        /* non-fatal cache write miss */
+      });
+    }, tickMs);
+    return () => window.clearInterval(timer);
+  }, [graphRevision, layoutVersion, nodes.length, spaceId]);
 
   return (
     <svg
@@ -169,6 +239,10 @@ function LinkGraphInner({
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [layoutRevision, setLayoutRevision] = useState(0);
+  const [graphRevision, setGraphRevision] = useState<string | null>(null);
+  const [layoutVersion, setLayoutVersion] = useState(GRAPH_LAYOUT_CACHE_LAYOUT_VERSION);
+  const [layoutPositions, setLayoutPositions] = useState<GraphLayoutPositions | null>(null);
+  const [layoutCacheHit, setLayoutCacheHit] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,10 +254,21 @@ function LinkGraphInner({
             setErr(data.error ?? "Could not load graph");
             setNodes([]);
             setEdges([]);
+            setGraphRevision(null);
+            setLayoutPositions(null);
+            setLayoutCacheHit(false);
           } else {
             setErr(null);
             setNodes(data.nodes);
             setEdges(data.edges ?? []);
+            setGraphRevision(typeof data.graphRevision === "string" ? data.graphRevision : null);
+            setLayoutVersion(
+              typeof data.layoutVersion === "string" && data.layoutVersion
+                ? data.layoutVersion
+                : GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
+            );
+            setLayoutPositions(data.layoutPositions ?? null);
+            setLayoutCacheHit(data.layoutCacheHit === true);
           }
           setDone(true);
         })
@@ -192,6 +277,9 @@ function LinkGraphInner({
         setErr("Could not load graph");
         setNodes([]);
         setEdges([]);
+        setGraphRevision(null);
+        setLayoutPositions(null);
+        setLayoutCacheHit(false);
         setDone(true);
       });
     return () => {
@@ -223,7 +311,16 @@ function LinkGraphInner({
           Link graph
         </span>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="md" variant="default" tone="glass" onClick={() => setLayoutRevision((n) => n + 1)}>
+          <Button
+            size="md"
+            variant="default"
+            tone="glass"
+            onClick={() => {
+              setLayoutPositions(null);
+              setLayoutCacheHit(false);
+              setLayoutRevision((n) => n + 1);
+            }}
+          >
             <ArrowCounterClockwise className={HEARTGARDEN_CHROME_ICON} weight="bold" aria-hidden />
             Reset layout
           </Button>
@@ -245,6 +342,10 @@ function LinkGraphInner({
         ) : (
           <LinkGraphInteractiveSvg
             key={layoutRevision}
+            spaceId={spaceId}
+            graphRevision={graphRevision}
+            layoutVersion={layoutVersion}
+            initialPositions={layoutPositions}
             nodes={nodes}
             edges={edges}
             onPick={onPick}
@@ -254,6 +355,8 @@ function LinkGraphInner({
       <p className="border-t border-[var(--vigil-border)] px-4 py-2.5 text-[10px] leading-relaxed text-[var(--vigil-muted)]">
         Layout: <strong>d3-force</strong> (charge + links + collision). Circles
         are items; lines are <code className="text-[9px]">item_links</code>.
+        {" "}
+        Cache: <strong>{layoutCacheHit ? "warm" : "cold"}</strong>.
         <strong> Reset layout</strong> starts fresh; <strong>drag</strong> a node
         to reposition; release to re-run layout from that pose. Click (without
         dragging) to jump to the item.

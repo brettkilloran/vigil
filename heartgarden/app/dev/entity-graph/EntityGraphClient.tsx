@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+
 import { EntityGraphLab } from "@/src/components/dev/EntityGraphLab";
 import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
 
@@ -9,9 +11,15 @@ import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
  * chunk never finished loading; a static import keeps this route reliable in dev.
  */
 export function EntityGraphClient() {
+  const params = useSearchParams();
+  const initialScenarioKey = params.get("scenario");
+  const initialFilter = params.get("filter") ?? "";
   return (
     <VigilThemeProvider>
-      <EntityGraphLab />
+      <EntityGraphLab
+        initialScenarioKey={initialScenarioKey}
+        initialFilter={initialFilter}
+      />
     </VigilThemeProvider>
   );
 }

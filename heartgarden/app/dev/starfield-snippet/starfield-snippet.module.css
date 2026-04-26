@@ -1,0 +1,26 @@
+.page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #020202;
+}
+
+.canvasContainer {
+  position: absolute;
+  inset: 0;
+}
+
+.caption {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(3, 3, 4, 0.45);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}

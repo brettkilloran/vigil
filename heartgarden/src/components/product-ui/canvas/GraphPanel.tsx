@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/src/components/ui/Button";
+import { EntityGraphThreeCanvas } from "@/src/components/product-ui/canvas/EntityGraphThreeCanvas";
+import type { CameraAction, LayoutMap } from "@/src/lib/graph-canvas-types";
+import { solveStableLayoutStreamingInWorker } from "@/src/lib/entity-graph-layout-client";
+import { buildEntityGraphModel } from "@/src/lib/entity-graph-model";
+import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 
 type BraneGraphNode = {
   id: string;
@@ -43,6 +48,23 @@ type SeedSearchHit = {
 
 const NEIGHBORHOOD_LIMIT = 250;
 const FULL_MODE_LIMIT = 250;
+
+function computeWorldSize(nodeCount: number): { width: number; height: number } {
+  const floor = 1800;
+  const spread = Math.ceil(Math.sqrt(Math.max(1, nodeCount)) * 220);
+  const side = Math.min(22000, Math.max(floor, spread));
+  return { width: side, height: side };
+}
+
+function nextAction(
+  key: number,
+  type: CameraAction,
+): {
+  key: number;
+  type: CameraAction;
+} {
+  return { key: key + 1, type };
+}
 
 /**
  * REVIEW_2026-04-25_1730 H4: GraphPanel was previously a one-shot
@@ -90,8 +112,50 @@ export function GraphPanel({
   const [frontierTruncated, setFrontierTruncated] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<LayoutMap>(new Map());
+  const [layoutLoading, setLayoutLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [cameraAction, setCameraAction] = useState<{ key: number; type: CameraAction }>({
+    key: 0,
+    type: "reset",
+  });
 
   const etagRef = useRef<string | null>(null);
+  const graphViewportRef = useRef<HTMLDivElement | null>(null);
+
+  const graphNodes = useMemo<GraphNode[]>(
+    () =>
+      nodes.map((node) => ({
+        id: node.id,
+        title: node.title,
+        itemType: node.itemType,
+        entityType: node.entityType,
+      })),
+    [nodes],
+  );
+  const graphEdges = useMemo<GraphEdge[]>(
+    () =>
+      edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        color: null,
+        sourcePin: null,
+        targetPin: null,
+        linkType: edge.linkType ?? (edge.edgeKind === "implicit" ? edge.matchedTerm ?? "mention" : edge.edgeKind),
+      })),
+    [edges],
+  );
+  const world = useMemo(() => computeWorldSize(graphNodes.length), [graphNodes.length]);
+  const model = useMemo(() => buildEntityGraphModel(graphNodes, graphEdges), [graphEdges, graphNodes]);
+  const selectedNeighborIds = useMemo(() => {
+    if (!selectedId) return new Set<string>();
+    return model.neighborIdsByNode.get(selectedId) ?? new Set<string>();
+  }, [model, selectedId]);
+  const selectedActiveEdgeIds = useMemo(() => {
+    if (!selectedId) return new Set<string>();
+    return model.edgeIdsByNode.get(selectedId) ?? new Set<string>();
+  }, [model, selectedId]);
 
   // Reset seed and graph state when the brane changes.
   useEffect(() => {
@@ -99,8 +163,11 @@ export function GraphPanel({
     setSeedTitle(null);
     setNodes([]);
     setEdges([]);
+    setLayout(new Map());
+    setSelectedId(null);
     setMode("neighborhood");
     setMaxDepth(1);
+    setCameraAction({ key: 0, type: "reset" });
     etagRef.current = null;
   }, [braneId]);
 
@@ -206,6 +273,40 @@ export function GraphPanel({
     };
   }, [open, braneId, mode, seedItemId, maxDepth]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (graphNodes.length === 0) {
+      setLayout(new Map());
+      setSelectedId(null);
+      return;
+    }
+    let cancelled = false;
+    setLayoutLoading(true);
+    void solveStableLayoutStreamingInWorker(
+      graphNodes,
+      graphEdges,
+      { width: world.width, height: world.height },
+      (progress) => {
+        if (cancelled) return;
+        setLayout(new Map(progress));
+      },
+    )
+      .then((resolved) => {
+        if (cancelled) return;
+        setLayout(new Map(resolved));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLayout(new Map());
+      })
+      .finally(() => {
+        if (!cancelled) setLayoutLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [graphEdges, graphNodes, open, world.height, world.width]);
+
   const filteredNodes = useMemo(() => {
     const q = filterQuery.trim().toLowerCase();
     if (!q) return nodes;
@@ -216,6 +317,8 @@ export function GraphPanel({
     setSeedItemId(hit.id);
     setSeedTitle(hit.title ?? "(untitled)");
     setMode("neighborhood");
+    setSelectedId(null);
+    setCameraAction((current) => nextAction(current.key, "reset"));
     setSeedSearchQuery("");
     setSeedSearchResults([]);
     etagRef.current = null;
@@ -226,8 +329,11 @@ export function GraphPanel({
     setSeedTitle(null);
     setNodes([]);
     setEdges([]);
+    setLayout(new Map());
+    setSelectedId(null);
     setMode("neighborhood");
     setMaxDepth(1);
+    setCameraAction((current) => nextAction(current.key, "reset"));
     etagRef.current = null;
   };
 
@@ -235,6 +341,8 @@ export function GraphPanel({
     setMode("full");
     setSeedItemId(null);
     setSeedTitle(null);
+    setSelectedId(null);
+    setCameraAction((current) => nextAction(current.key, "reset"));
     etagRef.current = null;
   };
 
@@ -365,8 +473,27 @@ export function GraphPanel({
             />
           </div>
 
-          <div className="px-3 pb-2 text-xs text-[var(--vigil-label)]">
-            {loading ? "Loading graph..." : `${nodes.length} nodes · ${edges.length} edges`}
+          <div className="flex items-center justify-between px-3 pb-2 text-xs text-[var(--vigil-label)]">
+            <span>{loading ? "Loading graph..." : `${nodes.length} nodes · ${edges.length} edges`}</span>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                tone="menu"
+                onClick={() => setCameraAction((current) => nextAction(current.key, "frame-all"))}
+              >
+                Frame all
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                tone="menu"
+                onClick={() => setCameraAction((current) => nextAction(current.key, "frame-selection"))}
+                disabled={!selectedId}
+              >
+                Frame selected
+              </Button>
+            </div>
           </div>
 
           {(truncated || frontierTruncated) && !loading && (
@@ -380,7 +507,37 @@ export function GraphPanel({
             </div>
           )}
 
-          <div className="max-h-[55vh] overflow-auto px-3 pb-3">
+          <div ref={graphViewportRef} className="mx-3 h-[300px] overflow-hidden rounded-md border border-[var(--vigil-border)]">
+            {graphNodes.length > 0 && layout.size > 0 ? (
+              <EntityGraphThreeCanvas
+                nodes={graphNodes}
+                edges={graphEdges}
+                layout={layout}
+                worldWidth={world.width}
+                worldHeight={world.height}
+                blurEffectsEnabled
+                selectedId={selectedId}
+                neighborIds={selectedNeighborIds}
+                activeEdgeIds={selectedActiveEdgeIds}
+                degreeByNode={model.degreeByNode}
+                cameraActionKey={cameraAction.key}
+                cameraActionType={cameraAction.type}
+                showStatsFooter={false}
+                enableNodeOverlayCard={false}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  if (id) onSelectItem(id);
+                }}
+                onLayoutChange={(next) => setLayout(new Map(next))}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-[var(--vigil-muted)]">
+                {layoutLoading ? "Solving layout..." : "No graph to render."}
+              </div>
+            )}
+          </div>
+
+          <div className="max-h-[28vh] overflow-auto px-3 pb-3 pt-2">
             <ul className="space-y-1">
               {filteredNodes.slice(0, 200).map((node) => (
                 <li key={node.id}>
@@ -389,7 +546,12 @@ export function GraphPanel({
                     variant="subtle"
                     tone="menu"
                     className="w-full justify-start truncate"
-                    onClick={() => onSelectItem(node.id)}
+                    isActive={selectedId === node.id}
+                    onClick={() => {
+                      setSelectedId(node.id);
+                      onSelectItem(node.id);
+                      setCameraAction((current) => nextAction(current.key, "frame-selection"));
+                    }}
                   >
                     {node.title}
                     <span className="ml-1 text-[var(--vigil-muted)]">({node.itemType})</span>
