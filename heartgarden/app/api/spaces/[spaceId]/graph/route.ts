@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { tryGetDb } from "@/src/db/index";
 import { itemLinks, items } from "@/src/db/schema";
 import { getHeartgardenApiBootContext } from "@/src/lib/heartgarden-api-boot-context";
-import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
+import type { GraphEdge, GraphNode, SpaceGraphResponse } from "@/src/lib/graph-types";
 import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
 import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { computeItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
@@ -87,10 +87,10 @@ export async function GET(
 
   const idList = rows.map((r) => r.id);
   if (idList.length === 0) {
-    const emptyPayload: Record<string, unknown> = {
+    const emptyPayload: SpaceGraphResponse = {
       ok: true,
-      nodes: [] as GraphNode[],
-      edges: [] as GraphEdge[],
+      nodes: [],
+      edges: [],
       total_nodes: totalNodes,
       itemLinksRevision,
       graphRevision,
@@ -183,7 +183,7 @@ export async function GET(
     slackMultiplier: parseSlackMultiplierFromLinkMeta(l.meta),
   }));
 
-  const payload: Record<string, unknown> = {
+  const payload: SpaceGraphResponse = {
     ok: true,
     nodes,
     edges,

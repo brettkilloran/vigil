@@ -57,10 +57,19 @@ export async function computeSpaceGraphRevisionForSpace(
     itemLinksRevision ? Promise.resolve(itemLinksRevision) : computeItemLinksRevisionForSpace(db, spaceId),
   ]);
   const value = `items:${itemsRevision}|links:${linksRevision}`;
-  spaceGraphRevisionCache.set(spaceId, {
-    value,
-    expiresAt: now + SPACE_GRAPH_REVISION_CACHE_TTL_MS,
-  });
-  pruneSpaceGraphRevisionCacheIfOversized(now);
+  /*
+   * Only populate the cache when no external itemLinksRevision was supplied.
+   * Writing when an external revision is provided would overwrite a valid cache entry
+   * with a value computed from a caller-owned snapshot; within the TTL window the items
+   * revision could already be stale, causing the layout-cache lookup to match against
+   * the wrong graph topology.
+   */
+  if (canUseCachedValue) {
+    spaceGraphRevisionCache.set(spaceId, {
+      value,
+      expiresAt: now + SPACE_GRAPH_REVISION_CACHE_TTL_MS,
+    });
+    pruneSpaceGraphRevisionCacheIfOversized(now);
+  }
   return value;
 }

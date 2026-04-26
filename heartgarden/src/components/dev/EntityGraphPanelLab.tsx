@@ -298,20 +298,28 @@ export function EntityGraphPanelLab() {
                               size="xs"
                               variant="subtle"
                               tone="glass"
+                              aria-label={node.title}
                               title={node.title}
                               onClick={() => setSelectedId(node.id)}
                               onMouseEnter={() => setHoveredChipId(node.id)}
                               onMouseLeave={() => setHoveredChipId(null)}
                               style={{
                                 maxWidth: 160,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
                                 transform: hoveredChipId === node.id ? "translateY(-1px)" : "translateY(0)",
                                 transition: "transform 100ms ease-out",
                               }}
                             >
-                              {node.title}
+                              <span
+                                style={{
+                                  display: "block",
+                                  minWidth: 0,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {node.title}
+                              </span>
                             </Button>
                           ))}
                         </div>
