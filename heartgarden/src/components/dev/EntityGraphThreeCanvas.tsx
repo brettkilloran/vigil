@@ -232,6 +232,9 @@ export function EntityGraphThreeCanvas({
   });
   const autoClusterFocusRef = useRef(true);
   const forceClusterFocusActionKeyRef = useRef<number | null>(null);
+  // Smooth opacity lerp targets — written by the layout effect, consumed by the frame loop.
+  const edgeMutedOpacityTargetRef = useRef(0.38);
+  const edgeActiveOpacityTargetRef = useRef(0.46);
   const lastSelectedIdRef = useRef<string | null>(selectedId);
   const nodeOrderRef = useRef<string[]>([]);
   const positionsRef = useRef<Float32Array>(new Float32Array());
@@ -599,12 +602,21 @@ export function EntityGraphThreeCanvas({
         const mat = el.material as THREE.ShaderMaterial;
         if (mat?.uniforms?.uTime) mat.uniforms.uTime.value = t;
         if (mat?.uniforms?.uBreathAmp) mat.uniforms.uBreathAmp.value = breathAmp;
+        // Smooth lerp toward the target opacity set by the layout effect.
+        if (mat?.uniforms?.uOpacity) {
+          const target = edgeMutedOpacityTargetRef.current;
+          mat.uniforms.uOpacity.value += (target - mat.uniforms.uOpacity.value) * 0.07;
+        }
       }
       const al = edgeActiveLineRef.current;
       if (al) {
         const mat = al.material as THREE.ShaderMaterial;
         if (mat?.uniforms?.uTime) mat.uniforms.uTime.value = t;
         if (mat?.uniforms?.uBreathAmp) mat.uniforms.uBreathAmp.value = breathAmp;
+        if (mat?.uniforms?.uOpacity) {
+          const target = edgeActiveOpacityTargetRef.current;
+          mat.uniforms.uOpacity.value += (target - mat.uniforms.uOpacity.value) * 0.07;
+        }
       }
       renderer.render(scene, camera);
       frameRef.current = window.requestAnimationFrame(renderLoop);
@@ -1015,10 +1027,10 @@ export function EntityGraphThreeCanvas({
     activeEdgeNodeIdx.needsUpdate = true;
     activeLines.geometry.boundingSphere = new THREE.Sphere(center, radius + 120);
 
-    const mutedMaterial = lines.material as THREE.ShaderMaterial;
     const highlightMaterial = activeLines.material as THREE.ShaderMaterial;
-    mutedMaterial.uniforms.uOpacity.value = hasSelection ? 0.06 : 0.38;
-    highlightMaterial.uniforms.uOpacity.value = hasHover ? 0.92 : hasSelection ? 0.74 : 0.46;
+    // Write to lerp targets — the frame loop smoothly interpolates the actual uniforms.
+    edgeMutedOpacityTargetRef.current = hasSelection ? 0.06 : 0.38;
+    edgeActiveOpacityTargetRef.current = hasHover ? 0.92 : hasSelection ? 0.74 : 0.46;
     highlightMaterial.uniforms.uColor.value = colorFromStyle(
       hasHover && !hasSelection ? EDGE_HOVER_RGB : EDGE_ACTIVE_OKLCH,
     );
@@ -1253,6 +1265,21 @@ export function EntityGraphThreeCanvas({
     });
   }, [nodes.length, selectedId, worldHeight, worldWidth]);
 
+  // When a node is focused, expand the collision radius for the entire focused
+  // cluster (selected + all neighbors) so the force simulation pushes them
+  // apart until their pill labels no longer overlap.
+  useEffect(() => {
+    const session = sessionRef.current;
+    if (!session) return;
+    const focusNodeIds = selectedId
+      ? [selectedId, ...Array.from(neighborIds)]
+      : [];
+    session.reheat({
+      focusNodeIds,
+      alpha: focusNodeIds.length > 0 ? 0.18 : 0.04,
+    });
+  }, [selectedId, neighborIds]);
+
   useEffect(() => {
     const root = rootRef.current;
     const camera = cameraRef.current;
@@ -1445,11 +1472,9 @@ export function EntityGraphThreeCanvas({
       let sampleOffset = 0;
       if (selectedId) {
         targetIds.add(selectedId);
-        let added = 0;
+        // No cap — all neighbors must become pills when a node is focused.
         for (const id of neighborIds) {
           targetIds.add(id);
-          added += 1;
-          if (added >= 80) break;
         }
       } else {
         const cap = Math.min(ids.length, 1200);
@@ -1549,7 +1574,7 @@ export function EntityGraphThreeCanvas({
         const minCellY = Math.floor((item.screenY - item.estHeight * 0.5) / cellSize);
         const maxCellY = Math.floor((item.screenY + item.estHeight * 0.5) / cellSize);
         let blocked = false;
-        if (!item.selected) {
+        if (!item.selected && !item.neighbor) {
           for (let cx = minCellX; cx <= maxCellX && !blocked; cx += 1) {
             for (let cy = minCellY; cy <= maxCellY && !blocked; cy += 1) {
               const bucket = buckets.get(`${cx}:${cy}`);
@@ -1717,7 +1742,7 @@ export function EntityGraphThreeCanvas({
                 }}
               >
                 <span className={styles.pillTypeDot} style={{ background: typeStyle.dotColor }} />
-                {node.title}
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{node.title}</span>
               </button>
             );
           })}
@@ -1725,20 +1750,42 @@ export function EntityGraphThreeCanvas({
       ) : null}
       {hoverPreview && !overlayNodeIdsRef.current.has(hoverPreview.nodeId) ? (() => {
         const hoverTypeStyle = getEntityTypeStyle(hoverPreview.entityType);
+        const previewId = hoverPreview.nodeId;
+        const previewTransform = `translate3d(${hoverPreview.x}px, ${hoverPreview.y}px, 0) translate(-50%, -50%)`;
         return (
-          <div
-            className={`${styles.pillNode} ${styles.hoverPill}`}
-            style={{
-              left: 0,
-              top: 0,
-              transform: `translate3d(${hoverPreview.x}px, ${hoverPreview.y}px, 0) translate(-50%, -50%)`,
-              paddingInline: "12px",
-              willChange: "transform",
-            }}
-          >
-            <span className={styles.pillTypeDot} style={{ background: hoverTypeStyle.dotColor }} />
-            {hoverPreview.title}
-          </div>
+          <>
+            {/* Expanding glow ring — re-mounts per node to retrigger the animation */}
+            <div
+              key={`ring-${previewId}`}
+              className={styles.hoverGlowRing}
+              style={{ left: 0, top: 0, transform: previewTransform }}
+            />
+            <button
+              type="button"
+              className={`${styles.pillNode} ${styles.hoverPill}`}
+              style={{
+                left: 0,
+                top: 0,
+                transform: previewTransform,
+                paddingInline: "12px",
+                willChange: "transform",
+              }}
+              title={hoverPreview.title}
+              onPointerEnter={() => setHoveredNodeId(previewId)}
+              onPointerLeave={() => {
+                setHoveredNodeId((current) => (current === previewId ? null : current));
+                setHoverPreview((current) => (current?.nodeId === previewId ? null : current));
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect(previewId);
+                setHoverPreview(null);
+              }}
+            >
+              <span className={styles.pillTypeDot} style={{ background: hoverTypeStyle.dotColor }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{hoverPreview.title}</span>
+            </button>
+          </>
         );
       })() : null}
       {showStatsFooter ? (

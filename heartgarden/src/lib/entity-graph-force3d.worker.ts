@@ -45,6 +45,10 @@ type ReheatMessage = {
   removeEdgeIds?: string[];
   updateNodes?: Array<Pick<GraphNode, "id" | "clusterHint">>;
   fixedNodes?: Array<{ id: string; x: number; y: number; z?: number; ttlTicks?: number }>;
+  /** Node IDs in the focused cluster (selected + neighbors). Nodes in this set
+   *  receive an expanded collision radius so the simulation spreads them apart
+   *  enough for pill labels to be legible. Pass an empty array to reset. */
+  focusNodeIds?: string[];
 };
 
 type StopMessage = {
@@ -106,12 +110,18 @@ type WorkerState = {
   timer: ReturnType<typeof setTimeout> | null;
   pinTicksById: Map<string, number>;
   clusterCentroids: Map<string, { x: number; y: number }>;
+  focusedNodeIds: Set<string>;
 };
 
 const FAST_TICK_MS = 16;
 const IDLE_TICK_MS = 200;
 
 const NODE_VISUAL_RADIUS = 6.4;
+// Expanded collision radius applied to focused nodes (selected + neighbors) so
+// the simulation pushes them far enough apart for pill labels to be readable.
+// At DEFAULT_CAMERA_ZOOM (1.45), two nodes at this radius are ~150px apart,
+// leaving room for a typical ~120px pill with a comfortable margin.
+const NODE_FOCUS_VISUAL_RADIUS = 44;
 const NODE_LABEL_MARGIN = 5.2;
 const HUB_RADIUS_PER_EDGE = 0.32;
 const HUB_RADIUS_CAP = 7.5;
@@ -587,6 +597,20 @@ function applyReheat(message: ReheatMessage): void {
     }
   }
 
+  if (message.focusNodeIds !== undefined) {
+    // Reset previously focused nodes back to the default visual radius.
+    for (const id of state.focusedNodeIds) {
+      const node = state.nodeById.get(id);
+      if (node) node.visualRadius = NODE_VISUAL_RADIUS;
+    }
+    state.focusedNodeIds = new Set(message.focusNodeIds);
+    // Apply expanded radius so the collision force spreads these nodes apart.
+    for (const id of state.focusedNodeIds) {
+      const node = state.nodeById.get(id);
+      if (node) node.visualRadius = NODE_FOCUS_VISUAL_RADIUS;
+    }
+  }
+
   applyGraphToSimulation();
   state.sim.alpha(Math.max(state.sim.alpha(), message.alpha ?? 0.12)).restart();
   setStatus("active");
@@ -626,6 +650,7 @@ function initSimulation(message: InitMessage): void {
     timer: null,
     pinTicksById: new Map(),
     clusterCentroids: centroids,
+    focusedNodeIds: new Set(),
   };
 
   applyGraphToSimulation();

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { EntityGraphThreeCanvas } from "@/src/components/product-ui/canvas/EntityGraphThreeCanvas";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
+import { Button } from "@/src/components/design-system/primitives/Button";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import type { CameraAction, LayoutMap } from "@/src/lib/graph-canvas-types";
 import { solveStableLayoutStreamingInWorker } from "@/src/lib/entity-graph-layout-client";
@@ -71,6 +72,22 @@ export function EntityGraphPanelLab() {
       .filter((node): node is GraphNode => node !== null)
       .slice(0, 4);
   }, [graphNodes, neighborIds, selectedNode]);
+
+  // Panel crossfade — keeps the displayed content stable while fading out,
+  // then swaps to the new node and fades back in.
+  const [panelDisplayId, setPanelDisplayId] = useState<string | null>(selectedId);
+  const [panelFading, setPanelFading] = useState(false);
+  const [hoveredChipId, setHoveredChipId] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (selectedId === panelDisplayId) return;
+    setPanelFading(true);
+    const t = setTimeout(() => {
+      setPanelDisplayId(selectedId);
+      setPanelFading(false);
+    }, 95);
+    return () => clearTimeout(t);
+  }, [selectedId, panelDisplayId]);
 
   useEffect(() => {
     if (graphNodes.length === 0) {
@@ -241,57 +258,72 @@ export function EntityGraphPanelLab() {
 
               {/* Body */}
               <div style={{ padding: "14px 16px 14px" }}>
-                {selectedNode ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {/* Title + meta */}
-                    <div>
-                      <div
-                        className="truncate"
-                        style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.3, color: "var(--sem-text-primary)" }}
-                      >
-                        {selectedNode.title}
-                      </div>
-                        <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--sem-text-secondary)", marginTop: 6 }}>
-                          {formatEntityLabel(selectedNode)}
+                <div
+                  style={{
+                    opacity: panelFading ? 0 : 1,
+                    transition: panelFading
+                      ? "opacity 95ms ease-out"
+                      : "opacity 160ms ease-in",
+                  }}
+                >
+                {panelDisplayId && graphNodes.find((n) => n.id === panelDisplayId) ? (() => {
+                  const displayNode = graphNodes.find((n) => n.id === panelDisplayId)!;
+                  const displayNeighbors = Array.from(
+                    model.neighborIdsByNode.get(panelDisplayId) ?? new Set<string>()
+                  )
+                    .map((id) => graphNodes.find((n) => n.id === id) ?? null)
+                    .filter((n): n is GraphNode => n !== null)
+                    .slice(0, 4);
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {/* Title + meta */}
+                      <div>
+                        <div
+                          className="truncate"
+                          style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.3, color: "var(--sem-text-primary)" }}
+                        >
+                          {displayNode.title}
                         </div>
-                    </div>
-
-                    {/* Neighbor chips */}
-                    {neighborPreview.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {neighborPreview.map((node) => (
-                          <button
-                            key={node.id}
-                            style={{
-                              display: "inline-block",
-                              maxWidth: 160,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              borderRadius: 6,
-                              padding: "3px 8px",
-                              fontSize: 11,
-                              fontWeight: 500,
-                              border: "0.5px solid color-mix(in srgb, white 16%, transparent)",
-                              background: "color-mix(in srgb, white 8%, transparent)",
-                              color: "var(--sem-text-secondary)",
-                              cursor: "pointer",
-                            }}
-                            title={node.title}
-                            onClick={() => setSelectedId(node.id)}
-                          >
-                            {node.title}
-                          </button>
-                        ))}
+                        <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--sem-text-secondary)", marginTop: 6 }}>
+                          {formatEntityLabel(displayNode)}
+                        </div>
                       </div>
-                    )}
 
-                  </div>
-                ) : (
+                      {/* Neighbor chips */}
+                      {displayNeighbors.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {displayNeighbors.map((node) => (
+                            <Button
+                              key={node.id}
+                              size="xs"
+                              variant="subtle"
+                              tone="glass"
+                              title={node.title}
+                              onClick={() => setSelectedId(node.id)}
+                              onMouseEnter={() => setHoveredChipId(node.id)}
+                              onMouseLeave={() => setHoveredChipId(null)}
+                              style={{
+                                maxWidth: 160,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                transform: hoveredChipId === node.id ? "translateY(-1px)" : "translateY(0)",
+                                transition: "transform 100ms ease-out",
+                              }}
+                            >
+                              {node.title}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })() : (
                   <p style={{ fontSize: 12, lineHeight: 1.45, color: "var(--sem-text-secondary)" }}>
                     Select any node in the canvas to open contextual details.
                   </p>
                 )}
+                </div>
               </div>
             </div>
           </div>

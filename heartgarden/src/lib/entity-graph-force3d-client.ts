@@ -34,6 +34,7 @@ type ReheatOptions = {
   removeEdgeIds?: string[];
   updateNodes?: Array<Pick<GraphNode, "id" | "clusterHint">>;
   fixedNodes?: Array<{ id: string; x: number; y: number; z?: number; ttlTicks?: number }>;
+  focusNodeIds?: string[];
 };
 
 export type Force3dSession = {
