@@ -4,13 +4,11 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { EntityGraphPillCanvas } from "@/src/components/dev/EntityGraphPillCanvas";
 import type {
   CameraAction,
   GraphCanvasSharedProps,
   GraphEdgeHover,
   LayoutMap,
-  RendererMode,
 } from "@/src/components/dev/entity-graph-renderer-types";
 import styles from "@/src/components/dev/entity-graph-lab.module.css";
 import { Button } from "@/src/components/ui/Button";
@@ -21,6 +19,13 @@ import {
 import { buildEntityGraphModel } from "@/src/lib/entity-graph-model";
 import { getRelationStyle } from "@/src/lib/entity-graph-relation-style";
 import { buildSyntheticScenario } from "@/src/lib/entity-graph-synthetic";
+import {
+  clearEntityGraphLayoutCache,
+  computeSyntheticGraphRevision,
+  readEntityGraphLayoutCache,
+  writeEntityGraphLayoutCache,
+} from "@/src/lib/entity-graph-layout-cache";
+import { GRAPH_LAYOUT_CACHE_LAYOUT_VERSION } from "@/src/lib/graph-layout-cache-contract";
 import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 import {
   HEARTGARDEN_GLASS_PANEL,
@@ -116,7 +121,6 @@ const STRESS_1K = buildSyntheticScenario("stress-1k", "Stress 1k", 1000, 1800, 1
 const STRESS_10K = buildSyntheticScenario("stress-10k", "Stress 10k", 10000, 12000, 2);
 
 const ALL_SCENARIOS: GraphScenario[] = [...SCENARIOS, STRESS_1K, STRESS_10K];
-const RENDERER_MODES: RendererMode[] = ["three", "html"];
 
 function nextAction(
   key: number,
@@ -134,22 +138,17 @@ function normalizeScenarioKey(candidate: string | null | undefined): string {
 }
 
 export function EntityGraphLab({
-  rendererMode = "three",
   initialScenarioKey,
   initialFilter = "",
-  initialBlurEnabled = true,
 }: {
-  rendererMode?: RendererMode;
   initialScenarioKey?: string | null;
   initialFilter?: string;
-  initialBlurEnabled?: boolean;
 }) {
   const storageKey = "heartgarden:entity-graph-lab:v1";
   const router = useRouter();
   const pathname = usePathname();
   const [scenarioKey, setScenarioKey] = useState(() => normalizeScenarioKey(initialScenarioKey));
   const [filter, setFilter] = useState(initialFilter);
-  const [blurEffectsEnabled, setBlurEffectsEnabled] = useState(initialBlurEnabled);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<GraphEdgeHover | null>(null);
@@ -180,24 +179,23 @@ export function EntityGraphLab({
   }, [initialFilter]);
 
   useEffect(() => {
-    setBlurEffectsEnabled(initialBlurEnabled);
-  }, [initialBlurEnabled]);
-
-  useEffect(() => {
     const params = new URLSearchParams();
-    params.set("renderer", rendererMode);
+    params.set("renderer", "three");
     params.set("scenario", scenarioKey);
     if (filter.length > 0) params.set("filter", filter);
-    if (!blurEffectsEnabled) params.set("blur", "0");
     const next = `${pathname}?${params.toString()}`;
     if (lastSyncedQueryRef.current === next) return;
     lastSyncedQueryRef.current = next;
     router.replace(next, { scroll: false });
-  }, [blurEffectsEnabled, filter, pathname, rendererMode, router, scenarioKey]);
+  }, [filter, pathname, router, scenarioKey]);
 
   const scenario = useMemo(
     () => ALL_SCENARIOS.find((candidate) => candidate.key === scenarioKey) ?? ALL_SCENARIOS[0],
     [scenarioKey],
+  );
+  const scenarioGraphRevision = useMemo(
+    () => computeSyntheticGraphRevision(scenario?.nodes ?? [], scenario?.edges ?? []),
+    [scenario?.edges, scenario?.nodes],
   );
   const world = useMemo(
     () => computeWorldSize(scenario?.nodes.length ?? 1),
@@ -233,6 +231,17 @@ export function EntityGraphLab({
       setLayout(new Map(cached));
       return;
     }
+    const persistentCacheKey = `scenario:${scenario.key}`;
+    const persistent = readEntityGraphLayoutCache(
+      persistentCacheKey,
+      scenarioGraphRevision,
+      GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
+    );
+    if (persistent) {
+      layoutByScenarioRef.current.set(scenario.key, new Map(persistent));
+      setLayout(new Map(persistent));
+      return;
+    }
     const started = performance.now();
     const pins = pinnedByScenarioRef.current.get(scenario.key) ?? new Map();
     void solveStableLayoutIncrementalInWorker(scenario.nodes, scenario.edges, {
@@ -248,7 +257,22 @@ export function EntityGraphLab({
     return () => {
       cancelled = true;
     };
-  }, [scenario, world.height, world.width]);
+  }, [scenario, scenarioGraphRevision, world.height, world.width]);
+
+  useEffect(() => {
+    if (!scenario) return;
+    if (layout.size === 0) return;
+    const persistentCacheKey = `scenario:${scenario.key}`;
+    const timer = window.setTimeout(() => {
+      writeEntityGraphLayoutCache(
+        persistentCacheKey,
+        scenarioGraphRevision,
+        layout,
+        GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
+      );
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [layout, scenario, scenarioGraphRevision]);
 
   useEffect(() => {
     let raf = 0;
@@ -388,7 +412,6 @@ export function EntityGraphLab({
   const selectedDescription = selectedNode
     ? `${selectedNode.itemType}${selectedNode.entityType ? ` · ${selectedNode.entityType}` : ""}`
     : "Select a node to inspect connected context.";
-  const rendererLabel = rendererMode.toUpperCase();
   const edgeById = useMemo(() => new Map(visibleEdges.map((edge) => [edge.id, edge])), [visibleEdges]);
   const selectedEdge = selectedEdgeId ? edgeById.get(selectedEdgeId) ?? null : null;
   const applyFocus = (nextSelectedId: string | null, nextEdgeId: string | null) => {
@@ -485,11 +508,6 @@ export function EntityGraphLab({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [neighborFocusIndex, selectedEdgeId, selectedId, selectedNeighbors, selectedNode]);
 
-  const CanvasComponent =
-    rendererMode === "three"
-      ? EntityGraphThreeCanvas
-      : EntityGraphPillCanvas;
-
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -498,13 +516,13 @@ export function EntityGraphLab({
             {visibleNodes.length === 0 ? (
               <div className="p-4 text-sm text-[var(--vigil-muted)]">No nodes match this filter.</div>
             ) : (
-              <CanvasComponent
+              <EntityGraphThreeCanvas
                 nodes={visibleNodes}
                 edges={visibleEdges}
                 layout={visibleLayout}
                 worldWidth={world.width}
                 worldHeight={world.height}
-                blurEffectsEnabled={blurEffectsEnabled}
+                blurEffectsEnabled
                 selectedId={selectedVisible ? selectedId : null}
                 neighborIds={selectedVisible ? neighborIdSet : new Set<string>()}
                 activeEdgeIds={selectedVisible ? activeEdgeIds : new Set<string>()}
@@ -559,35 +577,7 @@ export function EntityGraphLab({
               <span className={styles.counts}>
                 {visibleLayout.size} nodes · {visibleEdgeIds.size} edges
               </span>
-              <span className={styles.counts}>Renderer: {rendererLabel}</span>
-              <div className={styles.scenarioButtons} role="toolbar" aria-label="Renderer selector">
-                {RENDERER_MODES.map((mode) => (
-                  <Button
-                    key={mode}
-                    asChild
-                    size="sm"
-                    variant="subtle"
-                    tone="menu"
-                    isActive={mode === rendererMode}
-                    aria-label={`Switch to ${mode.toUpperCase()} renderer mode`}
-                  >
-                    <a
-                      href={`?renderer=${mode}&scenario=${encodeURIComponent(scenarioKey)}${filter.length > 0 ? `&filter=${encodeURIComponent(filter)}` : ""}${!blurEffectsEnabled ? "&blur=0" : ""}`}
-                    >
-                      {mode.toUpperCase()}
-                    </a>
-                  </Button>
-                ))}
-              </div>
-              <Button
-                size="sm"
-                variant="default"
-                tone="glass"
-                onClick={() => setBlurEffectsEnabled((current) => !current)}
-                aria-label={blurEffectsEnabled ? "Disable blur effects for performance testing" : "Enable blur effects"}
-              >
-                Blur {blurEffectsEnabled ? "On" : "Off"}
-              </Button>
+              <span className={styles.counts}>Renderer: THREE</span>
               <Button
                 size="sm"
                 variant="default"
@@ -644,6 +634,7 @@ export function EntityGraphLab({
                   pinnedByScenarioRef.current.clear();
                   layoutByScenarioRef.current.clear();
                   window.localStorage.removeItem(storageKey);
+                  clearEntityGraphLayoutCache();
                   void handleReSolve();
                 }}
                 aria-label="Reset persisted graph pins and cached layouts"

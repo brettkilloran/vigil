@@ -32,5 +32,3 @@ export type GraphCanvasSharedProps = {
   onEdgeHover?: (hover: GraphEdgeHover | null) => void;
   onEdgeSelect?: (edgeId: string | null) => void;
 };
-
-export type RendererMode = "html" | "three";

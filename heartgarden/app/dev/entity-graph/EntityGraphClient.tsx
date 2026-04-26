@@ -3,7 +3,6 @@
 import { useSearchParams } from "next/navigation";
 
 import { EntityGraphLab } from "@/src/components/dev/EntityGraphLab";
-import type { RendererMode } from "@/src/components/dev/entity-graph-renderer-types";
 import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
 
 /**
@@ -13,19 +12,13 @@ import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
  */
 export function EntityGraphClient() {
   const params = useSearchParams();
-  const requested = params.get("renderer");
   const initialScenarioKey = params.get("scenario");
   const initialFilter = params.get("filter") ?? "";
-  const initialBlurEnabled = params.get("blur") !== "0";
-  const rendererMode: RendererMode =
-    requested === "html" || requested === "three" ? requested : "three";
   return (
     <VigilThemeProvider>
       <EntityGraphLab
-        rendererMode={rendererMode}
         initialScenarioKey={initialScenarioKey}
         initialFilter={initialFilter}
-        initialBlurEnabled={initialBlurEnabled}
       />
     </VigilThemeProvider>
   );

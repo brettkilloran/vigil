@@ -251,3 +251,33 @@ export const itemEmbeddings = pgTable("item_embeddings", {
   headingPath: text("heading_path"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
+
+/**
+ * Persisted graph node positions for fast warm-start in large spaces.
+ * Cache rows are keyed by space + graph revision + layout algorithm version.
+ */
+export const spaceGraphLayoutCache = pgTable(
+  "space_graph_layout_cache",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    spaceId: uuid("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    graphRevision: varchar("graph_revision", { length: 255 }).notNull(),
+    layoutVersion: varchar("layout_version", { length: 64 }).notNull(),
+    positions: jsonb("positions")
+      .$type<Record<string, { x: number; y: number; z?: number }>>()
+      .notNull(),
+    nodeCount: integer("node_count").notNull().default(0),
+    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("space_graph_layout_cache_space_revision_layout_uidx").on(
+      table.spaceId,
+      table.graphRevision,
+      table.layoutVersion,
+    ),
+    index("space_graph_layout_cache_space_updated_at_idx").on(table.spaceId, table.updatedAt),
+  ],
+);

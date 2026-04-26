@@ -7,6 +7,9 @@ import type { GraphEdge, GraphNode } from "@/src/lib/graph-types";
 import { parseSlackMultiplierFromLinkMeta } from "@/src/lib/item-link-meta";
 import { dedupeLogicalItemLinkRows } from "@/src/lib/item-links-logical-dedupe";
 import { computeItemLinksRevisionForSpace } from "@/src/lib/item-links-space-revision";
+import { GRAPH_LAYOUT_CACHE_LAYOUT_VERSION } from "@/src/lib/graph-layout-cache-contract";
+import { readSpaceGraphLayoutCache } from "@/src/lib/space-graph-layout-cache";
+import { computeSpaceGraphRevisionForSpace } from "@/src/lib/space-graph-revision";
 import { requireHeartgardenSpaceApiAccess } from "@/src/lib/heartgarden-space-route-access";
 
 export async function GET(
@@ -47,6 +50,11 @@ export async function GET(
   const totalNodes = totalRow?.c ?? 0;
 
   const itemLinksRevision = await computeItemLinksRevisionForSpace(db, spaceId);
+  const graphRevision = await computeSpaceGraphRevisionForSpace(db, spaceId, itemLinksRevision);
+  const canAttachLayout = limitRaw == null;
+  const layoutCache = canAttachLayout
+    ? await readSpaceGraphLayoutCache(db, spaceId, graphRevision, GRAPH_LAYOUT_CACHE_LAYOUT_VERSION)
+    : null;
 
   let rows;
   let pageLimit: number | undefined;
@@ -85,6 +93,9 @@ export async function GET(
       edges: [] as GraphEdge[],
       total_nodes: totalNodes,
       itemLinksRevision,
+      graphRevision,
+      layoutVersion: GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
+      layoutCacheHit: false,
     };
     if (limitRaw != null && pageLimit != null) {
       emptyPayload.limit = pageLimit;
@@ -178,7 +189,14 @@ export async function GET(
     edges,
     total_nodes: totalNodes,
     itemLinksRevision,
+    graphRevision,
+    layoutVersion: GRAPH_LAYOUT_CACHE_LAYOUT_VERSION,
+    layoutCacheHit: layoutCache != null,
   };
+  if (layoutCache) {
+    payload.layoutPositions = layoutCache.positions;
+    payload.layoutCacheSavedAt = layoutCache.savedAt.toISOString();
+  }
   if (limitRaw != null && pageLimit != null) {
     payload.limit = pageLimit;
     payload.offset = offset;

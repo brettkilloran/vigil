@@ -12,6 +12,10 @@ import { estimatePillGeometry } from "@/src/lib/entity-graph-pill-geometry";
 import { getEntityTypeStyle } from "@/src/lib/entity-graph-type-style";
 import { getRelationStyle } from "@/src/lib/entity-graph-relation-style";
 
+/**
+ * @deprecated The entity-graph lab now canonizes the Three.js renderer.
+ * Keep this legacy canvas only for short-term reference while we finish cleanup.
+ */
 type CameraTransform = {
   x: number;
   y: number;

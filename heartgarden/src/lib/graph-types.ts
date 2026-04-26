@@ -1,3 +1,5 @@
+import type { GraphLayoutPositions } from "@/src/lib/graph-layout-cache-contract";
+
 export type GraphNode = {
   id: string;
   title: string;
@@ -31,5 +33,10 @@ export type SpaceGraphResponse = {
   nodes?: GraphNode[];
   edges?: GraphEdge[];
   itemLinksRevision?: string;
+  graphRevision?: string;
+  layoutVersion?: string;
+  layoutCacheHit?: boolean;
+  layoutCacheSavedAt?: string;
+  layoutPositions?: GraphLayoutPositions;
   error?: string;
 };

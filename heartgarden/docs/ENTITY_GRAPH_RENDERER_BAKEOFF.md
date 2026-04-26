@@ -1,9 +1,17 @@
 # Entity Graph Renderer Pivot
 
-The bake-off is retired. Active renderer routes are now:
+The bake-off is retired. The renderer decision is now final:
 
-- `/dev/entity-graph?renderer=webgl` (primary path)
-- `/dev/entity-graph?renderer=html` (temporary fallback)
+- `three.js` is the canonical and only supported renderer for the lab route.
+- The HTML renderer path is deprecated and no longer exposed in UI controls.
+- The route canonicalizes to `?renderer=three` for stable deep links.
+- Blur/bloom effects are canonized on in the lab route (no runtime toggle).
+
+## Canonical route contract
+
+- Primary route: `/dev/entity-graph`
+- Canonical query form: `/dev/entity-graph?renderer=three`
+- Legacy `renderer=html` links must be treated as backward-compatible inputs that resolve to the Three.js experience.
 
 ## Carry-forward checklist
 
@@ -21,6 +29,7 @@ These non-renderer wins are required to stay intact during the WebGL pivot:
 - Multi-renderer decision matrix (`pixi`, `sigma`, `rfg`) as day-to-day workflow.
 - React-force-graph as a final architecture target.
 - Assumption that high-density scale can be solved by DOM-heavy rendering.
+- Assumption that maintaining dual HTML + WebGL renderers is worth ongoing product complexity.
 
 ## Validation targets
 
