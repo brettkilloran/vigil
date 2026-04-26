@@ -5,30 +5,30 @@ export type EntityTypeStyle = {
 };
 
 const UNKNOWN_STYLE: EntityTypeStyle = {
-  dotColor: "oklch(0.79 0.02 255 / 0.82)",
-  edgeTint: "oklch(0.79 0.02 255 / 0.56)",
+  dotColor: "oklch(0.62 0.06 255 / 0.82)",
+  edgeTint: "oklch(0.62 0.06 255 / 0.56)",
   label: "unknown",
 };
 
 const MAP: Record<string, EntityTypeStyle> = {
   character: {
-    dotColor: "oklch(0.79 0.11 244 / 0.95)",
-    edgeTint: "oklch(0.79 0.11 244 / 0.52)",
+    dotColor: "oklch(0.72 0.26 250)",
+    edgeTint: "oklch(0.72 0.26 250 / 0.52)",
     label: "characters",
   },
   faction: {
-    dotColor: "oklch(0.82 0.11 72 / 0.95)",
-    edgeTint: "oklch(0.82 0.11 72 / 0.52)",
+    dotColor: "oklch(0.74 0.31 50)",
+    edgeTint: "oklch(0.74 0.31 50 / 0.52)",
     label: "factions",
   },
   location: {
-    dotColor: "oklch(0.83 0.1 155 / 0.95)",
-    edgeTint: "oklch(0.83 0.1 155 / 0.52)",
+    dotColor: "oklch(0.74 0.24 155)",
+    edgeTint: "oklch(0.74 0.24 155 / 0.52)",
     label: "locations",
   },
   note: {
-    dotColor: "oklch(0.79 0.1 299 / 0.95)",
-    edgeTint: "oklch(0.79 0.1 299 / 0.52)",
+    dotColor: "oklch(0.72 0.26 300)",
+    edgeTint: "oklch(0.72 0.26 300 / 0.52)",
     label: "notes",
   },
 };

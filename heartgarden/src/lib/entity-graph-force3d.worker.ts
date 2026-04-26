@@ -1,10 +1,10 @@
 /// <reference lib="webworker" />
 
 import {
-  forceCenter,
   forceCollide,
   forceLink,
   forceManyBody,
+  forceRadial,
   forceSimulation,
   forceX,
   forceY,
@@ -385,11 +385,21 @@ function buildSeededNodes(
     }
   }
 
-  const unclusteredRadius = Math.max(60, Math.sqrt(unclustered.length) * 18);
-  for (let i = 0; i < unclustered.length; i++) {
-    const node = unclustered[i]!;
-    const t = i / Math.max(1, unclustered.length - 1);
-    const r = Math.sqrt(t) * unclusteredRadius;
+  const orphans: GraphNode[] = [];
+  const connectedUnclustered: GraphNode[] = [];
+  for (const node of unclustered) {
+    if ((degreeMap.get(node.id) ?? 0) === 0) {
+      orphans.push(node);
+    } else {
+      connectedUnclustered.push(node);
+    }
+  }
+
+  const connectedRadius = Math.max(60, Math.sqrt(connectedUnclustered.length) * 18);
+  for (let i = 0; i < connectedUnclustered.length; i++) {
+    const node = connectedUnclustered[i]!;
+    const t = i / Math.max(1, connectedUnclustered.length - 1);
+    const r = Math.sqrt(t) * connectedRadius;
     const angle = i * GOLDEN_ANGLE;
     const u3 = seededNoise(i * 17749 + 41);
     result.push({
@@ -403,12 +413,30 @@ function buildSeededNodes(
     });
   }
 
+  const orphanRing = 180 + Math.sqrt(nodes.length) * 36;
+  for (let i = 0; i < orphans.length; i++) {
+    const node = orphans[i]!;
+    const angle = i * GOLDEN_ANGLE;
+    const jitter = seededNoise(i * 53731 + 7) * 30;
+    const u3 = seededNoise(i * 17749 + 41 + 9999);
+    result.push({
+      id: node.id,
+      x: Math.cos(angle) * (orphanRing + jitter),
+      y: Math.sin(angle) * (orphanRing + jitter),
+      z: (u3 - 0.5) * zSpread,
+      visualRadius: NODE_VISUAL_RADIUS,
+      degree: 0,
+      clusterHint: node.clusterHint ?? null,
+    });
+  }
+
   return { simNodes: result, centroids };
 }
 
 function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNode, SimLink> {
   const n = nodes.length;
-  const chargeStrength = n > 6000 ? -160 : n > 2000 ? -210 : -260;
+  const baseCharge = n > 6000 ? -160 : n > 2000 ? -210 : -260;
+  const orphanPerimeter = 180 + Math.sqrt(n) * 36;
 
   return forceSimulation<SimNode>(nodes)
     .force(
@@ -421,7 +449,7 @@ function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNod
     .force(
       "charge",
       forceManyBody<SimNode>()
-        .strength(chargeStrength)
+        .strength((d) => (d.degree === 0 ? baseCharge * 3 : baseCharge))
         .theta(0.82)
         .distanceMax(1400),
     )
@@ -436,7 +464,22 @@ function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNod
         .strength(0.9)
         .iterations(3),
     )
-    .force("center", forceCenter(0, 0).strength(0.012))
+    .force(
+      "centerX",
+      forceX<SimNode>(0).strength((d) => {
+        if (d.degree === 0) return 0;
+        if (d.clusterHint && d.clusterTargetX != null) return 0;
+        return 0.012;
+      }),
+    )
+    .force(
+      "centerY",
+      forceY<SimNode>(0).strength((d) => {
+        if (d.degree === 0) return 0;
+        if (d.clusterHint && d.clusterTargetY != null) return 0;
+        return 0.012;
+      }),
+    )
     .force(
       "clusterX",
       forceX<SimNode>((d) => d.clusterTargetX ?? 0)
@@ -446,6 +489,11 @@ function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNod
       "clusterY",
       forceY<SimNode>((d) => d.clusterTargetY ?? 0)
         .strength((d) => (d.clusterHint && d.clusterTargetY != null ? 0.07 : 0)),
+    )
+    .force(
+      "orphanRadial",
+      forceRadial<SimNode>(orphanPerimeter, 0, 0)
+        .strength((d) => (d.degree === 0 ? 0.09 : 0)),
     )
     .alphaDecay(0.016)
     .velocityDecay(0.38);
@@ -553,7 +601,7 @@ function initSimulation(message: InitMessage): void {
   const progressEvery = Math.max(1, message.options?.progressEvery ?? 6);
   const alphaThreshold = message.options?.alphaThreshold ?? 0.003;
   const warmNodeThreshold = message.options?.warmNodeThreshold ?? 4000;
-  const initialTicks = Math.max(0, message.options?.initialTicks ?? 80);
+  const initialTicks = Math.max(0, message.options?.initialTicks ?? 200);
 
   const nodeMetaById = new Map(message.nodes.map((node) => [node.id, node]));
   const edgeMetaById = new Map(message.edges.map((edge) => [edge.id, edge]));

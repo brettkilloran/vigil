@@ -259,6 +259,38 @@
   padding: 6px 10px;
 }
 
+.nodeHoverPreview {
+  position: absolute;
+  z-index: var(--layer-ui-chrome);
+  pointer-events: none;
+  max-width: min(300px, calc(100% - 20px));
+  border: 1px solid color-mix(in srgb, white 30%, var(--sem-border-subtle) 70%);
+  border-radius: 10px;
+  background: color-mix(in srgb, white 20%, transparent);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  padding: 8px 10px;
+  display: grid;
+  gap: 3px;
+}
+
+.nodeHoverPreviewId {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sem-text-secondary);
+}
+
+.nodeHoverPreviewTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sem-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @keyframes pillBreathe {
   0% {
     transform: translate(-50%, -50%) translate(0, 0);
@@ -279,7 +311,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
+  border: 0.5px solid color-mix(in srgb, white 28%, var(--sem-border-subtle) 72%);
   border-radius: 999px;
   background: color-mix(in srgb, white 18%, transparent);
   color: var(--sem-text-primary);
@@ -319,20 +351,19 @@
 .pillNode:hover {
   background: color-mix(in srgb, white 28%, transparent);
   color: var(--sem-text-primary);
-  border-color: color-mix(in srgb, white 58%, var(--sem-border-subtle) 42%);
+  border-color: color-mix(in srgb, white 42%, var(--sem-border-subtle) 58%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 7px 16px rgba(0, 0, 0, 0.24);
 }
 
 .pillNodeSelected {
   background: color-mix(in srgb, white 97%, var(--sem-surface-elevated) 3%);
   color: color-mix(in srgb, black 90%, #0b0b0c 10%);
-  border-color: color-mix(in srgb, var(--entity-graph-accent) 74%, white 26%);
+  border-color: color-mix(in srgb, var(--entity-graph-accent) 60%, white 40%);
   font-weight: 700;
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 58%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
+    0 0 0 0.5px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
     0 10px 24px color-mix(in srgb, var(--entity-graph-accent) 26%, transparent);
 }
 
@@ -343,7 +374,7 @@
 
 .pillNodeNeighbor {
   background: color-mix(in srgb, white 24%, transparent);
-  border-color: color-mix(in srgb, white 46%, var(--sem-border-subtle) 54%);
+  border-color: color-mix(in srgb, white 32%, var(--sem-border-subtle) 68%);
 }
 
 .pillNodeDimmed {

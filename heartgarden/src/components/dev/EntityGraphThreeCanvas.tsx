@@ -19,9 +19,18 @@ type OverlayState = {
   body: string;
 };
 
+type HoverPreviewState = {
+  nodeId: string;
+  title: string;
+  x: number;
+  y: number;
+};
+
 const DEFAULT_CAMERA_ZOOM = 1.45;
-const EDGE_MUTED_OKLCH = "oklch(0.22 0.01 252 / 0.7)";
+const EDGE_MUTED_OKLCH = "oklch(0.18 0.005 252 / 0.35)";
 const EDGE_ACTIVE_OKLCH = "oklch(0.81 0.13 74 / 0.95)";
+const EDGE_HOVER_RGB = "rgba(255, 136, 0, 1)";
+const PILL_OVERLAY_NODE_LIMIT = 12000;
 
 function sentimentForNode(nodeId: string): number {
   let hash = 2166136261;
@@ -126,8 +135,8 @@ function hash11(value: number): number {
 function computeSharedBreathAmp(usePillOverlay: boolean, simStatus: "active" | "idle" | "frozen"): number {
   // Keep a subtle ambient motion in pill mode while maintaining lockstep across
   // connectors, dots, and pills.
-  if (usePillOverlay) return simStatus === "active" ? 0.085 : 0.24;
-  return simStatus === "active" ? 0.18 : 1.1;
+  if (usePillOverlay) return simStatus === "active" ? 0.14 : 0.4;
+  return simStatus === "active" ? 0.3 : 1.6;
 }
 
 function applyBreathOffset(
@@ -218,17 +227,36 @@ export function EntityGraphThreeCanvas({
   const hoverPerturbRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
 
   const [overlay, setOverlay] = useState<OverlayState | null>(null);
+  const [hoverPreview, setHoverPreview] = useState<HoverPreviewState | null>(null);
   const [stats, setStats] = useState({ nodes: 0, edges: 0 });
   const [layoutRevision, setLayoutRevision] = useState(0);
   const [cameraRevision, setCameraRevision] = useState(0);
   const [viewport, setViewport] = useState({ width: 1000, height: 760 });
   const [simStatus, setSimStatus] = useState<"active" | "idle" | "frozen">("idle");
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const sentiments = useMemo(() => nodes.map((node) => sentimentForNode(node.id)), [nodes]);
   const nodeById = useMemo(() => buildNodeIndex(nodes), [nodes]);
-  const usePillOverlay = nodes.length <= 2500 || selectedId !== null;
+  const usePillOverlay = nodes.length <= PILL_OVERLAY_NODE_LIMIT || selectedId !== null;
   const usePillOverlayRef = useRef(usePillOverlay);
   const overlayNodeIdsRef = useRef<Set<string>>(new Set());
   const breathTimeRef = useRef(0);
+  const hoverNeighborIds = useMemo(() => {
+    if (!hoveredNodeId) return new Set<string>();
+    const next = new Set<string>();
+    for (const edge of edges) {
+      if (edge.source === hoveredNodeId) next.add(edge.target);
+      else if (edge.target === hoveredNodeId) next.add(edge.source);
+    }
+    return next;
+  }, [edges, hoveredNodeId]);
+  const hoverActiveEdgeIds = useMemo(() => {
+    if (!hoveredNodeId) return new Set<string>();
+    const next = new Set<string>();
+    for (const edge of edges) {
+      if (edge.source === hoveredNodeId || edge.target === hoveredNodeId) next.add(edge.id);
+    }
+    return next;
+  }, [edges, hoveredNodeId]);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -400,7 +428,7 @@ export function EntityGraphThreeCanvas({
           vec3 cool = vec3(0.77, 0.83, 0.98);
           vec3 warm = vec3(0.98, 0.73, 0.64);
           vec3 sentimentTint = mix(cool, warm, t);
-          vec3 base = mix(vBaseColor, sentimentTint, 0.2);
+          vec3 base = mix(vBaseColor, sentimentTint, 0.06);
           vec3 selected = mix(base, vec3(1.0), 0.26);
           vec3 finalColor = mix(base, selected, vSelectionMix);
           float edge = smoothstep(1.0, 0.7, d);
@@ -639,7 +667,7 @@ export function EntityGraphThreeCanvas({
         progressEvery: nodes.length >= 10000 ? 6 : nodes.length >= 4000 ? 2 : 1,
         alphaThreshold: 0.003,
         warmNodeThreshold: 4000,
-        initialTicks: nodes.length >= 10000 ? 60 : nodes.length >= 4000 ? 90 : 120,
+        initialTicks: nodes.length >= 10000 ? 140 : nodes.length >= 4000 ? 200 : 300,
       },
       (tick) => {
         applyTick(tick.ids, tick.positions, true);
@@ -696,6 +724,10 @@ export function EntityGraphThreeCanvas({
     const sentimentAttr = nodeMesh.geometry.getAttribute("instanceSentiment") as THREE.InstancedBufferAttribute | null;
     const baseColorAttr = nodeMesh.geometry.getAttribute("instanceBaseColor") as THREE.InstancedBufferAttribute | null;
     const opacityAttr = nodeMesh.geometry.getAttribute("instanceOpacity") as THREE.InstancedBufferAttribute | null;
+    const hasSelection = selectedId !== null;
+    const hasHover = !hasSelection && hoveredNodeId !== null;
+    const effectiveNeighborIds = hasSelection ? neighborIds : hasHover ? hoverNeighborIds : new Set<string>();
+    const effectiveActiveEdgeIds = hasSelection ? activeEdgeIds : hasHover ? hoverActiveEdgeIds : new Set<string>();
     const tmp = new THREE.Object3D();
     const nodeIndex = new Map<string, number>();
     let minX = Infinity;
@@ -720,9 +752,9 @@ export function EntityGraphThreeCanvas({
       const sentiment = sentiments[i] ?? sentimentForNode(id);
       const node = nodeById.get(id);
       const baseColor = parseRgbTuple(getEntityTypeStyle(node?.entityType ?? null).dotColor);
-      const nodeSelected = selectedId === id;
-      const nodeNeighbor = neighborIds.has(id);
-      const dimmed = selectedId !== null && !nodeSelected && !nodeNeighbor;
+      const nodeSelected = hasSelection ? selectedId === id : hoveredNodeId === id;
+      const nodeNeighbor = effectiveNeighborIds.has(id);
+      const dimmed = (hasSelection || hasHover) && !nodeSelected && !nodeNeighbor;
       const hasPill = usePillOverlay && overlayNodeIdsRef.current.has(id);
       const alpha = hasPill ? 0 : dimmed ? 0.16 : nodeSelected ? 1 : nodeNeighbor ? 0.9 : 0.72;
       if (sentimentAttr && i < sentimentAttr.count) {
@@ -761,7 +793,7 @@ export function EntityGraphThreeCanvas({
       const targetX = positions[targetIdx * 3] ?? 0;
       const targetY = positions[targetIdx * 3 + 1] ?? 0;
       const targetZ = positions[targetIdx * 3 + 2] ?? 0;
-      const isActive = activeEdgeIds.has(edge.id);
+      const isActive = effectiveActiveEdgeIds.has(edge.id);
       if (!isActive) {
         edgePositions.setXYZ(edgeCursor, sourceX, sourceY, sourceZ);
         edgeNodeIdx.setX(edgeCursor, sourceIdx);
@@ -789,8 +821,11 @@ export function EntityGraphThreeCanvas({
 
     const mutedMaterial = lines.material as THREE.ShaderMaterial;
     const highlightMaterial = activeLines.material as THREE.ShaderMaterial;
-    mutedMaterial.uniforms.uOpacity.value = selectedId ? 0.14 : 0.32;
-    highlightMaterial.uniforms.uOpacity.value = selectedId ? 0.74 : 0.46;
+    mutedMaterial.uniforms.uOpacity.value = hasSelection || hasHover ? 0.08 : 0.18;
+    highlightMaterial.uniforms.uOpacity.value = hasHover ? 0.92 : hasSelection ? 0.74 : 0.46;
+    highlightMaterial.uniforms.uColor.value = colorFromStyle(
+      hasHover && !hasSelection ? EDGE_HOVER_RGB : EDGE_ACTIVE_OKLCH,
+    );
 
     labels.clear?.();
     if (!usePillOverlay) {
@@ -798,10 +833,10 @@ export function EntityGraphThreeCanvas({
         const id = ids[i];
         const node = id ? nodeById.get(id) ?? null : null;
         if (!id || !node) continue;
-        const nodeSelected = selectedId === id;
-        const nodeNeighbor = neighborIds.has(id);
+        const nodeSelected = hasSelection ? selectedId === id : hoveredNodeId === id;
+        const nodeNeighbor = effectiveNeighborIds.has(id);
         const shouldRender =
-          selectedId === null ? i < 2200 : nodeSelected || nodeNeighbor || i < 320;
+          !hasSelection && !hasHover ? i < 2200 : nodeSelected || nodeNeighbor || i < 320;
         if (!shouldRender) continue;
         const label = new Text();
         label.text = node.title;
@@ -826,6 +861,9 @@ export function EntityGraphThreeCanvas({
   }, [
     activeEdgeIds,
     edges,
+    hoverActiveEdgeIds,
+    hoverNeighborIds,
+    hoveredNodeId,
     layoutRevision,
     neighborIds,
     nodeById,
@@ -968,20 +1006,58 @@ export function EntityGraphThreeCanvas({
         dragRef.current.x = event.clientX;
         dragRef.current.y = event.clientY;
         setCameraRevision((current) => current + 1);
+        setHoverPreview(null);
         return;
       }
-      if (nodes.length > 4000) return;
-      const now = performance.now();
-      if (now - hoverPerturbRef.current.at < 140) return;
+      if (nodes.length > 4000 && selectedId === null) {
+        setHoveredNodeId(null);
+        setHoverPreview(null);
+        return;
+      }
       const rect = root.getBoundingClientRect();
       pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointerRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycasterRef.current.setFromCamera(pointerRef.current, camera);
       const hit = raycasterRef.current.intersectObject(nodeMesh, false)[0];
       const hitInstance = hit?.instanceId;
-      if (hitInstance === undefined) return;
+      if (hitInstance === undefined) {
+        if (!usePillOverlayRef.current) {
+          setHoveredNodeId(null);
+          setHoverPreview(null);
+        }
+        return;
+      }
       const hitId = nodeOrderRef.current[hitInstance] ?? null;
-      if (!hitId || hoverPerturbRef.current.id === hitId) return;
+      if (!hitId) {
+        if (!usePillOverlayRef.current) {
+          setHoveredNodeId(null);
+          setHoverPreview(null);
+        }
+        return;
+      }
+      setHoveredNodeId((current) => (current === hitId ? current : hitId));
+      const hitNode = nodeById.get(hitId);
+      if (selectedId !== null && hitId !== selectedId && hitNode) {
+        const nextX = event.clientX - rect.left + 14;
+        const nextY = event.clientY - rect.top + 14;
+        setHoverPreview((current) => {
+          if (
+            current &&
+            current.nodeId === hitId &&
+            current.title === hitNode.title &&
+            Math.abs(current.x - nextX) < 1 &&
+            Math.abs(current.y - nextY) < 1
+          ) {
+            return current;
+          }
+          return { nodeId: hitId, title: hitNode.title, x: nextX, y: nextY };
+        });
+      } else {
+        setHoverPreview(null);
+      }
+      const now = performance.now();
+      if (hoverPerturbRef.current.id === hitId) return;
+      if (now - hoverPerturbRef.current.at < 140) return;
       hoverPerturbRef.current = { id: hitId, at: now };
       const x = positionsRef.current[hitInstance * 3] ?? worldWidth * 0.5;
       const y = positionsRef.current[hitInstance * 3 + 1] ?? worldHeight * 0.5;
@@ -1026,18 +1102,24 @@ export function EntityGraphThreeCanvas({
       camera.updateProjectionMatrix();
       setCameraRevision((current) => current + 1);
     };
+    const onPointerLeave = () => {
+      setHoveredNodeId(null);
+      setHoverPreview(null);
+    };
 
     root.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
     root.addEventListener("wheel", onWheel, { passive: false });
+    root.addEventListener("pointerleave", onPointerLeave);
     return () => {
       root.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       root.removeEventListener("wheel", onWheel);
+      root.removeEventListener("pointerleave", onPointerLeave);
     };
-  }, [nodeById, nodes.length, onSelect, worldHeight, worldWidth]);
+  }, [nodeById, nodes.length, onSelect, selectedId, worldHeight, worldWidth]);
 
   const overlayNodes = useMemo(() => {
     if (!usePillOverlay) return [];
@@ -1309,6 +1391,43 @@ export function EntityGraphThreeCanvas({
                   willChange: "transform",
                 } as React.CSSProperties}
                 title={node.title}
+                onPointerEnter={(event) => {
+                  setHoveredNodeId(node.id);
+                  if (selectedId !== null && node.id !== selectedId) {
+                    const rect = rootRef.current?.getBoundingClientRect();
+                    if (rect) {
+                      setHoverPreview({
+                        nodeId: node.id,
+                        title: node.title,
+                        x: event.clientX - rect.left + 14,
+                        y: event.clientY - rect.top + 14,
+                      });
+                    }
+                  }
+                }}
+                onPointerMove={(event) => {
+                  if (selectedId === null || node.id === selectedId) return;
+                  const rect = rootRef.current?.getBoundingClientRect();
+                  if (!rect) return;
+                  const nextX = event.clientX - rect.left + 14;
+                  const nextY = event.clientY - rect.top + 14;
+                  setHoverPreview((current) => {
+                    if (
+                      current &&
+                      current.nodeId === node.id &&
+                      current.title === node.title &&
+                      Math.abs(current.x - nextX) < 1 &&
+                      Math.abs(current.y - nextY) < 1
+                    ) {
+                      return current;
+                    }
+                    return { nodeId: node.id, title: node.title, x: nextX, y: nextY };
+                  });
+                }}
+                onPointerLeave={() => {
+                  setHoveredNodeId((current) => (current === node.id ? null : current));
+                  setHoverPreview((current) => (current?.nodeId === node.id ? null : current));
+                }}
                 onClick={(event) => {
                   event.stopPropagation();
                   onSelect(node.id);
@@ -1319,6 +1438,19 @@ export function EntityGraphThreeCanvas({
               </button>
             );
           })}
+        </div>
+      ) : null}
+      {hoverPreview ? (
+        <div
+          className={styles.nodeHoverPreview}
+          style={{
+            left: hoverPreview.x,
+            top: hoverPreview.y,
+            transform: "translate3d(0, 0, 0)",
+          }}
+        >
+          <span className={styles.nodeHoverPreviewId}>{hoverPreview.nodeId}</span>
+          <span className={styles.nodeHoverPreviewTitle}>{hoverPreview.title}</span>
         </div>
       ) : null}
       <div className={styles.edgeTooltip}>
