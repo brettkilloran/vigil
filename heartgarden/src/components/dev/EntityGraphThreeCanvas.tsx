@@ -22,6 +22,7 @@ type OverlayState = {
 type HoverPreviewState = {
   nodeId: string;
   title: string;
+  entityType: string | null;
   x: number;
   y: number;
 };
@@ -105,6 +106,24 @@ function projectToScreen(
   };
 }
 
+function getRightPanelOcclusionPx(root: HTMLElement): number {
+  const shell = root.closest(`.${styles.shell}`) as HTMLElement | null;
+  if (!shell) return 0;
+  const panel = shell.querySelector<HTMLElement>(`.${styles.panel}.${styles.panelVisible}`);
+  if (!panel) return 0;
+  const rootRect = root.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const overlapY = Math.max(0, Math.min(rootRect.bottom, panelRect.bottom) - Math.max(rootRect.top, panelRect.top));
+  if (overlapY <= 0) return 0;
+  const rootCenterX = rootRect.left + rootRect.width * 0.5;
+  const panelCenterX = panelRect.left + panelRect.width * 0.5;
+  // On narrow/mobile layouts the inspector can become bottom/full-width; do
+  // not apply right-side framing compensation in those cases.
+  if (panelCenterX <= rootCenterX + 1) return 0;
+  const overlapX = Math.max(0, rootRect.right - panelRect.left);
+  return overlapX;
+}
+
 function seedFromId(id: string): number {
   let hash = 2166136261;
   for (let i = 0; i < id.length; i += 1) {
@@ -167,6 +186,7 @@ function applyBreathOffset(
 export function EntityGraphThreeCanvas({
   nodes,
   edges,
+  layout,
   blurEffectsEnabled = true,
   selectedId,
   neighborIds,
@@ -225,6 +245,7 @@ export function EntityGraphThreeCanvas({
   const sessionRef = useRef<Force3dSession | null>(null);
   const simStatusRef = useRef<"active" | "idle" | "frozen">("idle");
   const hoverPerturbRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
+  const hoverPickAtRef = useRef(0);
 
   const [overlay, setOverlay] = useState<OverlayState | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreviewState | null>(null);
@@ -238,6 +259,7 @@ export function EntityGraphThreeCanvas({
   const nodeById = useMemo(() => buildNodeIndex(nodes), [nodes]);
   const usePillOverlay = nodes.length <= PILL_OVERLAY_NODE_LIMIT || selectedId !== null;
   const usePillOverlayRef = useRef(usePillOverlay);
+  const layoutRef = useRef(layout);
   const overlayNodeIdsRef = useRef<Set<string>>(new Set());
   const breathTimeRef = useRef(0);
   const hoverNeighborIds = useMemo(() => {
@@ -295,6 +317,10 @@ export function EntityGraphThreeCanvas({
   useEffect(() => {
     usePillOverlayRef.current = usePillOverlay;
   }, [usePillOverlay]);
+
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -644,9 +670,17 @@ export function EntityGraphThreeCanvas({
 
     const ids = nodes.map((node) => node.id);
     const quick = new Float32Array(ids.length * 3);
+    const seedLayout = layoutRef.current;
     const radius = 220 + Math.sqrt(Math.max(1, ids.length)) * 40;
     for (let i = 0; i < ids.length; i += 1) {
       const id = ids[i] ?? `${i}`;
+      const seeded = seedLayout.get(id);
+      if (seeded) {
+        quick[i * 3] = seeded.x;
+        quick[i * 3 + 1] = seeded.y;
+        quick[i * 3 + 2] = 0;
+        continue;
+      }
       const seed = seedFromId(id);
       const a = seededUnit(seed + 11) * Math.PI * 2;
       const r = Math.sqrt(seededUnit(seed + 29)) * radius;
@@ -890,10 +924,14 @@ export function EntityGraphThreeCanvas({
       const ids = nodeOrderRef.current;
       const idx = ids.findIndex((id) => id === selectedIdRef.current);
       if (idx >= 0) {
+        const root = rootRef.current;
+        const rightOcclusionPx = root ? getRightPanelOcclusionPx(root) : 0;
         const x = positionsRef.current[idx * 3] ?? camera.position.x;
         const y = positionsRef.current[idx * 3 + 1] ?? camera.position.y;
-        camera.position.set(x, y, 1200);
-        camera.zoom = Math.min(2.2, Math.max(1.2, camera.zoom));
+        const nextZoom = Math.min(2.2, Math.max(1.2, camera.zoom));
+        const focusShiftWorldX = rightOcclusionPx > 0 ? (rightOcclusionPx * 0.5 + 14) / Math.max(0.0001, nextZoom) : 0;
+        camera.position.set(x + focusShiftWorldX, y, 1200);
+        camera.zoom = nextZoom;
         camera.updateProjectionMatrix();
         setCameraRevision((current) => current + 1);
       }
@@ -932,11 +970,15 @@ export function EntityGraphThreeCanvas({
 
     const boxW = Math.max(80, maxX - minX);
     const boxH = Math.max(80, maxY - minY);
+    const root = rootRef.current;
+    const rightOcclusionPx = root ? getRightPanelOcclusionPx(root) : 0;
+    const fitWidthPx = Math.max(220, viewport.width - rightOcclusionPx - 24);
     const nextZoom = Math.min(
       2.2,
-      Math.max(0.4, Math.min(viewport.width / (boxW + 180), viewport.height / (boxH + 180))),
+      Math.max(0.4, Math.min(fitWidthPx / (boxW + 180), viewport.height / (boxH + 180))),
     );
-    const centerX = (minX + maxX) * 0.5;
+    const centerShiftWorldX = rightOcclusionPx > 0 ? (rightOcclusionPx * 0.5 + 14) / Math.max(0.0001, nextZoom) : 0;
+    const centerX = (minX + maxX) * 0.5 + centerShiftWorldX;
     const centerY = (minY + maxY) * 0.5;
     const startX = camera.position.x;
     const startY = camera.position.y;
@@ -1009,63 +1051,76 @@ export function EntityGraphThreeCanvas({
         setHoverPreview(null);
         return;
       }
-      if (nodes.length > 4000 && selectedId === null) {
-        setHoveredNodeId(null);
+      if (nodes.length > 4000) {
+        const now = performance.now();
+        if (now - hoverPickAtRef.current < 48) return;
+        hoverPickAtRef.current = now;
+      }
+      const rect = root.getBoundingClientRect();
+      const mx = event.clientX - rect.left;
+      const my = event.clientY - rect.top;
+      const vp = { width: rect.width, height: rect.height };
+      const ids = nodeOrderRef.current;
+      const positions = positionsRef.current;
+      const pickRadius = 18;
+      let bestId: string | null = null;
+      let bestIdx = -1;
+      let bestDist = pickRadius;
+      for (let i = 0; i < ids.length; i++) {
+        const wx = positions[i * 3] ?? 0;
+        const wy = positions[i * 3 + 1] ?? 0;
+        const wz = positions[i * 3 + 2] ?? 0;
+        const s = projectToScreen(wx, wy, wz, camera, vp);
+        const d = Math.hypot(s.x - mx, s.y - my);
+        if (d < bestDist) {
+          bestDist = d;
+          bestId = ids[i] ?? null;
+          bestIdx = i;
+        }
+      }
+      if (!bestId) {
+        if (!usePillOverlayRef.current) setHoveredNodeId(null);
         setHoverPreview(null);
         return;
       }
-      const rect = root.getBoundingClientRect();
-      pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointerRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      raycasterRef.current.setFromCamera(pointerRef.current, camera);
-      const hit = raycasterRef.current.intersectObject(nodeMesh, false)[0];
-      const hitInstance = hit?.instanceId;
-      if (hitInstance === undefined) {
-        if (!usePillOverlayRef.current) {
-          setHoveredNodeId(null);
-          setHoverPreview(null);
-        }
-        return;
-      }
-      const hitId = nodeOrderRef.current[hitInstance] ?? null;
-      if (!hitId) {
-        if (!usePillOverlayRef.current) {
-          setHoveredNodeId(null);
-          setHoverPreview(null);
-        }
-        return;
-      }
-      setHoveredNodeId((current) => (current === hitId ? current : hitId));
-      const hitNode = nodeById.get(hitId);
-      if (selectedId !== null && hitId !== selectedId && hitNode) {
-        const nextX = event.clientX - rect.left + 14;
-        const nextY = event.clientY - rect.top + 14;
+      setHoveredNodeId((current) => (current === bestId ? current : bestId));
+      const hitNode = nodeById.get(bestId);
+      if (hitNode) {
+        const sx = positions[bestIdx * 3] ?? 0;
+        const sy = positions[bestIdx * 3 + 1] ?? 0;
+        const sz = positions[bestIdx * 3 + 2] ?? 0;
+        const screen = projectToScreen(sx, sy, sz, camera, vp);
         setHoverPreview((current) => {
           if (
             current &&
-            current.nodeId === hitId &&
-            current.title === hitNode.title &&
-            Math.abs(current.x - nextX) < 1 &&
-            Math.abs(current.y - nextY) < 1
+            current.nodeId === bestId &&
+            Math.abs(current.x - screen.x) < 2 &&
+            Math.abs(current.y - screen.y) < 2
           ) {
             return current;
           }
-          return { nodeId: hitId, title: hitNode.title, x: nextX, y: nextY };
+          return {
+            nodeId: bestId!,
+            title: hitNode.title,
+            entityType: hitNode.entityType,
+            x: screen.x,
+            y: screen.y,
+          };
         });
       } else {
         setHoverPreview(null);
       }
       const now = performance.now();
-      if (hoverPerturbRef.current.id === hitId) return;
+      if (hoverPerturbRef.current.id === bestId) return;
       if (now - hoverPerturbRef.current.at < 140) return;
-      hoverPerturbRef.current = { id: hitId, at: now };
-      const x = positionsRef.current[hitInstance * 3] ?? worldWidth * 0.5;
-      const y = positionsRef.current[hitInstance * 3 + 1] ?? worldHeight * 0.5;
-      const z = positionsRef.current[hitInstance * 3 + 2] ?? 0;
+      hoverPerturbRef.current = { id: bestId, at: now };
+      const px = positions[bestIdx * 3] ?? worldWidth * 0.5;
+      const py = positions[bestIdx * 3 + 1] ?? worldHeight * 0.5;
+      const pz = positions[bestIdx * 3 + 2] ?? 0;
       sessionRef.current?.reheat({
         alpha: 0.03,
         options: { width: worldWidth, height: worldHeight },
-        fixedNodes: [{ id: hitId, x, y, z, ttlTicks: 12 }],
+        fixedNodes: [{ id: bestId, x: px, y: py, z: pz, ttlTicks: 12 }],
       });
     };
     const onPointerUp = (event: PointerEvent) => {
@@ -1145,6 +1200,8 @@ export function EntityGraphThreeCanvas({
 
     if (overlayPackCacheRef.current.key !== packKey) {
       const targetIds = new Set<string>();
+      let sampleStride = 1;
+      let sampleOffset = 0;
       if (selectedId) {
         targetIds.add(selectedId);
         let added = 0;
@@ -1155,10 +1212,9 @@ export function EntityGraphThreeCanvas({
         }
       } else {
         const cap = Math.min(ids.length, 1200);
-        for (let i = 0; i < cap; i += 1) {
-          const id = ids[i];
-          if (id) targetIds.add(id);
-        }
+        sampleStride = Math.max(1, Math.floor(ids.length / Math.max(1, cap)));
+        const hash = Math.abs((viewBucketX * 73856093) ^ (viewBucketY * 19349663));
+        sampleOffset = sampleStride > 1 ? hash % sampleStride : 0;
       }
 
       const candidates: Array<{
@@ -1180,7 +1236,12 @@ export function EntityGraphThreeCanvas({
 
       for (let i = 0; i < ids.length; i += 1) {
         const id = ids[i];
-        if (!id || !targetIds.has(id)) continue;
+        if (!id) continue;
+        if (selectedId) {
+          if (!targetIds.has(id)) continue;
+        } else if (sampleStride > 1 && (i + sampleOffset) % sampleStride !== 0) {
+          continue;
+        }
         const node = nodeById.get(id);
         if (!node) continue;
         const worldX = positions[i * 3] ?? 0;
@@ -1391,38 +1452,8 @@ export function EntityGraphThreeCanvas({
                   willChange: "transform",
                 } as React.CSSProperties}
                 title={node.title}
-                onPointerEnter={(event) => {
+                onPointerEnter={() => {
                   setHoveredNodeId(node.id);
-                  if (selectedId !== null && node.id !== selectedId) {
-                    const rect = rootRef.current?.getBoundingClientRect();
-                    if (rect) {
-                      setHoverPreview({
-                        nodeId: node.id,
-                        title: node.title,
-                        x: event.clientX - rect.left + 14,
-                        y: event.clientY - rect.top + 14,
-                      });
-                    }
-                  }
-                }}
-                onPointerMove={(event) => {
-                  if (selectedId === null || node.id === selectedId) return;
-                  const rect = rootRef.current?.getBoundingClientRect();
-                  if (!rect) return;
-                  const nextX = event.clientX - rect.left + 14;
-                  const nextY = event.clientY - rect.top + 14;
-                  setHoverPreview((current) => {
-                    if (
-                      current &&
-                      current.nodeId === node.id &&
-                      current.title === node.title &&
-                      Math.abs(current.x - nextX) < 1 &&
-                      Math.abs(current.y - nextY) < 1
-                    ) {
-                      return current;
-                    }
-                    return { nodeId: node.id, title: node.title, x: nextX, y: nextY };
-                  });
                 }}
                 onPointerLeave={() => {
                   setHoveredNodeId((current) => (current === node.id ? null : current));
@@ -1440,19 +1471,24 @@ export function EntityGraphThreeCanvas({
           })}
         </div>
       ) : null}
-      {hoverPreview ? (
-        <div
-          className={styles.nodeHoverPreview}
-          style={{
-            left: hoverPreview.x,
-            top: hoverPreview.y,
-            transform: "translate3d(0, 0, 0)",
-          }}
-        >
-          <span className={styles.nodeHoverPreviewId}>{hoverPreview.nodeId}</span>
-          <span className={styles.nodeHoverPreviewTitle}>{hoverPreview.title}</span>
-        </div>
-      ) : null}
+      {hoverPreview && !overlayNodeIdsRef.current.has(hoverPreview.nodeId) ? (() => {
+        const hoverTypeStyle = getEntityTypeStyle(hoverPreview.entityType);
+        return (
+          <div
+            className={`${styles.pillNode} ${styles.hoverPill}`}
+            style={{
+              left: 0,
+              top: 0,
+              transform: `translate3d(${hoverPreview.x}px, ${hoverPreview.y}px, 0) translate(-50%, -50%)`,
+              paddingInline: "12px",
+              willChange: "transform",
+            }}
+          >
+            <span className={styles.pillTypeDot} style={{ background: hoverTypeStyle.dotColor }} />
+            {hoverPreview.title}
+          </div>
+        );
+      })() : null}
       <div className={styles.edgeTooltip}>
         three.js · worker force3d · {stats.nodes.toLocaleString()} nodes · {stats.edges.toLocaleString()} edges
       </div>
