@@ -110,8 +110,8 @@ const NODE_VISUAL_RADIUS = 6.4;
 const NODE_LABEL_MARGIN = 5.2;
 const HUB_RADIUS_PER_EDGE = 0.32;
 const HUB_RADIUS_CAP = 7.5;
-const INTRA_CLUSTER_BASE_DISTANCE = 56;
-const CROSS_CLUSTER_BASE_DISTANCE = 130;
+const INTRA_CLUSTER_BASE_DISTANCE = 72;
+const CROSS_CLUSTER_BASE_DISTANCE = 168;
 const INTRA_CLUSTER_BASE_STRENGTH = 0.46;
 const CROSS_CLUSTER_BASE_STRENGTH = 0.18;
 const TIGHT_LINK_TYPES = new Set(["member_of", "operates_in", "trade_route"]);
@@ -302,7 +302,7 @@ function buildSeededNodes(nodes: GraphNode[]): SimNode[] {
     const u2 = seededNoise(idx * 68917 + 23);
     const u3 = seededNoise(idx * 17749 + 41);
     const theta = u1 * Math.PI * 2;
-    const radius = Math.sqrt(u2) * (220 + Math.sqrt(Math.max(1, nodes.length)) * 34);
+    const radius = Math.sqrt(u2) * (280 + Math.sqrt(Math.max(1, nodes.length)) * 42);
     const zSpread = 28 + Math.sqrt(Math.max(1, nodes.length)) * 1.8;
     return {
       id: node.id,
@@ -328,16 +328,16 @@ function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNod
     .force(
       "charge",
       forceManyBody<SimNode>()
-        .strength(-82)
+        .strength(-96)
         .theta(0.92)
-        .distanceMax(720),
+        .distanceMax(920),
     )
     .force(
       "collide",
       forceCollide<SimNode>(
         (node) =>
           node.visualRadius +
-          NODE_LABEL_MARGIN +
+          NODE_LABEL_MARGIN + 2.4 +
           Math.min(HUB_RADIUS_CAP, Math.max(0, node.degree - 4) * HUB_RADIUS_PER_EDGE),
       )
         .strength(0.85)
@@ -378,7 +378,7 @@ function applyReheat(message: ReheatMessage): void {
       const u2 = seededNoise(idx * 68917 + 23);
       const u3 = seededNoise(idx * 17749 + 41);
       const theta = u1 * Math.PI * 2;
-      const radius = Math.sqrt(u2) * 240;
+      const radius = Math.sqrt(u2) * 300;
       const simNode: SimNode = {
         id: graphNode.id,
         x: Math.cos(theta) * radius,
