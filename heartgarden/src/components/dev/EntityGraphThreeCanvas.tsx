@@ -191,6 +191,7 @@ export function EntityGraphThreeCanvas({
   onCameraZoomChange,
 }: GraphCanvasSharedProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const starfieldCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
   const composerTargetRef = useRef<THREE.WebGLRenderTarget | null>(null);
@@ -334,10 +335,12 @@ export function EntityGraphThreeCanvas({
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(root.clientWidth, root.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setClearColor(0x030304, 1);
+    renderer.setClearColor(0x000000, 0);
+    renderer.setClearAlpha(0);
     renderer.domElement.style.position = "absolute";
     renderer.domElement.style.inset = "0";
     renderer.domElement.style.zIndex = "1";
+    renderer.domElement.style.background = "transparent";
     root.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -358,101 +361,6 @@ export function EntityGraphThreeCanvas({
     dir.position.set(0, 0, 900);
     scene.add(dir);
 
-    const STAR_PARTICLE_COUNT = 35000;
-    const STAR_SPHERE_RADIUS = 1200;
-    const STAR_PARALLAX = 0.004;
-    const starScene = new THREE.Scene();
-    starScene.fog = new THREE.FogExp2(new THREE.Color(0x030304), 0.0008);
-    const starCamera = new THREE.PerspectiveCamera(60, root.clientWidth / root.clientHeight, 1, 3000);
-    starCamera.position.z = 600;
-    const starRenderTarget = new THREE.WebGLRenderTarget(
-      Math.max(1, Math.floor(root.clientWidth * pixelRatio)),
-      Math.max(1, Math.floor(root.clientHeight * pixelRatio)),
-    );
-    starRenderTarget.texture.colorSpace = THREE.SRGBColorSpace;
-    scene.background = starRenderTarget.texture;
-
-    const starGeometry = new THREE.BufferGeometry();
-    const starPositions = new Float32Array(STAR_PARTICLE_COUNT * 3);
-    const starSizes = new Float32Array(STAR_PARTICLE_COUNT);
-    const starPhases = new Float32Array(STAR_PARTICLE_COUNT);
-    const starBrightnesses = new Float32Array(STAR_PARTICLE_COUNT);
-    for (let i = 0; i < STAR_PARTICLE_COUNT; i++) {
-      const radius = 100 + Math.random() * Math.random() * STAR_SPHERE_RADIUS;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(Math.random() * 2 - 1);
-      starPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-      starPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-      starPositions[i * 3 + 2] = radius * Math.cos(phi);
-      starSizes[i] = Math.pow(Math.random(), 5) * 4.5 + 0.2;
-      starPhases[i] = Math.random() * Math.PI * 2;
-      starBrightnesses[i] = Math.pow(Math.random(), 3) * 0.9 + 0.1;
-    }
-    starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    starGeometry.setAttribute("aSize", new THREE.BufferAttribute(starSizes, 1));
-    starGeometry.setAttribute("aPhase", new THREE.BufferAttribute(starPhases, 1));
-    starGeometry.setAttribute("aBrightness", new THREE.BufferAttribute(starBrightnesses, 1));
-
-    const starMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: new THREE.Color(0xffffff) },
-      },
-      vertexShader: `
-        uniform float uTime;
-        attribute float aSize;
-        attribute float aPhase;
-        attribute float aBrightness;
-        varying float vAlpha;
-
-        void main() {
-          vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-          vec4 viewPosition = viewMatrix * modelPosition;
-          vec4 projectedPosition = projectionMatrix * viewPosition;
-          float twinkle = sin(uTime * 0.4 + aPhase) * 0.5 + 0.5;
-          float secondaryTwinkle = sin(uTime * 0.15 - aPhase * 2.0) * 0.5 + 0.5;
-          float combinedTwinkle = (twinkle * secondaryTwinkle) * 0.7 + 0.3;
-          float depthFade = smoothstep(1500.0, 200.0, -viewPosition.z);
-          vAlpha = combinedTwinkle * aBrightness * depthFade;
-          gl_PointSize = aSize * (800.0 / -viewPosition.z);
-          gl_Position = projectedPosition;
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uColor;
-        varying float vAlpha;
-
-        void main() {
-          vec2 center = gl_PointCoord - vec2(0.5);
-          float dist = length(center);
-          float alpha = exp(-dist * dist * 18.0);
-          if (alpha * vAlpha < 0.005) discard;
-          gl_FragColor = vec4(uColor, alpha * vAlpha);
-        }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
-    const starParticles = new THREE.Points(starGeometry, starMaterial);
-    starScene.add(starParticles);
-    let starMouseX = 0;
-    let starMouseY = 0;
-    let starTargetX = 0;
-    let starTargetY = 0;
-    let starHalfX = root.clientWidth * 0.5;
-    let starHalfY = root.clientHeight * 0.5;
-
-    const onStarMouseMove = (event: MouseEvent) => {
-      const rect = root.getBoundingClientRect();
-      const relativeX = event.clientX - rect.left;
-      const relativeY = event.clientY - rect.top;
-      starMouseX = (relativeX - starHalfX) * 0.5;
-      starMouseY = (relativeY - starHalfY) * 0.5;
-    };
-    root.addEventListener("mousemove", onStarMouseMove);
-
     let composerTarget: THREE.WebGLRenderTarget | null = null;
     if (renderer.capabilities.isWebGL2) {
       composerTarget = new THREE.WebGLRenderTarget(
@@ -464,6 +372,8 @@ export function EntityGraphThreeCanvas({
     }
     const composer = composerTarget ? new EffectComposer(renderer, composerTarget) : new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
+    renderPass.clearAlpha = 0;
+    renderPass.clearColor = null;
     composer.addPass(renderPass);
     const bloom = new UnrealBloomPass(new THREE.Vector2(root.clientWidth, root.clientHeight), 0.24, 0.2, 0.92);
     composer.addPass(bloom);
@@ -659,15 +569,6 @@ export function EntityGraphThreeCanvas({
       const h = Math.max(1, root.clientHeight);
       setViewport({ width: w, height: h });
       renderer.setSize(w, h);
-      composer.setSize(w, h);
-      starRenderTarget.setSize(
-        Math.max(1, Math.floor(w * pixelRatio)),
-        Math.max(1, Math.floor(h * pixelRatio)),
-      );
-      starHalfX = w * 0.5;
-      starHalfY = h * 0.5;
-      starCamera.aspect = w / h;
-      starCamera.updateProjectionMatrix();
       const halfW = w * 0.5;
       const halfH = h * 0.5;
       camera.left = -halfW;
@@ -705,19 +606,7 @@ export function EntityGraphThreeCanvas({
         if (mat?.uniforms?.uTime) mat.uniforms.uTime.value = t;
         if (mat?.uniforms?.uBreathAmp) mat.uniforms.uBreathAmp.value = breathAmp;
       }
-      starMaterial.uniforms.uTime.value = t;
-      starParticles.rotation.y = t * 0.02;
-      starParticles.rotation.z = t * 0.01;
-      starTargetX = starMouseX * 0.2 + (camera.position.x - worldWidth * 0.5) * STAR_PARALLAX;
-      starTargetY = starMouseY * 0.2 + (camera.position.y - worldHeight * 0.5) * STAR_PARALLAX;
-      starCamera.position.x += (starTargetX - starCamera.position.x) * 0.02;
-      starCamera.position.y += (-starTargetY - starCamera.position.y) * 0.02;
-      starCamera.lookAt(starScene.position);
-      renderer.setRenderTarget(starRenderTarget);
-      renderer.clear();
-      renderer.render(starScene, starCamera);
-      renderer.setRenderTarget(null);
-      composer.render();
+      renderer.render(scene, camera);
       frameRef.current = window.requestAnimationFrame(renderLoop);
     };
     frameRef.current = window.requestAnimationFrame(renderLoop);
@@ -731,14 +620,12 @@ export function EntityGraphThreeCanvas({
         cameraTweenFrameRef.current = null;
       }
       resizeObserverRef.current?.disconnect();
-      root.removeEventListener("mousemove", onStarMouseMove);
       root.removeChild(renderer.domElement);
       labelBatchRef.current = null;
       nodeMeshRef.current = null;
       edgeLineRef.current = null;
       edgeActiveLineRef.current = null;
       sceneRef.current = null;
-      scene.background = null;
       cameraRef.current = null;
       bloomPassRef.current = null;
       composerRef.current = null;
@@ -751,11 +638,176 @@ export function EntityGraphThreeCanvas({
       edgeMaterial.dispose();
       edgeActiveGeometry.dispose();
       edgeActiveMaterial.dispose();
-      starGeometry.dispose();
-      starMaterial.dispose();
-      starRenderTarget.dispose();
     };
   }, [edges.length, nodes.length, worldHeight, worldWidth]);
+
+  useEffect(() => {
+    const canvas = starfieldCanvasRef.current;
+    const root = rootRef.current;
+    if (!canvas || !root) return;
+
+    const PARTICLE_COUNT = 35000;
+    const SPHERE_RADIUS = 1200;
+    const BG_COLOR = new THREE.Color(0x030304);
+    const PARALLAX = 0.0025;
+
+    const starScene = new THREE.Scene();
+    starScene.background = BG_COLOR;
+    starScene.fog = new THREE.FogExp2(BG_COLOR, 0.0008);
+
+    const starCamera = new THREE.PerspectiveCamera(60, root.clientWidth / root.clientHeight, 1, 3000);
+    starCamera.position.z = 600;
+
+    const starRenderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: false,
+      alpha: false,
+      powerPreference: "high-performance",
+    });
+    starRenderer.setSize(root.clientWidth, root.clientHeight);
+    starRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    starRenderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(PARTICLE_COUNT * 3);
+    const sizes = new Float32Array(PARTICLE_COUNT);
+    const phases = new Float32Array(PARTICLE_COUNT);
+    const brightnesses = new Float32Array(PARTICLE_COUNT);
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const radius = 100 + Math.random() * Math.random() * SPHERE_RADIUS;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(Math.random() * 2 - 1);
+      positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = radius * Math.cos(phi);
+      sizes[i] = Math.pow(Math.random(), 5) * 4.5 + 0.2;
+      phases[i] = Math.random() * Math.PI * 2;
+      brightnesses[i] = Math.pow(Math.random(), 3) * 0.9 + 0.1;
+    }
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+    geometry.setAttribute("aPhase", new THREE.BufferAttribute(phases, 1));
+    geometry.setAttribute("aBrightness", new THREE.BufferAttribute(brightnesses, 1));
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(0xffffff) },
+      },
+      vertexShader: `
+        uniform float uTime;
+        attribute float aSize;
+        attribute float aPhase;
+        attribute float aBrightness;
+        varying float vAlpha;
+
+        void main() {
+          vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+          vec4 viewPosition = viewMatrix * modelPosition;
+          vec4 projectedPosition = projectionMatrix * viewPosition;
+
+          float twinkle = sin(uTime * 0.4 + aPhase) * 0.5 + 0.5;
+          float secondaryTwinkle = sin(uTime * 0.15 - aPhase * 2.0) * 0.5 + 0.5;
+          float combinedTwinkle = (twinkle * secondaryTwinkle) * 0.7 + 0.3;
+          float depthFade = smoothstep(1500.0, 200.0, -viewPosition.z);
+
+          vAlpha = combinedTwinkle * aBrightness * depthFade;
+          gl_PointSize = aSize * (800.0 / -viewPosition.z);
+          gl_Position = projectedPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        varying float vAlpha;
+
+        void main() {
+          vec2 center = gl_PointCoord - vec2(0.5);
+          float dist = length(center);
+          float alpha = exp(-dist * dist * 18.0);
+          if (alpha * vAlpha < 0.005) discard;
+          gl_FragColor = vec4(uColor, alpha * vAlpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    starScene.add(particles);
+
+    const starComposer = new EffectComposer(starRenderer);
+    const starRenderPass = new RenderPass(starScene, starCamera);
+    const starBloomPass = new UnrealBloomPass(
+      new THREE.Vector2(root.clientWidth, root.clientHeight),
+      1.8,
+      1.2,
+      0.0,
+    );
+    starComposer.addPass(starRenderPass);
+    starComposer.addPass(starBloomPass);
+
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetX = 0;
+    let targetY = 0;
+    let halfX = root.clientWidth * 0.5;
+    let halfY = root.clientHeight * 0.5;
+
+    const onMouseMove = (event: MouseEvent) => {
+      const rect = root.getBoundingClientRect();
+      mouseX = (event.clientX - rect.left - halfX) * 0.5;
+      mouseY = (event.clientY - rect.top - halfY) * 0.5;
+    };
+
+    const onResize = () => {
+      const width = Math.max(1, root.clientWidth);
+      const height = Math.max(1, root.clientHeight);
+      halfX = width * 0.5;
+      halfY = height * 0.5;
+      starCamera.aspect = width / height;
+      starCamera.updateProjectionMatrix();
+      starRenderer.setSize(width, height);
+      starComposer.setSize(width, height);
+    };
+
+    root.addEventListener("mousemove", onMouseMove);
+    const observer = new ResizeObserver(onResize);
+    observer.observe(root);
+
+    const clock = new THREE.Clock();
+    let rafId: number | null = null;
+    const animate = () => {
+      rafId = window.requestAnimationFrame(animate);
+      const elapsedTime = clock.getElapsedTime();
+      material.uniforms.uTime.value = elapsedTime;
+      particles.rotation.y = elapsedTime * 0.02;
+      particles.rotation.z = elapsedTime * 0.01;
+
+      const graphCamera = cameraRef.current;
+      const graphOffsetX = graphCamera ? graphCamera.position.x - worldWidth * 0.5 : 0;
+      const graphOffsetY = graphCamera ? graphCamera.position.y - worldHeight * 0.5 : 0;
+      targetX = mouseX * 0.2 + graphOffsetX * PARALLAX;
+      targetY = mouseY * 0.2 + graphOffsetY * PARALLAX;
+      starCamera.position.x += (targetX - starCamera.position.x) * 0.02;
+      starCamera.position.y += (-targetY - starCamera.position.y) * 0.02;
+      starCamera.lookAt(starScene.position);
+      starComposer.render();
+    };
+
+    onResize();
+    animate();
+
+    return () => {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      observer.disconnect();
+      root.removeEventListener("mousemove", onMouseMove);
+      starComposer.dispose();
+      geometry.dispose();
+      material.dispose();
+      starRenderer.dispose();
+    };
+  }, [worldHeight, worldWidth]);
 
   useEffect(() => {
     const bloom = bloomPassRef.current;
@@ -1622,6 +1674,17 @@ export function EntityGraphThreeCanvas({
       role="presentation"
       aria-label="threejs entity graph"
     >
+      <canvas
+        ref={starfieldCanvasRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
       {usePillOverlay ? (
         <div className={styles.webglHtmlOverlay}>
           {overlayNodes.map((node) => {

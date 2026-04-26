@@ -5,7 +5,7 @@
   height: 100%;
   overflow: hidden;
   cursor: grab;
-  background: #030304;
+  background: transparent;
 }
 
 .webglHtmlOverlay {
