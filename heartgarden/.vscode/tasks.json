@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Simple Browser: heartgarden (localhost:3000)",
+      "type": "shell",
+      "command": "echo ${input:sbApp}",
+      "windows": { "command": "cmd", "args": ["/d", "/c", "echo ${input:sbApp}"] },
+      "problemMatcher": [],
+      "presentation": { "reveal": "never", "echo": false, "focus": false, "panel": "shared" }
+    },
+    {
+      "label": "Simple Browser: Storybook (127.0.0.1:6006)",
+      "type": "shell",
+      "command": "echo ${input:sbStorybook}",
+      "windows": { "command": "cmd", "args": ["/d", "/c", "echo ${input:sbStorybook}"] },
+      "problemMatcher": [],
+      "presentation": { "reveal": "never", "echo": false, "focus": false, "panel": "shared" }
+    },
+    {
+      "label": "Simple Browser: entity graph (stress-1k)",
+      "type": "shell",
+      "command": "echo ${input:sbEntityGraph}",
+      "windows": { "command": "cmd", "args": ["/d", "/c", "echo ${input:sbEntityGraph}"] },
+      "problemMatcher": [],
+      "presentation": { "reveal": "never", "echo": false, "focus": false, "panel": "shared" }
+    },
+    {
+      "label": "Simple Browser: open all three (app, Storybook, entity graph)",
+      "dependsOn": [
+        "Simple Browser: heartgarden (localhost:3000)",
+        "Simple Browser: Storybook (127.0.0.1:6006)",
+        "Simple Browser: entity graph (stress-1k)"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "sbApp",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": ["http://localhost:3000/"]
+    },
+    {
+      "id": "sbStorybook",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": ["http://127.0.0.1:6006/"]
+    },
+    {
+      "id": "sbEntityGraph",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": [
+        "http://localhost:3000/dev/entity-graph?renderer=three&scenario=stress-1k&blur=0"
+      ]
+    }
+  ]
+}
