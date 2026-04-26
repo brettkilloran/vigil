@@ -19,6 +19,10 @@ type OverlayState = {
   body: string;
 };
 
+const DEFAULT_CAMERA_ZOOM = 1.45;
+const EDGE_MUTED_OKLCH = "oklch(0.58 0.03 252 / 0.9)";
+const EDGE_ACTIVE_OKLCH = "oklch(0.81 0.13 74 / 0.95)";
+
 function sentimentForNode(nodeId: string): number {
   let hash = 2166136261;
   for (let i = 0; i < nodeId.length; i += 1) {
@@ -37,6 +41,32 @@ function buildNodeIndex(nodes: GraphNode[]): Map<string, GraphNode> {
 }
 
 function parseRgbTuple(input: string): [number, number, number] {
+  const oklchMatch = input.match(/oklch\(\s*([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)(?:\s*\/\s*([0-9.]+))?\s*\)/i);
+  if (oklchMatch) {
+    const l = Number(oklchMatch[1] ?? 0);
+    const c = Number(oklchMatch[2] ?? 0);
+    const h = Number(oklchMatch[3] ?? 0);
+    if (Number.isFinite(l) && Number.isFinite(c) && Number.isFinite(h)) {
+      const hr = (h * Math.PI) / 180;
+      const a = Math.cos(hr) * c;
+      const b = Math.sin(hr) * c;
+      const l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+      const m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+      const s_ = l - 0.0894841775 * a - 1.291485548 * b;
+      const l3 = l_ * l_ * l_;
+      const m3 = m_ * m_ * m_;
+      const s3 = s_ * s_ * s_;
+      const rLinear = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+      const gLinear = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+      const bLinear = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3;
+      const toSrgb = (value: number) => {
+        const v = Math.max(0, Math.min(1, value));
+        if (v <= 0.0031308) return v * 12.92;
+        return 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+      };
+      return [toSrgb(rLinear), toSrgb(gLinear), toSrgb(bLinear)];
+    }
+  }
   const match = input.match(/rgba?\(([^)]+)\)/i);
   if (!match) return [0.82, 0.86, 0.92];
   const parts = (match[1] ?? "")
@@ -45,6 +75,11 @@ function parseRgbTuple(input: string): [number, number, number] {
     .filter((value) => Number.isFinite(value));
   if (parts.length < 3) return [0.82, 0.86, 0.92];
   return [parts[0]! / 255, parts[1]! / 255, parts[2]! / 255];
+}
+
+function colorFromStyle(input: string): THREE.Color {
+  const [r, g, b] = parseRgbTuple(input);
+  return new THREE.Color(r, g, b);
 }
 
 function projectToScreen(
@@ -78,6 +113,41 @@ function seededUnit(seed: number): number {
   return (t >>> 0) / 4294967296;
 }
 
+function hash11(value: number): number {
+  let p = value;
+  p = p - Math.floor(p);
+  p *= 0.1031;
+  p = p - Math.floor(p);
+  p *= p + 33.33;
+  p *= p + p;
+  return p - Math.floor(p);
+}
+
+function computeBreathAmp(usePillOverlay: boolean, simStatus: "active" | "idle" | "frozen"): number {
+  if (usePillOverlay) return 0;
+  return simStatus === "active" ? 0.18 : 1.1;
+}
+
+function applyBreathOffset(
+  x: number,
+  y: number,
+  z: number,
+  nodeIndex: number,
+  t: number,
+  amp: number,
+): { x: number; y: number; z: number } {
+  if (amp <= 0) return { x, y, z };
+  const pa = hash11(nodeIndex + 0.13) * Math.PI * 2;
+  const pb = hash11(nodeIndex + 0.71) * Math.PI * 2;
+  const omega = t * 1.382;
+  return {
+    x: x + Math.sin(omega + pa) * amp,
+    y: y + Math.cos(omega * 1.13 + pb) * amp,
+    z: z + Math.sin(omega * 0.87 + pa) * 0.4 * amp,
+  };
+}
+
+
 export function EntityGraphThreeCanvas({
   nodes,
   edges,
@@ -109,6 +179,7 @@ export function EntityGraphThreeCanvas({
       id: string;
       title: string;
       entityType: string | null;
+      nodeIndex: number;
       selected: boolean;
       neighbor: boolean;
       estWidth: number;
@@ -119,6 +190,7 @@ export function EntityGraphThreeCanvas({
     }>;
   }>({ key: "", entries: [] });
   const frameRef = useRef<number | null>(null);
+  const cameraTweenFrameRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerRef = useRef(new THREE.Vector2());
@@ -130,6 +202,8 @@ export function EntityGraphThreeCanvas({
   });
   const nodeOrderRef = useRef<string[]>([]);
   const positionsRef = useRef<Float32Array>(new Float32Array());
+  const previousPositionsRef = useRef<Float32Array>(new Float32Array());
+  const tickTimingRef = useRef<{ lastTickAt: number; intervalMs: number }>({ lastTickAt: 0, intervalMs: 32 });
   const selectedIdRef = useRef<string | null>(selectedId);
   const sessionRef = useRef<Force3dSession | null>(null);
   const simStatusRef = useRef<"active" | "idle" | "frozen">("idle");
@@ -144,7 +218,9 @@ export function EntityGraphThreeCanvas({
   const sentiments = useMemo(() => nodes.map((node) => sentimentForNode(node.id)), [nodes]);
   const nodeById = useMemo(() => buildNodeIndex(nodes), [nodes]);
   const usePillOverlay = nodes.length <= 2500 || selectedId !== null;
+  const usePillOverlayRef = useRef(usePillOverlay);
   const overlayNodeIdsRef = useRef<Set<string>>(new Set());
+  const breathTimeRef = useRef(0);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -153,6 +229,36 @@ export function EntityGraphThreeCanvas({
   useEffect(() => {
     onLayoutChangeRef.current = onLayoutChange;
   }, [onLayoutChange]);
+
+  const buildInterpolatedPositions = (ids: string[]): Float32Array | null => {
+    const target = positionsRef.current;
+    const previous = previousPositionsRef.current;
+    if (ids.length === 0 || target.length === 0) return null;
+    if (previous.length !== target.length) return null;
+    const elapsed = performance.now() - tickTimingRef.current.lastTickAt;
+    const interval = Math.max(8, tickTimingRef.current.intervalMs);
+    const t = Math.max(0, Math.min(1, elapsed / interval));
+    if (t >= 0.999) return target;
+    const out = new Float32Array(target.length);
+    for (let i = 0; i < target.length; i += 1) {
+      const a = previous[i] ?? 0;
+      const b = target[i] ?? 0;
+      out[i] = a + (b - a) * t;
+    }
+    return out;
+  };
+
+  const sameNodeOrder = (a: string[], b: string[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    usePillOverlayRef.current = usePillOverlay;
+  }, [usePillOverlay]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -172,7 +278,7 @@ export function EntityGraphThreeCanvas({
     const camera = new THREE.OrthographicCamera(-500, 500, 380, -380, -5000, 5000);
     camera.position.set(worldWidth * 0.5, worldHeight * 0.5, 1200);
     camera.lookAt(worldWidth * 0.5, worldHeight * 0.5, 0);
-    camera.zoom = 1;
+    camera.zoom = DEFAULT_CAMERA_ZOOM;
     camera.updateProjectionMatrix();
     cameraRef.current = camera;
 
@@ -237,8 +343,7 @@ export function EntityGraphThreeCanvas({
           vBaseColor = instanceBaseColor;
           vOpacity = instanceOpacity;
           vUv = uv;
-          float t = clamp(instanceSentiment * 0.5 + 0.5, 0.0, 1.0);
-          float scale = mix(4.2, 8.2, t);
+          float scale = 6.2;
           vec3 scaled = position * scale;
           vec4 worldPos = instanceMatrix * vec4(scaled, 1.0);
           // Subtle "alive" breath. Amplitude is sub-pixel at typical zoom, so
@@ -324,7 +429,7 @@ export function EntityGraphThreeCanvas({
         uTime: { value: 0 },
         uBreathAmp: { value: 1.1 },
         uOpacity: { value: 0.34 },
-        uColor: { value: new THREE.Color(0x6f7b8c) },
+        uColor: { value: colorFromStyle(EDGE_MUTED_OKLCH) },
       },
       vertexShader: edgeBreathVertex,
       fragmentShader: `
@@ -348,7 +453,7 @@ export function EntityGraphThreeCanvas({
         uTime: { value: 0 },
         uBreathAmp: { value: 1.1 },
         uOpacity: { value: 0.68 },
-        uColor: { value: new THREE.Color(0xf7be72) },
+        uColor: { value: colorFromStyle(EDGE_ACTIVE_OKLCH) },
       },
       vertexShader: edgeBreathVertex,
       fragmentShader: `
@@ -390,7 +495,8 @@ export function EntityGraphThreeCanvas({
     const startTime = performance.now();
     const renderLoop = () => {
       const t = (performance.now() - startTime) / 1000;
-      const breathAmp = simStatusRef.current === "active" ? 0.18 : 1.1;
+      breathTimeRef.current = t;
+      const breathAmp = computeBreathAmp(usePillOverlayRef.current, simStatusRef.current);
       const nowMesh = nodeMeshRef.current;
       if (nowMesh) {
         const mat = nowMesh.material as THREE.ShaderMaterial;
@@ -417,6 +523,10 @@ export function EntityGraphThreeCanvas({
     return () => {
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
+      }
+      if (cameraTweenFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraTweenFrameRef.current);
+        cameraTweenFrameRef.current = null;
       }
       resizeObserverRef.current?.disconnect();
       root.removeChild(renderer.domElement);
@@ -447,8 +557,22 @@ export function EntityGraphThreeCanvas({
   useEffect(() => {
     const applyTick = (ids: string[], positions: Float32Array, emitLayout: boolean) => {
       if (ids.length === 0 || positions.length === 0) return;
+      const now = performance.now();
+      const prevIds = nodeOrderRef.current;
+      const prevPositions = positionsRef.current;
+      if (sameNodeOrder(prevIds, ids) && prevPositions.length === positions.length) {
+        // Blend continuity: start the next segment from what is currently
+        // displayed, not from the last target keyframe.
+        const displayed = buildInterpolatedPositions(prevIds) ?? prevPositions;
+        previousPositionsRef.current = new Float32Array(displayed);
+      } else {
+        previousPositionsRef.current = new Float32Array(positions);
+      }
       nodeOrderRef.current = ids;
       positionsRef.current = positions;
+      const prevTickAt = tickTimingRef.current.lastTickAt;
+      const nextInterval = prevTickAt > 0 ? Math.max(12, Math.min(80, now - prevTickAt)) : 32;
+      tickTimingRef.current = { lastTickAt: now, intervalMs: nextInterval };
       if (emitLayout) {
         const nextLayout = new Map<string, { x: number; y: number }>();
         for (let i = 0; i < ids.length; i += 1) {
@@ -483,7 +607,9 @@ export function EntityGraphThreeCanvas({
       {
         width: worldWidth,
         height: worldHeight,
-        progressEvery: nodes.length >= 10000 ? 8 : nodes.length >= 4000 ? 6 : 4,
+        // Emit more frequently on smaller graphs so pill overlays track motion
+        // smoothly instead of stepping across sparse worker ticks.
+        progressEvery: nodes.length >= 10000 ? 8 : nodes.length >= 4000 ? 4 : 2,
         alphaThreshold: 0.003,
         warmNodeThreshold: 4000,
         initialTicks: nodes.length >= 10000 ? 20 : nodes.length >= 4000 ? 26 : 32,
@@ -504,6 +630,26 @@ export function EntityGraphThreeCanvas({
       setSimStatus("idle");
     };
   }, [edges, nodes, worldHeight, worldWidth]);
+
+  const [overlayMotionRevision, setOverlayMotionRevision] = useState(0);
+  useEffect(() => {
+    if (!usePillOverlay) return;
+    let cancelled = false;
+    let last = 0;
+    const step = (now: number) => {
+      if (cancelled) return;
+      // Keep pill overlays in lockstep with GL line drift.
+      if (now - last >= 16) {
+        last = now;
+        setOverlayMotionRevision((current) => current + 1);
+      }
+      window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+    return () => {
+      cancelled = true;
+    };
+  }, [usePillOverlay]);
 
   useEffect(() => {
     const nodeMesh = nodeMeshRef.current;
@@ -650,19 +796,32 @@ export function EntityGraphThreeCanvas({
     const selectedIndex = selectedId ? nodeIndex.get(selectedId) ?? -1 : -1;
     const material = nodeMesh.material as THREE.ShaderMaterial;
     material.uniforms.uSelectedIndex.value = selectedIndex;
-  }, [activeEdgeIds, edges, layoutRevision, neighborIds, nodeById, selectedId, sentiments, usePillOverlay]);
+  }, [
+    activeEdgeIds,
+    edges,
+    layoutRevision,
+    neighborIds,
+    nodeById,
+    selectedId,
+    sentiments,
+    usePillOverlay,
+  ]);
 
   useEffect(() => {
     const camera = cameraRef.current;
     if (!camera) return;
     if (cameraActionType === "reset" || cameraActionType === "frame-all") {
       camera.position.set(worldWidth * 0.5, worldHeight * 0.5, 1200);
-      camera.zoom = 1;
+      camera.zoom = DEFAULT_CAMERA_ZOOM;
       camera.updateProjectionMatrix();
       setCameraRevision((current) => current + 1);
       return;
     }
     if (cameraActionType === "frame-selection" && selectedIdRef.current) {
+      if (cameraTweenFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraTweenFrameRef.current);
+        cameraTweenFrameRef.current = null;
+      }
       const ids = nodeOrderRef.current;
       const idx = ids.findIndex((id) => id === selectedIdRef.current);
       if (idx >= 0) {
@@ -675,6 +834,67 @@ export function EntityGraphThreeCanvas({
       }
     }
   }, [cameraActionKey, cameraActionType, worldHeight, worldWidth]);
+
+  useEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera || !selectedId) return;
+    if (cameraTweenFrameRef.current !== null) {
+      window.cancelAnimationFrame(cameraTweenFrameRef.current);
+      cameraTweenFrameRef.current = null;
+    }
+    const ids = nodeOrderRef.current;
+    const positions = positionsRef.current;
+    if (ids.length === 0 || positions.length === 0) return;
+
+    const frameIds = new Set<string>([selectedId, ...Array.from(neighborIds)]);
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let found = 0;
+    for (const id of frameIds) {
+      const idx = ids.indexOf(id);
+      if (idx < 0) continue;
+      const x = positions[idx * 3] ?? 0;
+      const y = positions[idx * 3 + 1] ?? 0;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      found += 1;
+    }
+    if (found === 0) return;
+
+    const boxW = Math.max(80, maxX - minX);
+    const boxH = Math.max(80, maxY - minY);
+    const nextZoom = Math.min(
+      2.2,
+      Math.max(0.4, Math.min(viewport.width / (boxW + 180), viewport.height / (boxH + 180))),
+    );
+    const centerX = (minX + maxX) * 0.5;
+    const centerY = (minY + maxY) * 0.5;
+    const startX = camera.position.x;
+    const startY = camera.position.y;
+    const startZoom = camera.zoom;
+    const durationMs = 720;
+    const startedAt = performance.now();
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    const animate = (now: number) => {
+      const t = Math.max(0, Math.min(1, (now - startedAt) / durationMs));
+      const e = easeOutCubic(t);
+      camera.position.x = startX + (centerX - startX) * e;
+      camera.position.y = startY + (centerY - startY) * e;
+      camera.zoom = startZoom + (nextZoom - startZoom) * e;
+      camera.updateProjectionMatrix();
+      setCameraRevision((current) => current + 1);
+      if (t >= 1) {
+        cameraTweenFrameRef.current = null;
+        return;
+      }
+      cameraTweenFrameRef.current = window.requestAnimationFrame(animate);
+    };
+    cameraTweenFrameRef.current = window.requestAnimationFrame(animate);
+  }, [neighborIds, selectedId, viewport.height, viewport.width]);
 
   useEffect(() => {
     const session = sessionRef.current;
@@ -706,6 +926,9 @@ export function EntityGraphThreeCanvas({
     if (!root || !camera || !nodeMesh) return;
 
     const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      // Let HTML controls (pill buttons, overlay controls) own their clicks.
+      if (target?.closest("button")) return;
       dragRef.current = { active: true, x: event.clientX, y: event.clientY, moved: false };
     };
     const onPointerMove = (event: PointerEvent) => {
@@ -794,7 +1017,7 @@ export function EntityGraphThreeCanvas({
     const camera = cameraRef.current;
     if (!camera) return [];
     const ids = nodeOrderRef.current;
-    const positions = positionsRef.current;
+    const positions = usePillOverlay ? buildInterpolatedPositions(ids) ?? positionsRef.current : positionsRef.current;
     if (ids.length === 0 || positions.length === 0) return [];
     const worldViewWidth = Math.max(1, (camera.right - camera.left) / Math.max(0.0001, camera.zoom));
     const worldViewHeight = Math.max(1, (camera.top - camera.bottom) / Math.max(0.0001, camera.zoom));
@@ -833,6 +1056,7 @@ export function EntityGraphThreeCanvas({
         id: string;
         title: string;
         entityType: string | null;
+        nodeIndex: number;
         worldX: number;
         worldY: number;
         worldZ: number;
@@ -853,7 +1077,15 @@ export function EntityGraphThreeCanvas({
         const worldX = positions[i * 3] ?? 0;
         const worldY = positions[i * 3 + 1] ?? 0;
         const worldZ = positions[i * 3 + 2] ?? 0;
-        const screen = projectToScreen(worldX, worldY, worldZ, camera, viewport);
+        const breath = applyBreathOffset(
+          worldX,
+          worldY,
+          worldZ,
+          i,
+          breathTimeRef.current,
+          computeBreathAmp(true, simStatusRef.current),
+        );
+        const screen = projectToScreen(breath.x, breath.y, breath.z, camera, viewport);
         if (
           screen.x < -140 ||
           screen.y < -80 ||
@@ -871,6 +1103,7 @@ export function EntityGraphThreeCanvas({
           id,
           title: node.title,
           entityType: node.entityType,
+          nodeIndex: i,
           worldX,
           worldY,
           worldZ,
@@ -887,7 +1120,7 @@ export function EntityGraphThreeCanvas({
       candidates.sort((a, b) => b.priority - a.priority);
       const accepted: typeof candidates = [];
       const cellSize = 56;
-      const maxLabels = selectedId ? 280 : 900;
+      const maxLabels = selectedId ? 280 : 560;
       const buckets = new Map<string, number[]>();
       const aabbOverlaps = (
         ax: number,
@@ -957,6 +1190,7 @@ export function EntityGraphThreeCanvas({
         id: entry.id,
         title: entry.title,
         entityType: entry.entityType,
+        nodeIndex: entry.nodeIndex,
         selected: entry.selected,
         neighbor: entry.neighbor,
         estWidth: entry.estWidth,
@@ -980,7 +1214,20 @@ export function EntityGraphThreeCanvas({
       estHeight: number;
     }> = [];
     for (const entry of packed) {
-      const screen = projectToScreen(entry.worldX, entry.worldY, entry.worldZ, camera, viewport);
+      const idx = entry.nodeIndex;
+      if (idx < 0) continue;
+      const worldX = positions[idx * 3] ?? entry.worldX;
+      const worldY = positions[idx * 3 + 1] ?? entry.worldY;
+      const worldZ = positions[idx * 3 + 2] ?? entry.worldZ;
+      const breath = applyBreathOffset(
+        worldX,
+        worldY,
+        worldZ,
+        idx,
+        breathTimeRef.current,
+        computeBreathAmp(true, simStatusRef.current),
+      );
+      const screen = projectToScreen(breath.x, breath.y, breath.z, camera, viewport);
       if (
         screen.x < -140 ||
         screen.y < -80 ||
@@ -1013,6 +1260,7 @@ export function EntityGraphThreeCanvas({
     selectedId,
     usePillOverlay,
     viewport,
+    overlayMotionRevision,
   ]);
 
   return (

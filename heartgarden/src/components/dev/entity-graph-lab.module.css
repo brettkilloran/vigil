@@ -298,8 +298,6 @@
   text-overflow: ellipsis;
   cursor: pointer;
   user-select: none;
-  animation: pillBreathe 4.5s ease-in-out infinite;
-  animation-delay: calc(var(--pill-phase, 0) * -4.5s);
   transition:
     background-color 0.3s ease,
     color 0.3s ease,
