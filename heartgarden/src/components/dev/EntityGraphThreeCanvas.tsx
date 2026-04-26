@@ -28,6 +28,9 @@ type HoverPreviewState = {
 };
 
 const DEFAULT_CAMERA_ZOOM = 1.45;
+const MAX_CAMERA_ZOOM = 2.2;
+const MIN_CAMERA_ZOOM = 0.22;
+const CAMERA_ZOOM_STEP = 1.35;
 const EDGE_MUTED_OKLCH = "oklch(0.18 0.005 252 / 0.35)";
 const EDGE_ACTIVE_OKLCH = "oklch(0.81 0.13 74 / 0.95)";
 const EDGE_HOVER_RGB = "rgba(255, 136, 0, 1)";
@@ -178,11 +181,13 @@ export function EntityGraphThreeCanvas({
   cameraActionKey,
   cameraActionType,
   rightPanelOcclusionPx = 0,
+  bottomPanelOcclusionPx = 0,
   showStatsFooter = false,
   enableNodeOverlayCard = false,
   statsFooterLabel = "three.js · worker force3d",
   onSelect,
   onLayoutChange,
+  onCameraZoomChange,
 }: GraphCanvasSharedProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -223,6 +228,8 @@ export function EntityGraphThreeCanvas({
     y: 0,
     moved: false,
   });
+  const autoClusterFocusRef = useRef(true);
+  const lastSelectedIdRef = useRef<string | null>(selectedId);
   const nodeOrderRef = useRef<string[]>([]);
   const positionsRef = useRef<Float32Array>(new Float32Array());
   const previousPositionsRef = useRef<Float32Array>(new Float32Array());
@@ -268,6 +275,14 @@ export function EntityGraphThreeCanvas({
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedId && selectedId !== lastSelectedIdRef.current) {
+      // A deliberate node selection should re-engage focus mode.
+      autoClusterFocusRef.current = true;
+    }
+    lastSelectedIdRef.current = selectedId;
   }, [selectedId]);
 
   useEffect(() => {
@@ -895,6 +910,26 @@ export function EntityGraphThreeCanvas({
   useEffect(() => {
     const camera = cameraRef.current;
     if (!camera) return;
+    onCameraZoomChange?.(camera.zoom);
+  }, [cameraRevision, onCameraZoomChange]);
+
+  useEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    if (cameraActionType === "zoom-in") {
+      autoClusterFocusRef.current = false;
+      camera.zoom = Math.min(MAX_CAMERA_ZOOM, Math.max(MIN_CAMERA_ZOOM, camera.zoom * CAMERA_ZOOM_STEP));
+      camera.updateProjectionMatrix();
+      setCameraRevision((current) => current + 1);
+      return;
+    }
+    if (cameraActionType === "zoom-out") {
+      autoClusterFocusRef.current = false;
+      camera.zoom = Math.min(MAX_CAMERA_ZOOM, Math.max(MIN_CAMERA_ZOOM, camera.zoom / CAMERA_ZOOM_STEP));
+      camera.updateProjectionMatrix();
+      setCameraRevision((current) => current + 1);
+      return;
+    }
     if (cameraActionType === "reset" || cameraActionType === "frame-all") {
       camera.position.set(worldWidth * 0.5, worldHeight * 0.5, 1200);
       camera.zoom = DEFAULT_CAMERA_ZOOM;
@@ -903,6 +938,8 @@ export function EntityGraphThreeCanvas({
       return;
     }
     if (cameraActionType === "frame-selection" && selectedIdRef.current) {
+      // Explicit recenter should restore cluster-follow mode.
+      autoClusterFocusRef.current = true;
       if (cameraTweenFrameRef.current !== null) {
         window.cancelAnimationFrame(cameraTweenFrameRef.current);
         cameraTweenFrameRef.current = null;
@@ -911,21 +948,26 @@ export function EntityGraphThreeCanvas({
       const idx = ids.findIndex((id) => id === selectedIdRef.current);
       if (idx >= 0) {
         const rightOcclusionPx = rightPanelOcclusionPx;
+        const bottomOcclusionPx = bottomPanelOcclusionPx;
         const x = positionsRef.current[idx * 3] ?? camera.position.x;
         const y = positionsRef.current[idx * 3 + 1] ?? camera.position.y;
-        const nextZoom = Math.min(2.2, Math.max(1.2, camera.zoom));
+        const nextZoom = Math.min(MAX_CAMERA_ZOOM, Math.max(1.2, camera.zoom));
         const focusShiftWorldX = rightOcclusionPx > 0 ? (rightOcclusionPx * 0.5 + 14) / Math.max(0.0001, nextZoom) : 0;
-        camera.position.set(x + focusShiftWorldX, y, 1200);
+        const focusShiftWorldY =
+          bottomOcclusionPx > 0 ? (bottomOcclusionPx * 0.5 + 10) / Math.max(0.0001, nextZoom) : 0;
+        camera.position.set(x + focusShiftWorldX, y - focusShiftWorldY, 1200);
         camera.zoom = nextZoom;
         camera.updateProjectionMatrix();
         setCameraRevision((current) => current + 1);
       }
     }
-  }, [cameraActionKey, cameraActionType, rightPanelOcclusionPx, worldHeight, worldWidth]);
+  }, [bottomPanelOcclusionPx, cameraActionKey, cameraActionType, rightPanelOcclusionPx, worldHeight, worldWidth]);
 
   useEffect(() => {
     const camera = cameraRef.current;
     if (!camera || !selectedId) return;
+    const forceFocus = cameraActionType === "frame-selection";
+    if (!forceFocus && !autoClusterFocusRef.current) return;
     if (cameraTweenFrameRef.current !== null) {
       window.cancelAnimationFrame(cameraTweenFrameRef.current);
       cameraTweenFrameRef.current = null;
@@ -956,14 +998,29 @@ export function EntityGraphThreeCanvas({
     const boxW = Math.max(80, maxX - minX);
     const boxH = Math.max(80, maxY - minY);
     const rightOcclusionPx = rightPanelOcclusionPx;
+    const bottomOcclusionPx = bottomPanelOcclusionPx;
     const fitWidthPx = Math.max(220, viewport.width - rightOcclusionPx - 24);
+    const fitHeightPx = Math.max(220, viewport.height - bottomOcclusionPx - 24);
     const nextZoom = Math.min(
-      2.2,
-      Math.max(0.4, Math.min(fitWidthPx / (boxW + 180), viewport.height / (boxH + 180))),
+      MAX_CAMERA_ZOOM,
+      Math.max(0.4, Math.min(fitWidthPx / (boxW + 180), fitHeightPx / (boxH + 180))),
     );
     const centerShiftWorldX = rightOcclusionPx > 0 ? (rightOcclusionPx * 0.5 + 14) / Math.max(0.0001, nextZoom) : 0;
+    const centerShiftWorldY =
+      bottomOcclusionPx > 0 ? (bottomOcclusionPx * 0.5 + 10) / Math.max(0.0001, nextZoom) : 0;
     const centerX = (minX + maxX) * 0.5 + centerShiftWorldX;
-    const centerY = (minY + maxY) * 0.5;
+    const centerY = (minY + maxY) * 0.5 - centerShiftWorldY;
+    if (!forceFocus) {
+      // Keep the selected cluster centered as simulation/layout evolves, but do
+      // it incrementally so motion stays stable instead of "fighting back".
+      const blend = 0.22;
+      camera.position.x = camera.position.x + (centerX - camera.position.x) * blend;
+      camera.position.y = camera.position.y + (centerY - camera.position.y) * blend;
+      camera.zoom = camera.zoom + (nextZoom - camera.zoom) * blend;
+      camera.updateProjectionMatrix();
+      setCameraRevision((current) => current + 1);
+      return;
+    }
     const startX = camera.position.x;
     const startY = camera.position.y;
     const startZoom = camera.zoom;
@@ -985,7 +1042,16 @@ export function EntityGraphThreeCanvas({
       cameraTweenFrameRef.current = window.requestAnimationFrame(animate);
     };
     cameraTweenFrameRef.current = window.requestAnimationFrame(animate);
-  }, [neighborIds, rightPanelOcclusionPx, selectedId, viewport.height, viewport.width]);
+  }, [
+    bottomPanelOcclusionPx,
+    cameraActionType,
+    layoutRevision,
+    neighborIds,
+    rightPanelOcclusionPx,
+    selectedId,
+    viewport.height,
+    viewport.width,
+  ]);
 
   useEffect(() => {
     const session = sessionRef.current;
@@ -1027,6 +1093,7 @@ export function EntityGraphThreeCanvas({
         const dx = event.clientX - dragRef.current.x;
         const dy = event.clientY - dragRef.current.y;
         if (Math.abs(dx) + Math.abs(dy) > 2) dragRef.current.moved = true;
+        if (dragRef.current.moved) autoClusterFocusRef.current = false;
         camera.position.x -= dx / camera.zoom;
         camera.position.y += dy / camera.zoom;
         dragRef.current.x = event.clientX;
@@ -1140,8 +1207,9 @@ export function EntityGraphThreeCanvas({
     };
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
+      autoClusterFocusRef.current = false;
       const zoom = Math.exp(-event.deltaY * 0.0016);
-      camera.zoom = Math.min(6, Math.max(0.22, camera.zoom * zoom));
+      camera.zoom = Math.min(MAX_CAMERA_ZOOM, Math.max(MIN_CAMERA_ZOOM, camera.zoom * zoom));
       camera.updateProjectionMatrix();
       setCameraRevision((current) => current + 1);
     };

@@ -11,7 +11,7 @@ export type GraphEdgeHover = {
   y: number;
 };
 
-export type CameraAction = "reset" | "frame-all" | "frame-selection";
+export type CameraAction = "reset" | "frame-all" | "frame-selection" | "zoom-in" | "zoom-out";
 
 export type GraphCanvasSharedProps = {
   nodes: GraphNode[];
@@ -27,11 +27,13 @@ export type GraphCanvasSharedProps = {
   cameraActionKey: number;
   cameraActionType: CameraAction;
   rightPanelOcclusionPx?: number;
+  bottomPanelOcclusionPx?: number;
   showStatsFooter?: boolean;
   enableNodeOverlayCard?: boolean;
   statsFooterLabel?: string;
   onSelect: (id: string | null) => void;
   onLayoutChange?: (next: LayoutMap) => void;
+  onCameraZoomChange?: (zoom: number) => void;
   onNodePin?: (id: string, position: { x: number; y: number }) => void;
   onEdgeHover?: (hover: GraphEdgeHover | null) => void;
   onEdgeSelect?: (edgeId: string | null) => void;
