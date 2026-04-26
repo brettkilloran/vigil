@@ -17,6 +17,8 @@ export type GraphCanvasSharedProps = {
   nodes: GraphNode[];
   edges: GraphEdge[];
   layout: LayoutMap;
+  worldWidth: number;
+  worldHeight: number;
   selectedId: string | null;
   neighborIds: Set<string>;
   activeEdgeIds: Set<string>;
@@ -30,4 +32,4 @@ export type GraphCanvasSharedProps = {
   onEdgeSelect?: (edgeId: string | null) => void;
 };
 
-export type RendererMode = "html" | "pixi" | "sigma" | "rfg";
+export type RendererMode = "html" | "webgl" | "three";

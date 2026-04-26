@@ -41,12 +41,17 @@ function truncateLabel(input: string, max = 28): string {
   return `${input.slice(0, Math.max(1, max - 1)).trimEnd()}…`;
 }
 
-function initialCamera(viewportWidth: number, viewportHeight: number): CameraTransform {
+function initialCameraForWorld(
+  viewportWidth: number,
+  viewportHeight: number,
+  worldWidth: number,
+  worldHeight: number,
+): CameraTransform {
   const scale = 1;
   return {
     scale,
-    x: (viewportWidth - 1000 * scale) / 2,
-    y: (viewportHeight - 1000 * scale) / 2,
+    x: (viewportWidth - worldWidth * scale) / 2,
+    y: (viewportHeight - worldHeight * scale) / 2,
   };
 }
 
@@ -78,12 +83,12 @@ export function EntityGraphPillCanvas({
   nodes,
   edges,
   layout,
+  worldWidth,
+  worldHeight,
   selectedId,
   neighborIds,
   activeEdgeIds,
-  degreeByNode,
   onSelect,
-  onLayoutChange,
   onNodePin,
   cameraActionKey,
   cameraActionType,
@@ -92,7 +97,9 @@ export function EntityGraphPillCanvas({
 }: GraphCanvasSharedProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ width: 1000, height: 760 });
-  const [camera, setCamera] = useState<CameraTransform>(() => initialCamera(1000, 760));
+  const [camera, setCamera] = useState<CameraTransform>(() =>
+    initialCameraForWorld(1000, 760, worldWidth, worldHeight),
+  );
   const [draggingCanvas, setDraggingCanvas] = useState(false);
   const [animatedCamera, setAnimatedCamera] = useState(false);
   const [displayLayout, setDisplayLayout] = useState<LayoutMap>(() => new Map(layout));
@@ -107,13 +114,6 @@ export function EntityGraphPillCanvas({
     cameraX: number;
     cameraY: number;
     didMove: boolean;
-  } | null>(null);
-  const nodeDragRef = useRef<{
-    pointerId: number;
-    nodeId: string;
-    offsetX: number;
-    offsetY: number;
-    moved: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -162,7 +162,6 @@ export function EntityGraphPillCanvas({
       const frameScale = dt / 16.6667;
       const next = new Map(displayLayoutRef.current);
       const velocities = velocityRef.current;
-      const draggedNodeId = nodeDragRef.current?.nodeId ?? null;
 
       let maxVelocity = 0;
       for (const node of nodes) {
@@ -170,7 +169,7 @@ export function EntityGraphPillCanvas({
         if (!target) continue;
         const current = next.get(node.id) ?? target;
         const vel = velocities.get(node.id) ?? { x: 0, y: 0 };
-        const spring = draggedNodeId === node.id ? 0.03 : 0.085;
+        const spring = 0.085;
         vel.x += (target.x - current.x) * spring * frameScale;
         vel.y += (target.y - current.y) * spring * frameScale;
 
@@ -179,7 +178,7 @@ export function EntityGraphPillCanvas({
         vel.x += Math.sin(now * 0.0013 + jitterSeed) * jitterAmp * frameScale;
         vel.y += Math.cos(now * 0.0011 + jitterSeed * 1.17) * jitterAmp * frameScale;
 
-        const damping = draggedNodeId === node.id ? 0.62 : 0.84;
+        const damping = 0.84;
         vel.x *= damping;
         vel.y *= damping;
         maxVelocity = Math.max(maxVelocity, Math.hypot(vel.x, vel.y));
@@ -234,21 +233,10 @@ export function EntityGraphPillCanvas({
           const overlap = minDist - dist;
           const ux = dx / dist;
           const uy = dy / dist;
-          const aDragged = draggedNodeId === idA;
-          const bDragged = draggedNodeId === idB;
-          if (aDragged && bDragged) continue;
-          if (aDragged) {
-            b.x += ux * overlap;
-            b.y += uy * overlap;
-          } else if (bDragged) {
-            a.x -= ux * overlap;
-            a.y -= uy * overlap;
-          } else {
-            a.x -= ux * overlap * 0.5;
-            a.y -= uy * overlap * 0.5;
-            b.x += ux * overlap * 0.5;
-            b.y += uy * overlap * 0.5;
-          }
+          a.x -= ux * overlap * 0.5;
+          a.y -= uy * overlap * 0.5;
+          b.x += ux * overlap * 0.5;
+          b.y += uy * overlap * 0.5;
             }
           }
         }
@@ -257,15 +245,15 @@ export function EntityGraphPillCanvas({
       const pad = 24;
       for (const [id, pos] of next) {
         const clamped = {
-          x: Math.min(1000 - pad, Math.max(pad, pos.x)),
-          y: Math.min(1000 - pad, Math.max(pad, pos.y)),
+          x: Math.min(worldWidth - pad, Math.max(pad, pos.x)),
+          y: Math.min(worldHeight - pad, Math.max(pad, pos.y)),
         };
         next.set(id, clamped);
       }
 
       displayLayoutRef.current = next;
       setDisplayLayout(next);
-      if (maxVelocity < 0.05 && !nodeDragRef.current) {
+      if (maxVelocity < 0.05) {
         quietFrames += 1;
       } else {
         quietFrames = 0;
@@ -278,7 +266,7 @@ export function EntityGraphPillCanvas({
 
     frameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frameId);
-  }, [layout, nodes, selectedId]);
+  }, [layout, nodes, selectedId, worldHeight, worldWidth]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -295,7 +283,7 @@ export function EntityGraphPillCanvas({
   useEffect(() => {
     if (cameraActionType === "reset") {
       setAnimatedCamera(true);
-      setCamera(initialCamera(viewport.width, viewport.height));
+      setCamera(initialCameraForWorld(viewport.width, viewport.height, worldWidth, worldHeight));
       const timer = window.setTimeout(() => setAnimatedCamera(false), 760);
       return () => window.clearTimeout(timer);
     }
@@ -325,12 +313,21 @@ export function EntityGraphPillCanvas({
     });
     const timer = window.setTimeout(() => setAnimatedCamera(false), 760);
     return () => window.clearTimeout(timer);
-  }, [cameraActionKey, cameraActionType, neighborIds, selectedId, viewport.height, viewport.width]);
+  }, [
+    cameraActionKey,
+    cameraActionType,
+    neighborIds,
+    selectedId,
+    viewport.height,
+    viewport.width,
+    worldHeight,
+    worldWidth,
+  ]);
 
   useEffect(() => {
     if (!selectedId) {
       setAnimatedCamera(true);
-      setCamera(initialCamera(viewport.width, viewport.height));
+      setCamera(initialCameraForWorld(viewport.width, viewport.height, worldWidth, worldHeight));
       const timer = window.setTimeout(() => setAnimatedCamera(false), 760);
       return () => window.clearTimeout(timer);
     }
@@ -344,7 +341,7 @@ export function EntityGraphPillCanvas({
     setCamera({ x: nextX, y: nextY, scale: nextScale });
     const timer = window.setTimeout(() => setAnimatedCamera(false), 760);
     return () => window.clearTimeout(timer);
-  }, [layout, selectedId, viewport.height, viewport.width]);
+  }, [layout, selectedId, viewport.height, viewport.width, worldHeight, worldWidth]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -386,34 +383,6 @@ export function EntityGraphPillCanvas({
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (nodeDragRef.current && nodeDragRef.current.pointerId === event.pointerId) {
-      if (!rootRef.current) return;
-      const rect = rootRef.current.getBoundingClientRect();
-      const world = toWorldCoordinates(event.clientX, event.clientY, rect, cameraRef.current);
-      const next = new Map(layout);
-      const nextPos = {
-        x: world.x - nodeDragRef.current.offsetX,
-        y: world.y - nodeDragRef.current.offsetY,
-      };
-      const prevPos = displayLayoutRef.current.get(nodeDragRef.current.nodeId);
-      if (prevPos) {
-        const dx = nextPos.x - prevPos.x;
-        const dy = nextPos.y - prevPos.y;
-        if (Math.hypot(dx, dy) > 1.5) {
-          nodeDragRef.current.moved = true;
-        }
-      }
-      next.set(nodeDragRef.current.nodeId, nextPos);
-      onLayoutChange?.(next);
-      setDisplayLayout((prev) => {
-        const updated = new Map(prev);
-        updated.set(nodeDragRef.current!.nodeId, nextPos);
-        displayLayoutRef.current = updated;
-        return updated;
-      });
-      return;
-    }
-
     const pan = panRef.current;
     if (!pan || pan.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - pan.startX;
@@ -428,13 +397,6 @@ export function EntityGraphPillCanvas({
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (nodeDragRef.current && nodeDragRef.current.pointerId === event.pointerId) {
-      const draggedId = nodeDragRef.current.nodeId;
-      const pos = displayLayoutRef.current.get(draggedId) ?? layout.get(draggedId);
-      if (pos) onNodePin?.(draggedId, pos);
-      nodeDragRef.current = null;
-    }
-
     if (panRef.current?.pointerId === event.pointerId) {
       panRef.current = null;
       setDraggingCanvas(false);
@@ -449,7 +411,6 @@ export function EntityGraphPillCanvas({
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
     if (!rootRef.current) return;
-    if (nodeDragRef.current) return;
     setAnimatedCamera(false);
     const rect = rootRef.current.getBoundingClientRect();
     const delta = Math.exp(-event.deltaY * 0.0015);
@@ -492,10 +453,16 @@ export function EntityGraphPillCanvas({
       <div
         className={classNames(styles.graphLayer, animatedCamera && styles.graphLayerAnimated)}
         style={{
+          width: worldWidth,
+          height: worldHeight,
           transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
         }}
       >
-        <svg className={styles.edgeSvg} viewBox="0 0 1000 1000" preserveAspectRatio="none">
+        <svg
+          className={styles.edgeSvg}
+          viewBox={`0 0 ${worldWidth} ${worldHeight}`}
+          preserveAspectRatio="none"
+        >
           {edges
             .filter((edge) => visibleEdgeSet.has(edge.id))
             .map((edge) => {
@@ -557,8 +524,6 @@ export function EntityGraphPillCanvas({
           const isNeighbor = neighborIds.has(node.id);
           const isDimmed = selected && !isSelected && !isNeighbor;
           const typeStyle = getEntityTypeStyle(node.entityType);
-          const degree = degreeByNode?.get(node.id) ?? 1;
-          const hubBoost = Math.max(0, Math.min(4, degree - 1));
           return (
             <button
               key={node.id}
@@ -569,26 +534,10 @@ export function EntityGraphPillCanvas({
                 !isSelected && isNeighbor && styles.pillNodeNeighbor,
                 isDimmed && styles.pillNodeDimmed,
               )}
-              style={{ left: point.x, top: point.y, paddingInline: `${12 + hubBoost}px` }}
+              style={{ left: point.x, top: point.y }}
               title={node.title}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                if (!event.shiftKey) return;
-                if (!rootRef.current) return;
-                const rect = rootRef.current.getBoundingClientRect();
-                const world = toWorldCoordinates(event.clientX, event.clientY, rect, cameraRef.current);
-                nodeDragRef.current = {
-                  pointerId: event.pointerId,
-                  nodeId: node.id,
-                  offsetX: world.x - point.x,
-                  offsetY: world.y - point.y,
-                  moved: false,
-                };
-                (event.currentTarget as HTMLButtonElement).setPointerCapture(event.pointerId);
-              }}
               onClick={(event) => {
                 event.stopPropagation();
-                if (nodeDragRef.current?.nodeId === node.id && nodeDragRef.current.moved) return;
                 if (event.altKey) {
                   onNodePin?.(node.id, { x: Number.NaN, y: Number.NaN });
                   return;

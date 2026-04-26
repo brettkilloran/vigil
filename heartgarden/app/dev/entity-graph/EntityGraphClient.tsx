@@ -14,11 +14,17 @@ import { VigilThemeProvider } from "@/src/contexts/vigil-theme-context";
 export function EntityGraphClient() {
   const params = useSearchParams();
   const requested = params.get("renderer");
+  const initialScenarioKey = params.get("scenario");
+  const initialFilter = params.get("filter") ?? "";
   const rendererMode: RendererMode =
-    requested === "pixi" || requested === "sigma" || requested === "rfg" ? requested : "html";
+    requested === "html" || requested === "three" ? requested : "webgl";
   return (
     <VigilThemeProvider>
-      <EntityGraphLab rendererMode={rendererMode} />
+      <EntityGraphLab
+        rendererMode={rendererMode}
+        initialScenarioKey={initialScenarioKey}
+        initialFilter={initialFilter}
+      />
     </VigilThemeProvider>
   );
 }

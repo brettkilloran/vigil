@@ -1,13 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EntityGraphPixiCanvas } from "@/src/components/dev/EntityGraphPixiCanvas";
 import { EntityGraphPillCanvas } from "@/src/components/dev/EntityGraphPillCanvas";
-import { EntityGraphRfgCanvas } from "@/src/components/dev/EntityGraphRfgCanvas";
-import { EntityGraphSigmaCanvas } from "@/src/components/dev/EntityGraphSigmaCanvas";
 import type {
   CameraAction,
+  GraphCanvasSharedProps,
   GraphEdgeHover,
   LayoutMap,
   RendererMode,
@@ -15,7 +15,6 @@ import type {
 import styles from "@/src/components/dev/entity-graph-lab.module.css";
 import { Button } from "@/src/components/ui/Button";
 import {
-  solveStableLayoutInWorker,
   solveStableLayoutIncrementalInWorker,
   solveStableLayoutStreamingInWorker,
 } from "@/src/lib/entity-graph-layout-client";
@@ -28,6 +27,15 @@ import {
   HEARTGARDEN_METADATA_LABEL,
 } from "@/src/lib/vigil-ui-classes";
 import { cx } from "@/src/lib/cx";
+
+const EntityGraphWebGLCanvas = dynamic<GraphCanvasSharedProps>(
+  () => import("@/src/components/dev/EntityGraphWebGLCanvas").then((mod) => mod.EntityGraphWebGLCanvas),
+  { ssr: false },
+);
+const EntityGraphThreeCanvas = dynamic<GraphCanvasSharedProps>(
+  () => import("@/src/components/dev/EntityGraphThreeCanvas").then((mod) => mod.EntityGraphThreeCanvas),
+  { ssr: false },
+);
 
 type GraphScenario = {
   key: string;
@@ -101,11 +109,18 @@ function byTitle(a: GraphNode, b: GraphNode): number {
   return a.title.localeCompare(b.title);
 }
 
-const STRESS_1K = buildSyntheticScenario("stress-1k", "Stress 1k", 1000, 2500, 1);
-const STRESS_10K = buildSyntheticScenario("stress-10k", "Stress 10k", 10000, 25000, 2);
+function computeWorldSize(nodeCount: number): { width: number; height: number } {
+  const floor = 2200;
+  const spread = Math.ceil(Math.sqrt(Math.max(1, nodeCount)) * 230);
+  const side = Math.min(42000, Math.max(floor, spread));
+  return { width: side, height: side };
+}
+
+const STRESS_1K = buildSyntheticScenario("stress-1k", "Stress 1k", 1000, 1800, 1);
+const STRESS_10K = buildSyntheticScenario("stress-10k", "Stress 10k", 10000, 12000, 2);
 
 const ALL_SCENARIOS: GraphScenario[] = [...SCENARIOS, STRESS_1K, STRESS_10K];
-const RENDERER_MODES: RendererMode[] = ["html", "pixi", "sigma", "rfg"];
+const RENDERER_MODES: RendererMode[] = ["three", "webgl", "html"];
 
 function nextAction(
   key: number,
@@ -117,10 +132,25 @@ function nextAction(
   return { key: key + 1, type };
 }
 
-export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: RendererMode }) {
+function normalizeScenarioKey(candidate: string | null | undefined): string {
+  if (!candidate) return SCENARIOS[0]?.key ?? "";
+  return ALL_SCENARIOS.some((scenario) => scenario.key === candidate) ? candidate : (SCENARIOS[0]?.key ?? "");
+}
+
+export function EntityGraphLab({
+  rendererMode = "webgl",
+  initialScenarioKey,
+  initialFilter = "",
+}: {
+  rendererMode?: RendererMode;
+  initialScenarioKey?: string | null;
+  initialFilter?: string;
+}) {
   const storageKey = "heartgarden:entity-graph-lab:v1";
-  const [scenarioKey, setScenarioKey] = useState(SCENARIOS[0]?.key ?? "");
-  const [filter, setFilter] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+  const [scenarioKey, setScenarioKey] = useState(() => normalizeScenarioKey(initialScenarioKey));
+  const [filter, setFilter] = useState(initialFilter);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<GraphEdgeHover | null>(null);
@@ -140,10 +170,34 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
 
   const layoutByScenarioRef = useRef<Map<string, LayoutMap>>(new Map());
   const pinnedByScenarioRef = useRef<Map<string, LayoutMap>>(new Map());
+  const lastSyncedQueryRef = useRef<string>("");
+
+  useEffect(() => {
+    setScenarioKey(normalizeScenarioKey(initialScenarioKey));
+  }, [initialScenarioKey]);
+
+  useEffect(() => {
+    setFilter(initialFilter);
+  }, [initialFilter]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("renderer", rendererMode);
+    params.set("scenario", scenarioKey);
+    if (filter.length > 0) params.set("filter", filter);
+    const next = `${pathname}?${params.toString()}`;
+    if (lastSyncedQueryRef.current === next) return;
+    lastSyncedQueryRef.current = next;
+    router.replace(next, { scroll: false });
+  }, [filter, pathname, rendererMode, router, scenarioKey]);
 
   const scenario = useMemo(
     () => ALL_SCENARIOS.find((candidate) => candidate.key === scenarioKey) ?? ALL_SCENARIOS[0],
     [scenarioKey],
+  );
+  const world = useMemo(
+    () => computeWorldSize(scenario?.nodes.length ?? 1),
+    [scenario?.key, scenario?.nodes.length],
   );
 
   useEffect(() => {
@@ -154,7 +208,7 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
         scenarioKey?: string;
         pinnedByScenario?: Record<string, Array<[string, { x: number; y: number }]>>;
       };
-      if (parsed.scenarioKey) setScenarioKey(parsed.scenarioKey);
+      if (!initialScenarioKey && parsed.scenarioKey) setScenarioKey(parsed.scenarioKey);
       if (parsed.pinnedByScenario) {
         const restored = new Map<string, LayoutMap>();
         for (const [key, entries] of Object.entries(parsed.pinnedByScenario)) {
@@ -165,7 +219,7 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
     } catch {
       // Ignore malformed local storage payloads.
     }
-  }, [storageKey]);
+  }, [initialScenarioKey, storageKey]);
 
   useEffect(() => {
     if (!scenario) return;
@@ -178,8 +232,8 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
     const started = performance.now();
     const pins = pinnedByScenarioRef.current.get(scenario.key) ?? new Map();
     void solveStableLayoutIncrementalInWorker(scenario.nodes, scenario.edges, {
-      width: 1000,
-      height: 1000,
+      width: world.width,
+      height: world.height,
       pinned: pins,
     }).then((next) => {
       if (cancelled) return;
@@ -190,7 +244,7 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
     return () => {
       cancelled = true;
     };
-  }, [scenario]);
+  }, [scenario, world.height, world.width]);
 
   useEffect(() => {
     let raf = 0;
@@ -273,8 +327,8 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
       scenario.nodes,
       scenario.edges,
       {
-      width: 1000,
-      height: 1000,
+      width: world.width,
+      height: world.height,
       pinned: pins,
       },
       (progress) => {
@@ -425,13 +479,11 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
   }, [neighborFocusIndex, selectedEdgeId, selectedId, selectedNeighbors, selectedNode]);
 
   const CanvasComponent =
-    rendererMode === "pixi"
-      ? EntityGraphPixiCanvas
-      : rendererMode === "sigma"
-        ? EntityGraphSigmaCanvas
-        : rendererMode === "rfg"
-          ? EntityGraphRfgCanvas
-          : EntityGraphPillCanvas;
+    rendererMode === "three"
+      ? EntityGraphThreeCanvas
+      : rendererMode === "webgl"
+        ? EntityGraphWebGLCanvas
+        : EntityGraphPillCanvas;
 
   return (
     <main className={styles.page}>
@@ -445,6 +497,8 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
                 nodes={visibleNodes}
                 edges={visibleEdges}
                 layout={visibleLayout}
+                worldWidth={world.width}
+                worldHeight={world.height}
                 selectedId={selectedVisible ? selectedId : null}
                 neighborIds={selectedVisible ? neighborIdSet : new Set<string>()}
                 activeEdgeIds={selectedVisible ? activeEdgeIds : new Set<string>()}
@@ -511,7 +565,11 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
                     isActive={mode === rendererMode}
                     aria-label={`Switch to ${mode.toUpperCase()} renderer mode`}
                   >
-                    <a href={`?renderer=${mode}`}>{mode.toUpperCase()}</a>
+                    <a
+                      href={`?renderer=${mode}&scenario=${encodeURIComponent(scenarioKey)}${filter.length > 0 ? `&filter=${encodeURIComponent(filter)}` : ""}`}
+                    >
+                      {mode.toUpperCase()}
+                    </a>
                   </Button>
                 ))}
               </div>
@@ -585,7 +643,7 @@ export function EntityGraphLab({ rendererMode = "html" }: { rendererMode?: Rende
                 onClick={() => setShowHint(false)}
                 aria-label="Hide graph interaction hint"
               >
-                drag canvas · wheel zoom · shift-drag node · alt-click selected node to unpin · esc clears focus
+                drag canvas · wheel zoom · alt-click selected node to unpin · esc clears focus
               </button>
             ) : (
               <Button

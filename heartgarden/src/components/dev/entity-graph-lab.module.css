@@ -193,6 +193,16 @@
   pointer-events: auto;
 }
 
+.webglHtmlOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.webglHtmlOverlay .pillNode {
+  pointer-events: auto;
+}
+
 .edge {
   stroke: color-mix(in srgb, var(--vigil-label) 20%, transparent);
   stroke-width: 1;
@@ -289,8 +299,7 @@
   color: color-mix(in srgb, black 90%, #0b0b0c 10%);
   border-color: color-mix(in srgb, var(--entity-graph-accent) 74%, white 26%);
   font-weight: 700;
-  transform: translate(-50%, -50%) scale(1.12);
-  padding: 8px 14px;
+  transform: translate(-50%, -50%);
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 58%, transparent),
     0 0 0 1px color-mix(in srgb, var(--entity-graph-accent) 40%, transparent),
@@ -325,6 +334,53 @@
   padding: 8px 10px;
   font-size: 11px;
   color: var(--sem-text-secondary);
+}
+
+.threeOverlayCard {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: min(380px, calc(100% - 28px));
+  z-index: var(--layer-ui-chrome);
+  border: 1px solid color-mix(in srgb, white 30%, var(--sem-border-subtle) 70%);
+  border-radius: 14px;
+  background: color-mix(in srgb, white 16%, transparent);
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  padding: 12px 13px;
+}
+
+.threeOverlayMeta {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sem-text-secondary);
+}
+
+.threeOverlayTitle {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sem-text-primary);
+}
+
+.threeOverlayBody {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sem-text-secondary);
+}
+
+.threeOverlayClose {
+  margin-top: 10px;
+  border: 1px solid var(--sem-border-subtle);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--sem-text-primary);
+  background: color-mix(in srgb, white 8%, transparent);
 }
 
 @media (max-width: 1120px) {
