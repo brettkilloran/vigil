@@ -16,14 +16,16 @@ export function EntityGraphClient() {
   const requested = params.get("renderer");
   const initialScenarioKey = params.get("scenario");
   const initialFilter = params.get("filter") ?? "";
+  const initialBlurEnabled = params.get("blur") !== "0";
   const rendererMode: RendererMode =
-    requested === "html" || requested === "three" ? requested : "webgl";
+    requested === "html" || requested === "three" ? requested : "three";
   return (
     <VigilThemeProvider>
       <EntityGraphLab
         rendererMode={rendererMode}
         initialScenarioKey={initialScenarioKey}
         initialFilter={initialFilter}
+        initialBlurEnabled={initialBlurEnabled}
       />
     </VigilThemeProvider>
   );

@@ -61,9 +61,27 @@ function projectToScreen(
   };
 }
 
+function seedFromId(id: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i += 1) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededUnit(seed: number): number {
+  let t = seed | 0;
+  t = Math.imul(t ^ (t >>> 16), 0x45d9f3b);
+  t = Math.imul(t ^ (t >>> 16), 0x45d9f3b);
+  t = t ^ (t >>> 16);
+  return (t >>> 0) / 4294967296;
+}
+
 export function EntityGraphThreeCanvas({
   nodes,
   edges,
+  blurEffectsEnabled = true,
   selectedId,
   neighborIds,
   activeEdgeIds,
@@ -77,12 +95,29 @@ export function EntityGraphThreeCanvas({
   const rootRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
+  const bloomPassRef = useRef<UnrealBloomPass | null>(null);
   const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const nodeMeshRef = useRef<THREE.InstancedMesh | null>(null);
   const edgeLineRef = useRef<THREE.LineSegments | null>(null);
   const edgeActiveLineRef = useRef<THREE.LineSegments | null>(null);
   const labelBatchRef = useRef<BatchedText | null>(null);
+  const onLayoutChangeRef = useRef(onLayoutChange);
+  const overlayPackCacheRef = useRef<{
+    key: string;
+    entries: Array<{
+      id: string;
+      title: string;
+      entityType: string | null;
+      selected: boolean;
+      neighbor: boolean;
+      estWidth: number;
+      estHeight: number;
+      worldX: number;
+      worldY: number;
+      worldZ: number;
+    }>;
+  }>({ key: "", entries: [] });
   const frameRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -109,6 +144,10 @@ export function EntityGraphThreeCanvas({
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    onLayoutChangeRef.current = onLayoutChange;
+  }, [onLayoutChange]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -143,6 +182,7 @@ export function EntityGraphThreeCanvas({
     composer.addPass(new RenderPass(scene, camera));
     const bloom = new UnrealBloomPass(new THREE.Vector2(root.clientWidth, root.clientHeight), 0.24, 0.2, 0.92);
     composer.addPass(bloom);
+    bloomPassRef.current = bloom;
     composerRef.current = composer;
 
     const baseGeometry = new THREE.PlaneGeometry(1, 1, 1, 1);
@@ -172,11 +212,13 @@ export function EntityGraphThreeCanvas({
         varying vec3 vBaseColor;
         varying float vOpacity;
         varying float vSelectionMix;
+        varying vec2 vUv;
         uniform float uSelectedIndex;
         void main() {
           vSentiment = instanceSentiment;
           vBaseColor = instanceBaseColor;
           vOpacity = instanceOpacity;
+          vUv = uv;
           float t = clamp(instanceSentiment * 0.5 + 0.5, 0.0, 1.0);
           float scale = mix(4.2, 8.2, t);
           vec3 scaled = position * scale;
@@ -190,8 +232,9 @@ export function EntityGraphThreeCanvas({
         varying vec3 vBaseColor;
         varying float vOpacity;
         varying float vSelectionMix;
+        varying vec2 vUv;
         void main() {
-          vec2 p = uv * 2.0 - 1.0;
+          vec2 p = vUv * 2.0 - 1.0;
           float d = dot(p, p);
           if (d > 1.0) discard;
           float t = clamp(vSentiment * 0.5 + 0.5, 0.0, 1.0);
@@ -280,6 +323,7 @@ export function EntityGraphThreeCanvas({
       edgeActiveLineRef.current = null;
       sceneRef.current = null;
       cameraRef.current = null;
+      bloomPassRef.current = null;
       composerRef.current = null;
       renderer.dispose();
       baseGeometry.dispose();
@@ -292,11 +336,43 @@ export function EntityGraphThreeCanvas({
   }, [edges.length, nodes.length, worldHeight, worldWidth]);
 
   useEffect(() => {
+    const bloom = bloomPassRef.current;
+    if (!bloom) return;
+    bloom.enabled = blurEffectsEnabled;
+  }, [blurEffectsEnabled]);
+
+  useEffect(() => {
     let cancelled = false;
+    // Immediate first paint: show deterministic seeded positions right away,
+    // then refine asynchronously from worker physics.
+    const ids = nodes.map((node) => node.id);
+    const quick = new Float32Array(ids.length * 3);
+    const radius = 220 + Math.sqrt(Math.max(1, ids.length)) * 40;
+    for (let i = 0; i < ids.length; i += 1) {
+      const id = ids[i] ?? `${i}`;
+      const seed = seedFromId(id);
+      const a = seededUnit(seed + 11) * Math.PI * 2;
+      const r = Math.sqrt(seededUnit(seed + 29)) * radius;
+      quick[i * 3] = worldWidth * 0.5 + Math.cos(a) * r;
+      quick[i * 3 + 1] = worldHeight * 0.5 + Math.sin(a) * r;
+      quick[i * 3 + 2] = (seededUnit(seed + 47) - 0.5) * 24;
+    }
+    nodeOrderRef.current = ids;
+    positionsRef.current = quick;
+    const seededLayout = new Map<string, { x: number; y: number }>();
+    for (let i = 0; i < ids.length; i += 1) {
+      const id = ids[i];
+      if (!id) continue;
+      seededLayout.set(id, { x: quick[i * 3] ?? 0, y: quick[i * 3 + 1] ?? 0 });
+    }
+    onLayoutChangeRef.current?.(seededLayout);
+    setStats({ nodes: ids.length, edges: edges.length });
+    setLayoutRevision((current) => current + 1);
+
     void solveGraphForce3dInWorker(nodes, edges, {
       width: worldWidth,
       height: worldHeight,
-      iterations: nodes.length >= 4000 ? 130 : nodes.length >= 1000 ? 190 : 260,
+      iterations: nodes.length >= 10000 ? 32 : nodes.length >= 4000 ? 56 : nodes.length >= 1000 ? 90 : 130,
     }).then((result) => {
       if (cancelled) return;
       nodeOrderRef.current = result.ids;
@@ -310,14 +386,14 @@ export function EntityGraphThreeCanvas({
           y: result.positions[i * 3 + 1] ?? 0,
         });
       }
-      onLayoutChange?.(nextLayout);
+      onLayoutChangeRef.current?.(nextLayout);
       setStats({ nodes: result.ids.length, edges: edges.length });
       setLayoutRevision((current) => current + 1);
     });
     return () => {
       cancelled = true;
     };
-  }, [edges, nodes, onLayoutChange, worldHeight, worldWidth]);
+  }, [edges, nodes, worldHeight, worldWidth]);
 
   useEffect(() => {
     const nodeMesh = nodeMeshRef.current;
@@ -555,22 +631,178 @@ export function EntityGraphThreeCanvas({
     const ids = nodeOrderRef.current;
     const positions = positionsRef.current;
     if (ids.length === 0 || positions.length === 0) return [];
-    const targetIds = new Set<string>();
-    if (selectedId) {
-      targetIds.add(selectedId);
-      let added = 0;
-      for (const id of neighborIds) {
-        targetIds.add(id);
-        added += 1;
-        if (added >= 80) break;
+    const worldViewWidth = Math.max(1, (camera.right - camera.left) / Math.max(0.0001, camera.zoom));
+    const worldViewHeight = Math.max(1, (camera.top - camera.bottom) / Math.max(0.0001, camera.zoom));
+    const viewMinX = camera.position.x - worldViewWidth * 0.5;
+    const viewMinY = camera.position.y - worldViewHeight * 0.5;
+    const bucketWorld = Math.max(90, Math.round(220 / Math.max(0.4, camera.zoom)));
+    const viewBucketX = Math.floor(viewMinX / bucketWorld);
+    const viewBucketY = Math.floor(viewMinY / bucketWorld);
+    const zoomBucket = Math.round(camera.zoom * 10);
+    const selectionKey =
+      selectedId === null
+        ? "none"
+        : `${selectedId}:${Array.from(neighborIds).sort().slice(0, 96).join(",")}`;
+    const packKey = `lr:${layoutRevision}|n:${ids.length}|sel:${selectionKey}|vx:${viewBucketX}|vy:${viewBucketY}|z:${zoomBucket}|u:${usePillOverlay ? 1 : 0}`;
+    let packed = overlayPackCacheRef.current.entries;
+
+    if (overlayPackCacheRef.current.key !== packKey) {
+      const targetIds = new Set<string>();
+      if (selectedId) {
+        targetIds.add(selectedId);
+        let added = 0;
+        for (const id of neighborIds) {
+          targetIds.add(id);
+          added += 1;
+          if (added >= 80) break;
+        }
+      } else {
+        const cap = Math.min(ids.length, 1200);
+        for (let i = 0; i < cap; i += 1) {
+          const id = ids[i];
+          if (id) targetIds.add(id);
+        }
       }
-    } else {
-      const cap = Math.min(ids.length, 1200);
-      for (let i = 0; i < cap; i += 1) {
+
+      const candidates: Array<{
+        id: string;
+        title: string;
+        entityType: string | null;
+        worldX: number;
+        worldY: number;
+        worldZ: number;
+        selected: boolean;
+        neighbor: boolean;
+        priority: number;
+        estWidth: number;
+        estHeight: number;
+        screenX: number;
+        screenY: number;
+      }> = [];
+
+      for (let i = 0; i < ids.length; i += 1) {
         const id = ids[i];
-        if (id) targetIds.add(id);
+        if (!id || !targetIds.has(id)) continue;
+        const node = nodeById.get(id);
+        if (!node) continue;
+        const worldX = positions[i * 3] ?? 0;
+        const worldY = positions[i * 3 + 1] ?? 0;
+        const worldZ = positions[i * 3 + 2] ?? 0;
+        const screen = projectToScreen(worldX, worldY, worldZ, camera, viewport);
+        if (
+          screen.x < -140 ||
+          screen.y < -80 ||
+          screen.x > viewport.width + 140 ||
+          screen.y > viewport.height + 80
+        ) {
+          continue;
+        }
+        const selected = selectedId === id;
+        const neighbor = neighborIds.has(id);
+        const estWidth = Math.max(72, Math.min(228, node.title.length * 6.4 + (selected ? 56 : 42)));
+        const estHeight = selected ? 30 : 26;
+        const priority = (selected ? 1_000_000 : 0) + (neighbor ? 100_000 : 0) + (ids.length - i);
+        candidates.push({
+          id,
+          title: node.title,
+          entityType: node.entityType,
+          worldX,
+          worldY,
+          worldZ,
+          selected,
+          neighbor,
+          priority,
+          estWidth,
+          estHeight,
+          screenX: screen.x,
+          screenY: screen.y,
+        });
       }
+
+      candidates.sort((a, b) => b.priority - a.priority);
+      const accepted: typeof candidates = [];
+      const cellSize = 56;
+      const maxLabels = selectedId ? 280 : 900;
+      const buckets = new Map<string, number[]>();
+      const aabbOverlaps = (
+        ax: number,
+        ay: number,
+        aw: number,
+        ah: number,
+        bx: number,
+        by: number,
+        bw: number,
+        bh: number,
+      ): boolean => {
+        const pad = 4;
+        return (
+          Math.abs(ax - bx) * 2 < aw + bw + pad * 2 &&
+          Math.abs(ay - by) * 2 < ah + bh + pad * 2
+        );
+      };
+
+      for (const item of candidates) {
+        if (accepted.length >= maxLabels) break;
+        const minCellX = Math.floor((item.screenX - item.estWidth * 0.5) / cellSize);
+        const maxCellX = Math.floor((item.screenX + item.estWidth * 0.5) / cellSize);
+        const minCellY = Math.floor((item.screenY - item.estHeight * 0.5) / cellSize);
+        const maxCellY = Math.floor((item.screenY + item.estHeight * 0.5) / cellSize);
+        let blocked = false;
+        if (!item.selected) {
+          for (let cx = minCellX; cx <= maxCellX && !blocked; cx += 1) {
+            for (let cy = minCellY; cy <= maxCellY && !blocked; cy += 1) {
+              const bucket = buckets.get(`${cx}:${cy}`);
+              if (!bucket) continue;
+              for (const acceptedIndex of bucket) {
+                const other = accepted[acceptedIndex];
+                if (!other) continue;
+                if (
+                  aabbOverlaps(
+                    item.screenX,
+                    item.screenY,
+                    item.estWidth,
+                    item.estHeight,
+                    other.screenX,
+                    other.screenY,
+                    other.estWidth,
+                    other.estHeight,
+                  )
+                ) {
+                  blocked = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (blocked) continue;
+        const nextIndex = accepted.length;
+        accepted.push(item);
+        for (let cx = minCellX; cx <= maxCellX; cx += 1) {
+          for (let cy = minCellY; cy <= maxCellY; cy += 1) {
+            const key = `${cx}:${cy}`;
+            const bucket = buckets.get(key) ?? [];
+            bucket.push(nextIndex);
+            buckets.set(key, bucket);
+          }
+        }
+      }
+
+      packed = accepted.map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        entityType: entry.entityType,
+        selected: entry.selected,
+        neighbor: entry.neighbor,
+        estWidth: entry.estWidth,
+        estHeight: entry.estHeight,
+        worldX: entry.worldX,
+        worldY: entry.worldY,
+        worldZ: entry.worldZ,
+      }));
+      overlayPackCacheRef.current = { key: packKey, entries: packed };
     }
+
     const out: Array<{
       id: string;
       title: string;
@@ -579,19 +811,11 @@ export function EntityGraphThreeCanvas({
       screenY: number;
       selected: boolean;
       neighbor: boolean;
+      estWidth: number;
+      estHeight: number;
     }> = [];
-    for (let i = 0; i < ids.length; i += 1) {
-      const id = ids[i];
-      if (!id || !targetIds.has(id)) continue;
-      const node = nodeById.get(id);
-      if (!node) continue;
-      const screen = projectToScreen(
-        positions[i * 3] ?? 0,
-        positions[i * 3 + 1] ?? 0,
-        positions[i * 3 + 2] ?? 0,
-        camera,
-        viewport,
-      );
+    for (const entry of packed) {
+      const screen = projectToScreen(entry.worldX, entry.worldY, entry.worldZ, camera, viewport);
       if (
         screen.x < -140 ||
         screen.y < -80 ||
@@ -601,13 +825,15 @@ export function EntityGraphThreeCanvas({
         continue;
       }
       out.push({
-        id,
-        title: node.title,
-        entityType: node.entityType,
+        id: entry.id,
+        title: entry.title,
+        entityType: entry.entityType,
         screenX: screen.x,
         screenY: screen.y,
-        selected: selectedId === id,
-        neighbor: neighborIds.has(id),
+        selected: entry.selected,
+        neighbor: entry.neighbor,
+        estWidth: entry.estWidth,
+        estHeight: entry.estHeight,
       });
     }
     out.sort((a, b) => Number(a.selected) - Number(b.selected));
@@ -623,7 +849,12 @@ export function EntityGraphThreeCanvas({
   ]);
 
   return (
-    <div ref={rootRef} className={styles.graphRoot} role="presentation" aria-label="threejs entity graph">
+    <div
+      ref={rootRef}
+      className={`${styles.graphRoot} ${!blurEffectsEnabled ? styles.blurDisabled : ""}`}
+      role="presentation"
+      aria-label="threejs entity graph"
+    >
       {usePillOverlay ? (
         <div className={styles.webglHtmlOverlay}>
           {overlayNodes.map((node) => {

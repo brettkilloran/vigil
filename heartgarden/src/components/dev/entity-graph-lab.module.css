@@ -203,6 +203,18 @@
   pointer-events: auto;
 }
 
+.blurDisabled .pillNode {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: color-mix(in srgb, white 14%, transparent);
+}
+
+.blurDisabled .edgeTooltip,
+.blurDisabled .threeOverlayCard {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .edge {
   stroke: color-mix(in srgb, var(--vigil-label) 20%, transparent);
   stroke-width: 1;

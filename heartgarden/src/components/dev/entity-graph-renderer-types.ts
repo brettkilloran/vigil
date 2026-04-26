@@ -19,6 +19,7 @@ export type GraphCanvasSharedProps = {
   layout: LayoutMap;
   worldWidth: number;
   worldHeight: number;
+  blurEffectsEnabled?: boolean;
   selectedId: string | null;
   neighborIds: Set<string>;
   activeEdgeIds: Set<string>;
@@ -32,4 +33,4 @@ export type GraphCanvasSharedProps = {
   onEdgeSelect?: (edgeId: string | null) => void;
 };
 
-export type RendererMode = "html" | "webgl" | "three";
+export type RendererMode = "html" | "three";

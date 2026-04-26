@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import {
+  forceCollide,
   forceCenter,
   forceLink,
   forceManyBody,
@@ -34,6 +35,14 @@ type SimNode = SimulationNodeDatum & {
   z?: number;
 };
 
+function seededNoise(seed: number): number {
+  let t = seed | 0;
+  t = Math.imul(t ^ (t >>> 16), 0x45d9f3b);
+  t = Math.imul(t ^ (t >>> 16), 0x45d9f3b);
+  t = t ^ (t >>> 16);
+  return (t >>> 0) / 4294967296;
+}
+
 self.onmessage = (event: MessageEvent<Force3dMessage>) => {
   const message = event.data;
   if (message.type !== "solve-force3d") return;
@@ -43,13 +52,17 @@ self.onmessage = (event: MessageEvent<Force3dMessage>) => {
   const iterations = message.options?.iterations ?? 260;
 
   const nodes: SimNode[] = message.nodes.map((node, idx) => {
-    const angle = (idx / Math.max(1, message.nodes.length)) * Math.PI * 2;
-    const radius = 120 + (idx % 23) * 6;
+    const u1 = seededNoise(idx * 92821 + 11);
+    const u2 = seededNoise(idx * 68917 + 23);
+    const u3 = seededNoise(idx * 17749 + 41);
+    const theta = u1 * Math.PI * 2;
+    const radius = Math.sqrt(u2) * (220 + Math.sqrt(Math.max(1, message.nodes.length)) * 34);
+    const zSpread = 28 + Math.sqrt(Math.max(1, message.nodes.length)) * 1.8;
     return {
       id: node.id,
-      x: Math.cos(angle) * radius,
-      y: Math.sin(angle) * radius,
-      z: ((idx % 17) - 8) * 5,
+      x: Math.cos(theta) * radius,
+      y: Math.sin(theta) * radius,
+      z: (u3 - 0.5) * zSpread,
     };
   });
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
@@ -67,13 +80,14 @@ self.onmessage = (event: MessageEvent<Force3dMessage>) => {
     .force(
       "link",
       forceLink<SimNode, { source: SimNode; target: SimNode }>(links)
-        .distance(52)
-        .strength(0.42),
+        .distance(68)
+        .strength(0.34),
     )
-    .force("charge", forceManyBody<SimNode>().strength(-42))
+    .force("charge", forceManyBody<SimNode>().strength(-68))
+    .force("collide", forceCollide<SimNode>(10).strength(0.62).iterations(1))
     .force("center", forceCenter(0, 0))
-    .alphaDecay(0.033)
-    .velocityDecay(0.38);
+    .alphaDecay(0.028)
+    .velocityDecay(0.42);
 
   sim.stop();
   for (let i = 0; i < iterations; i += 1) {
