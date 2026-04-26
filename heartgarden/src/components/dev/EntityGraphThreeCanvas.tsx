@@ -229,6 +229,7 @@ export function EntityGraphThreeCanvas({
     moved: false,
   });
   const autoClusterFocusRef = useRef(true);
+  const forceClusterFocusActionKeyRef = useRef<number | null>(null);
   const lastSelectedIdRef = useRef<string | null>(selectedId);
   const nodeOrderRef = useRef<string[]>([]);
   const positionsRef = useRef<Float32Array>(new Float32Array());
@@ -352,6 +353,64 @@ export function EntityGraphThreeCanvas({
     const dir = new THREE.DirectionalLight(0xffffff, 0.5);
     dir.position.set(0, 0, 900);
     scene.add(dir);
+
+    // ── Starfield background ─────────────────────────────────────────────────
+    const STAR_COUNT = 9000;
+    const starGeo = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(STAR_COUNT * 3);
+    const starSizes = new Float32Array(STAR_COUNT);
+    const starPhases = new Float32Array(STAR_COUNT);
+    const starBrightnesses = new Float32Array(STAR_COUNT);
+    const starSpread = 3200;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      starPositions[i * 3] = (Math.random() - 0.5) * starSpread;
+      starPositions[i * 3 + 1] = (Math.random() - 0.5) * starSpread * 0.75;
+      starPositions[i * 3 + 2] = -120 - Math.random() * Math.random() * 1800;
+      starSizes[i] = Math.pow(Math.random(), 4) * 3.2 + 0.35;
+      starPhases[i] = Math.random() * Math.PI * 2;
+      starBrightnesses[i] = Math.pow(Math.random(), 2.5) * 0.85 + 0.15;
+    }
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    starGeo.setAttribute("aSize", new THREE.BufferAttribute(starSizes, 1));
+    starGeo.setAttribute("aPhase", new THREE.BufferAttribute(starPhases, 1));
+    starGeo.setAttribute("aBrightness", new THREE.BufferAttribute(starBrightnesses, 1));
+    const starMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: `
+        uniform float uTime;
+        attribute float aSize;
+        attribute float aPhase;
+        attribute float aBrightness;
+        varying float vAlpha;
+        void main() {
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          float twinkle = sin(uTime * 0.4 + aPhase) * 0.5 + 0.5;
+          float secondary = sin(uTime * 0.15 - aPhase * 2.0) * 0.5 + 0.5;
+          float combined = twinkle * secondary * 0.7 + 0.3;
+          float depthFade = smoothstep(-2000.0, -60.0, mvPosition.z);
+          vAlpha = combined * aBrightness * depthFade;
+          float depthScale = smoothstep(-2000.0, -40.0, mvPosition.z);
+          gl_PointSize = aSize * (0.38 + depthScale * 0.62);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha;
+        void main() {
+          vec2 center = gl_PointCoord - vec2(0.5);
+          float alpha = exp(-dot(center, center) * 18.0);
+          if (alpha * vAlpha < 0.005) discard;
+          gl_FragColor = vec4(1.0, 1.0, 1.0, alpha * vAlpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const starPoints = new THREE.Points(starGeo, starMat);
+    starPoints.renderOrder = -1;
+    scene.add(starPoints);
+    // ────────────────────────────────────────────────────────────────────────
 
     let composerTarget: THREE.WebGLRenderTarget | null = null;
     if (renderer.capabilities.isWebGL2) {
@@ -596,6 +655,10 @@ export function EntityGraphThreeCanvas({
         if (mat?.uniforms?.uTime) mat.uniforms.uTime.value = t;
         if (mat?.uniforms?.uBreathAmp) mat.uniforms.uBreathAmp.value = breathAmp;
       }
+      // Animate starfield and keep it anchored to camera so it's always visible
+      starMat.uniforms.uTime.value = t;
+      starPoints.position.x = camera.position.x;
+      starPoints.position.y = camera.position.y;
       composer.render();
       frameRef.current = window.requestAnimationFrame(renderLoop);
     };
@@ -628,6 +691,8 @@ export function EntityGraphThreeCanvas({
       edgeMaterial.dispose();
       edgeActiveGeometry.dispose();
       edgeActiveMaterial.dispose();
+      starGeo.dispose();
+      starMat.dispose();
     };
   }, [edges.length, nodes.length, worldHeight, worldWidth]);
 
@@ -940,6 +1005,7 @@ export function EntityGraphThreeCanvas({
     if (cameraActionType === "frame-selection" && selectedIdRef.current) {
       // Explicit recenter should restore cluster-follow mode.
       autoClusterFocusRef.current = true;
+      forceClusterFocusActionKeyRef.current = cameraActionKey;
       if (cameraTweenFrameRef.current !== null) {
         window.cancelAnimationFrame(cameraTweenFrameRef.current);
         cameraTweenFrameRef.current = null;
@@ -966,8 +1032,12 @@ export function EntityGraphThreeCanvas({
   useEffect(() => {
     const camera = cameraRef.current;
     if (!camera || !selectedId) return;
-    const forceFocus = cameraActionType === "frame-selection";
+    const forceFocus = forceClusterFocusActionKeyRef.current === cameraActionKey;
     if (!forceFocus && !autoClusterFocusRef.current) return;
+    if (forceFocus) {
+      // Recenter is a one-shot intent, not a sticky mode.
+      forceClusterFocusActionKeyRef.current = null;
+    }
     if (cameraTweenFrameRef.current !== null) {
       window.cancelAnimationFrame(cameraTweenFrameRef.current);
       cameraTweenFrameRef.current = null;
