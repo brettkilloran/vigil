@@ -126,7 +126,7 @@ function hash11(value: number): number {
 function computeSharedBreathAmp(usePillOverlay: boolean, simStatus: "active" | "idle" | "frozen"): number {
   // Keep a subtle ambient motion in pill mode while maintaining lockstep across
   // connectors, dots, and pills.
-  if (usePillOverlay) return simStatus === "active" ? 0.018 : 0.06;
+  if (usePillOverlay) return simStatus === "active" ? 0.085 : 0.24;
   return simStatus === "active" ? 0.18 : 1.1;
 }
 
@@ -141,11 +141,15 @@ function applyBreathOffset(
   if (amp <= 0) return { x, y, z };
   const pa = hash11(nodeIndex + 0.13) * Math.PI * 2;
   const pb = hash11(nodeIndex + 0.71) * Math.PI * 2;
-  const omega = t * 1.382;
+  const freq = 0.94 + hash11(nodeIndex + 1.37) * 0.16;
+  const wobble = 0.97 + hash11(nodeIndex + 2.11) * 0.12;
+  const ampScale = 0.92 + hash11(nodeIndex + 3.29) * 0.16;
+  const omega = t * 1.382 * freq;
+  const finalAmp = amp * ampScale;
   return {
-    x: x + Math.sin(omega + pa) * amp,
-    y: y + Math.cos(omega * 1.13 + pb) * amp,
-    z: z + Math.sin(omega * 0.87 + pa) * 0.4 * amp,
+    x: x + Math.sin(omega + pa) * finalAmp,
+    y: y + Math.cos(omega * 1.13 * wobble + pb) * finalAmp,
+    z: z + Math.sin(omega * 0.87 / wobble + pa) * 0.4 * finalAmp,
   };
 }
 
@@ -355,12 +359,16 @@ export function EntityGraphThreeCanvas({
           float fid = float(gl_InstanceID);
           float pa = hash11(fid + 0.13) * 6.2831853;
           float pb = hash11(fid + 0.71) * 6.2831853;
-          float omega = uTime * 1.382;
+          float freq = 0.94 + hash11(fid + 1.37) * 0.16;
+          float wobble = 0.97 + hash11(fid + 2.11) * 0.12;
+          float ampScale = 0.92 + hash11(fid + 3.29) * 0.16;
+          float omega = uTime * 1.382 * freq;
+          float amp = uBreathAmp * ampScale;
           vec3 breath = vec3(
             sin(omega + pa),
-            cos(omega * 1.13 + pb),
-            sin(omega * 0.87 + pa) * 0.4
-          ) * uBreathAmp;
+            cos(omega * 1.13 * wobble + pb),
+            sin(omega * 0.87 / wobble + pa) * 0.4
+          ) * amp;
           worldPos.xyz += breath;
           vec4 mvPosition = modelViewMatrix * worldPos;
           gl_Position = projectionMatrix * mvPosition;
@@ -410,12 +418,16 @@ export function EntityGraphThreeCanvas({
         float fid = aNodeIdx;
         float pa = hash11(fid + 0.13) * 6.2831853;
         float pb = hash11(fid + 0.71) * 6.2831853;
-        float omega = uTime * 1.382;
+        float freq = 0.94 + hash11(fid + 1.37) * 0.16;
+        float wobble = 0.97 + hash11(fid + 2.11) * 0.12;
+        float ampScale = 0.92 + hash11(fid + 3.29) * 0.16;
+        float omega = uTime * 1.382 * freq;
+        float amp = uBreathAmp * ampScale;
         vec3 breath = vec3(
           sin(omega + pa),
-          cos(omega * 1.13 + pb),
-          sin(omega * 0.87 + pa) * 0.4
-        ) * uBreathAmp;
+          cos(omega * 1.13 * wobble + pb),
+          sin(omega * 0.87 / wobble + pa) * 0.4
+        ) * amp;
         vec3 pos = position + breath;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
       }
@@ -614,7 +626,7 @@ export function EntityGraphThreeCanvas({
         progressEvery: nodes.length >= 10000 ? 6 : nodes.length >= 4000 ? 2 : 1,
         alphaThreshold: 0.003,
         warmNodeThreshold: 4000,
-        initialTicks: nodes.length >= 10000 ? 20 : nodes.length >= 4000 ? 26 : 32,
+        initialTicks: nodes.length >= 10000 ? 60 : nodes.length >= 4000 ? 90 : 120,
       },
       (tick) => {
         applyTick(tick.ids, tick.positions, true);

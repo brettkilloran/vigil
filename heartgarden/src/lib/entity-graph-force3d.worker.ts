@@ -6,6 +6,8 @@ import {
   forceLink,
   forceManyBody,
   forceSimulation,
+  forceX,
+  forceY,
   type Simulation,
   type SimulationNodeDatum,
 } from "d3-force-3d";
@@ -74,6 +76,8 @@ type SimNode = SimulationNodeDatum & {
   visualRadius: number;
   degree: number;
   clusterHint?: string | null;
+  clusterTargetX?: number;
+  clusterTargetY?: number;
 };
 
 type SimLink = {
@@ -101,6 +105,7 @@ type WorkerState = {
   tickCount: number;
   timer: ReturnType<typeof setTimeout> | null;
   pinTicksById: Map<string, number>;
+  clusterCentroids: Map<string, { x: number; y: number }>;
 };
 
 const FAST_TICK_MS = 16;
@@ -296,27 +301,115 @@ function stopSimulation(): void {
   state = null;
 }
 
-function buildSeededNodes(nodes: GraphNode[]): SimNode[] {
-  return nodes.map((node, idx) => {
-    const u1 = seededNoise(idx * 92821 + 11);
-    const u2 = seededNoise(idx * 68917 + 23);
-    const u3 = seededNoise(idx * 17749 + 41);
-    const theta = u1 * Math.PI * 2;
-    const radius = Math.sqrt(u2) * (280 + Math.sqrt(Math.max(1, nodes.length)) * 42);
-    const zSpread = 28 + Math.sqrt(Math.max(1, nodes.length)) * 1.8;
-    return {
+const GOLDEN_ANGLE = 2.399963229728653;
+
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function buildSeededNodes(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+): { simNodes: SimNode[]; centroids: Map<string, { x: number; y: number }> } {
+  const degreeMap = new Map<string, number>();
+  for (const edge of edges) {
+    degreeMap.set(edge.source, (degreeMap.get(edge.source) ?? 0) + 1);
+    degreeMap.set(edge.target, (degreeMap.get(edge.target) ?? 0) + 1);
+  }
+
+  const clusterGroups = new Map<string, GraphNode[]>();
+  const unclustered: GraphNode[] = [];
+  for (const node of nodes) {
+    const hint = node.clusterHint;
+    if (hint) {
+      let group = clusterGroups.get(hint);
+      if (!group) {
+        group = [];
+        clusterGroups.set(hint, group);
+      }
+      group.push(node);
+    } else {
+      unclustered.push(node);
+    }
+  }
+
+  const clusterKeys = [...clusterGroups.keys()];
+  const clusterCount = clusterKeys.length;
+  const orbitRadius = 160 + Math.sqrt(nodes.length) * 30;
+  const centroids = new Map<string, { x: number; y: number }>();
+
+  for (let i = 0; i < clusterCount; i++) {
+    const angle = (i / Math.max(1, clusterCount)) * Math.PI * 2;
+    const group = clusterGroups.get(clusterKeys[i]!)!;
+    const sizeWeight = Math.sqrt(group.length / Math.max(1, nodes.length));
+    const r = orbitRadius * (0.65 + sizeWeight * 0.7);
+    centroids.set(clusterKeys[i]!, {
+      x: Math.cos(angle) * r,
+      y: Math.sin(angle) * r,
+    });
+  }
+
+  const zSpread = 28 + Math.sqrt(Math.max(1, nodes.length)) * 1.8;
+  const result: SimNode[] = [];
+
+  for (const [key, group] of clusterGroups) {
+    const centroid = centroids.get(key)!;
+    const sorted = [...group].sort(
+      (a, b) => (degreeMap.get(b.id) ?? 0) - (degreeMap.get(a.id) ?? 0),
+    );
+    const clusterRadius = Math.max(36, Math.sqrt(group.length) * 16);
+    const keyHash = hashString(key);
+
+    for (let i = 0; i < sorted.length; i++) {
+      const node = sorted[i]!;
+      const t = i / Math.max(1, sorted.length - 1);
+      const r = Math.sqrt(t) * clusterRadius;
+      const angle = i * GOLDEN_ANGLE;
+      const u3 = seededNoise(i * 17749 + 41 + keyHash);
+      result.push({
+        id: node.id,
+        x: centroid.x + Math.cos(angle) * r,
+        y: centroid.y + Math.sin(angle) * r,
+        z: (u3 - 0.5) * zSpread,
+        visualRadius: NODE_VISUAL_RADIUS,
+        degree: degreeMap.get(node.id) ?? 0,
+        clusterHint: node.clusterHint ?? null,
+        clusterTargetX: centroid.x,
+        clusterTargetY: centroid.y,
+      });
+    }
+  }
+
+  const unclusteredRadius = Math.max(60, Math.sqrt(unclustered.length) * 18);
+  for (let i = 0; i < unclustered.length; i++) {
+    const node = unclustered[i]!;
+    const t = i / Math.max(1, unclustered.length - 1);
+    const r = Math.sqrt(t) * unclusteredRadius;
+    const angle = i * GOLDEN_ANGLE;
+    const u3 = seededNoise(i * 17749 + 41);
+    result.push({
       id: node.id,
-      x: Math.cos(theta) * radius,
-      y: Math.sin(theta) * radius,
+      x: Math.cos(angle) * r,
+      y: Math.sin(angle) * r,
       z: (u3 - 0.5) * zSpread,
       visualRadius: NODE_VISUAL_RADIUS,
-      degree: 0,
+      degree: degreeMap.get(node.id) ?? 0,
       clusterHint: node.clusterHint ?? null,
-    };
-  });
+    });
+  }
+
+  return { simNodes: result, centroids };
 }
 
 function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNode, SimLink> {
+  const n = nodes.length;
+  const chargeStrength = n > 6000 ? -160 : n > 2000 ? -210 : -260;
+
   return forceSimulation<SimNode>(nodes)
     .force(
       "link",
@@ -328,9 +421,9 @@ function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNod
     .force(
       "charge",
       forceManyBody<SimNode>()
-        .strength(-96)
-        .theta(0.92)
-        .distanceMax(920),
+        .strength(chargeStrength)
+        .theta(0.82)
+        .distanceMax(1400),
     )
     .force(
       "collide",
@@ -340,12 +433,22 @@ function createSimulation(nodes: SimNode[], links: SimLink[]): Simulation<SimNod
           NODE_LABEL_MARGIN + 2.4 +
           Math.min(HUB_RADIUS_CAP, Math.max(0, node.degree - 4) * HUB_RADIUS_PER_EDGE),
       )
-        .strength(0.85)
-        .iterations(2),
+        .strength(0.9)
+        .iterations(3),
     )
-    .force("center", forceCenter(0, 0).strength(0.04))
-    .alphaDecay(0.024)
-    .velocityDecay(0.46);
+    .force("center", forceCenter(0, 0).strength(0.012))
+    .force(
+      "clusterX",
+      forceX<SimNode>((d) => d.clusterTargetX ?? 0)
+        .strength((d) => (d.clusterHint && d.clusterTargetX != null ? 0.07 : 0)),
+    )
+    .force(
+      "clusterY",
+      forceY<SimNode>((d) => d.clusterTargetY ?? 0)
+        .strength((d) => (d.clusterHint && d.clusterTargetY != null ? 0.07 : 0)),
+    )
+    .alphaDecay(0.016)
+    .velocityDecay(0.38);
 }
 
 function applyReheat(message: ReheatMessage): void {
@@ -374,19 +477,31 @@ function applyReheat(message: ReheatMessage): void {
       const graphNode = message.addNodes[i];
       if (!graphNode || state.nodeById.has(graphNode.id)) continue;
       const idx = baseIndex + i;
-      const u1 = seededNoise(idx * 92821 + 11);
-      const u2 = seededNoise(idx * 68917 + 23);
+      const hint = graphNode.clusterHint ?? null;
+      const centroid = hint ? state.clusterCentroids.get(hint) : null;
       const u3 = seededNoise(idx * 17749 + 41);
-      const theta = u1 * Math.PI * 2;
-      const radius = Math.sqrt(u2) * 300;
+      let px: number;
+      let py: number;
+      if (centroid) {
+        const jitter = 40 + Math.sqrt(state.nodes.length) * 2;
+        px = centroid.x + (seededNoise(idx * 92821 + 11) - 0.5) * jitter;
+        py = centroid.y + (seededNoise(idx * 68917 + 23) - 0.5) * jitter;
+      } else {
+        const theta = seededNoise(idx * 92821 + 11) * Math.PI * 2;
+        const radius = Math.sqrt(seededNoise(idx * 68917 + 23)) * 300;
+        px = Math.cos(theta) * radius;
+        py = Math.sin(theta) * radius;
+      }
       const simNode: SimNode = {
         id: graphNode.id,
-        x: Math.cos(theta) * radius,
-        y: Math.sin(theta) * radius,
+        x: px,
+        y: py,
         z: (u3 - 0.5) * 24,
         visualRadius: NODE_VISUAL_RADIUS,
         degree: 0,
-        clusterHint: graphNode.clusterHint ?? null,
+        clusterHint: hint,
+        clusterTargetX: centroid?.x,
+        clusterTargetY: centroid?.y,
       };
       state.nodes.push(simNode);
       state.nodeById.set(simNode.id, simNode);
@@ -438,11 +553,11 @@ function initSimulation(message: InitMessage): void {
   const progressEvery = Math.max(1, message.options?.progressEvery ?? 6);
   const alphaThreshold = message.options?.alphaThreshold ?? 0.003;
   const warmNodeThreshold = message.options?.warmNodeThreshold ?? 4000;
-  const initialTicks = Math.max(0, message.options?.initialTicks ?? 28);
+  const initialTicks = Math.max(0, message.options?.initialTicks ?? 80);
 
   const nodeMetaById = new Map(message.nodes.map((node) => [node.id, node]));
   const edgeMetaById = new Map(message.edges.map((edge) => [edge.id, edge]));
-  const nodes = buildSeededNodes(message.nodes);
+  const { simNodes: nodes, centroids } = buildSeededNodes(message.nodes, message.edges);
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
 
   state = {
@@ -462,6 +577,7 @@ function initSimulation(message: InitMessage): void {
     tickCount: 0,
     timer: null,
     pinTicksById: new Map(),
+    clusterCentroids: centroids,
   };
 
   applyGraphToSimulation();
