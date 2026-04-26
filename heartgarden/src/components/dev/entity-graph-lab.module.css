@@ -166,7 +166,7 @@
   height: 100%;
   overflow: hidden;
   cursor: grab;
-  background: var(--sem-bg-canvas, var(--vigil-canvas));
+  background: #000;
 }
 
 .graphRootDragging {

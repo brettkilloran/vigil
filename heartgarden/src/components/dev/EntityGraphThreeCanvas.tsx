@@ -20,7 +20,7 @@ type OverlayState = {
 };
 
 const DEFAULT_CAMERA_ZOOM = 1.45;
-const EDGE_MUTED_OKLCH = "oklch(0.58 0.03 252 / 0.9)";
+const EDGE_MUTED_OKLCH = "oklch(0.22 0.01 252 / 0.7)";
 const EDGE_ACTIVE_OKLCH = "oklch(0.81 0.13 74 / 0.95)";
 
 function sentimentForNode(nodeId: string): number {
@@ -172,6 +172,7 @@ export function EntityGraphThreeCanvas({
   const rootRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
+  const composerTargetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const bloomPassRef = useRef<UnrealBloomPass | null>(null);
   const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -272,14 +273,15 @@ export function EntityGraphThreeCanvas({
     if (!root) return;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    const pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(root.clientWidth, root.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     root.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b1018);
+    scene.background = new THREE.Color(0x000000);
     sceneRef.current = scene;
 
     const camera = new THREE.OrthographicCamera(-500, 500, 380, -380, -5000, 5000);
@@ -296,7 +298,16 @@ export function EntityGraphThreeCanvas({
     dir.position.set(0, 0, 900);
     scene.add(dir);
 
-    const composer = new EffectComposer(renderer);
+    let composerTarget: THREE.WebGLRenderTarget | null = null;
+    if (renderer.capabilities.isWebGL2) {
+      composerTarget = new THREE.WebGLRenderTarget(
+        Math.max(1, Math.floor(root.clientWidth * pixelRatio)),
+        Math.max(1, Math.floor(root.clientHeight * pixelRatio)),
+      );
+      composerTarget.samples = 4;
+      composerTargetRef.current = composerTarget;
+    }
+    const composer = composerTarget ? new EffectComposer(renderer, composerTarget) : new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
     const bloom = new UnrealBloomPass(new THREE.Vector2(root.clientWidth, root.clientHeight), 0.24, 0.2, 0.92);
     composer.addPass(bloom);
@@ -553,6 +564,8 @@ export function EntityGraphThreeCanvas({
       cameraRef.current = null;
       bloomPassRef.current = null;
       composerRef.current = null;
+      composerTargetRef.current?.dispose();
+      composerTargetRef.current = null;
       renderer.dispose();
       baseGeometry.dispose();
       nodeMaterial.dispose();
