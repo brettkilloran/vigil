@@ -81,10 +81,13 @@
     transition: none;
   }
 
-  .viewport,
-  .chromeLayer {
+  .viewport {
     transition: none;
     will-change: auto;
+  }
+
+  .chromeLayer {
+    transition: none;
   }
 
   .viewportSceneLayerDimmed {
@@ -328,7 +331,15 @@
   z-index: var(--layer-ui-chrome);
   pointer-events: none;
   transition: filter 0.28s ease;
-  will-change: filter;
+  /*
+   * will-change: filter intentionally omitted: promoting this layer to a GPU compositing
+   * layer before a filter is actually applied creates a compositing isolation that makes
+   * backdrop-filter on child elements (toolbar panels, side rail, dock) appear inert —
+   * they cannot sample the canvas content composited in the sibling .viewport layer.
+   * The filter transition (shellBackdropBlurActive) still animates correctly without the
+   * hint; the focus-overlay blur relies on the content-layer filter fallback anyway.
+   * See also: prefers-reduced-motion block below which already sets will-change: auto.
+   */
 }
 
 /* Full-screen boot uses a transparent plane so flow (z ~92) + viewport show through. */
@@ -2473,28 +2484,13 @@
 }
 
 /*
- * Single-icon top-right chrome (log out, vault review, import, search): we reuse the
- * `.glassPanel.shellTopChromePanel` sizing / min-height / padding rhythm so these icons
- * share a line height + baseline with the save + breadcrumb strips, but we *opt out* of
- * the frosted chrome skin (border, translucent fill, shadow, backdrop blur). The buttons
- * should read as bare toolbar icons — same visual weight as the canvas toolbars lower in
- * the UI — not as tiny pills with their own ambient card.
- *
- * Only the visual chrome is stripped here; `min-height`, `padding-block`, and
- * `padding-inline` intentionally stay inherited from `.glassPanel.shellTopChromePanel`
- * (= `--chrome-panel-height`, `--chrome-panel-pad-y`, `--chrome-panel-pad-x`) so the
- * icons keep the same 40px-ish band and vertical centering as the rest of the top
- * chrome. Don't zero the padding/min-height here — that subtly shrinks the band and
- * bumps the icons 4px upward relative to the top-left save / breadcrumb strips.
+ * Single-icon top-right chrome (log out, vault review, import, search): reuse
+ * `.glassPanel.shellTopChromePanel` sizing + glass visual so these panels share the
+ * same height band and frosted appearance as the save + breadcrumb strips on the left.
  */
 .shellTopLogOutPanel.glassPanel.shellTopChromePanel {
   gap: 0;
   justify-content: center;
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* Square icon control, same vertical band as save trigger / nav row. */
@@ -6144,23 +6140,16 @@ button.rootDockPanel.viewportMetricsPanel {
 }
 
 /* Side rail icon tools should float on the glass strip, not as filled chips. */
+/* Active (data-active="true") intentionally excluded — .shell neutral-100 chip is the selection indicator. */
 .sideTools :global(.vigil-btn[data-size="icon"]) {
   background: transparent;
   border-color: transparent;
 }
 
-.sideTools :global(.vigil-btn[data-size="icon"][data-active="true"]) {
-  background: transparent;
-}
-
 .sideTools :global(.vigil-btn[data-size="icon"]:hover:not(:disabled):not([data-disabled="true"])),
 .sideTools :global(.vigil-btn[data-size="icon"]:active:not(:disabled):not([data-disabled="true"])),
 .sideTools :global(.vigil-btn[data-size="icon"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])),
-.sideTools :global(.vigil-btn[data-size="icon"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])),
-.sideTools
-  :global(.vigil-btn[data-size="icon"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
-.sideTools
-  :global(.vigil-btn[data-size="icon"][data-active="true"]:active:not(:disabled):not([data-disabled="true"])) {
+.sideTools :global(.vigil-btn[data-size="icon"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])) {
   background: transparent;
 }
 
