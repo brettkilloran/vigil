@@ -558,8 +558,25 @@ export async function apiCreateItem(
 export async function apiPatchItem(
   itemId: string,
   patch: Record<string, unknown>,
+  options?: {
+    /**
+     * Resolve `baseUpdatedAt` just-in-time inside the per-item serialization
+     * chain, so the timestamp reflects any PATCHes that settled while this
+     * call was queued. Only used when the patch does not already contain an
+     * explicit `baseUpdatedAt` (e.g. 409-retry patches include their own).
+     */
+    resolveBaseUpdatedAt?: () => string | undefined;
+  },
 ): Promise<ApiPatchItemResult> {
   return runSerializedItemPatch(itemId, async () => {
+    const resolvedPatch =
+      options?.resolveBaseUpdatedAt && patch.baseUpdatedAt === undefined
+        ? (() => {
+            const base = options.resolveBaseUpdatedAt!();
+            return base ? { ...patch, baseUpdatedAt: base } : patch;
+          })()
+        : patch;
+
     const track = getNeonSyncSnapshot().cloudEnabled;
     if (track) neonSyncBeginRequest();
     const op = `PATCH /api/items/${itemId}`;
@@ -569,7 +586,7 @@ export async function apiPatchItem(
       const res = await fetch(`/api/items/${itemId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
+        body: JSON.stringify(resolvedPatch),
       });
       const rawText = await res.text();
       const body = parseJsonBody(rawText) as {
@@ -583,7 +600,7 @@ export async function apiPatchItem(
           ms: Math.round(performance.now() - t0),
           status: res.status,
           baseUpdatedAt:
-            typeof patch.baseUpdatedAt === "string" ? patch.baseUpdatedAt : undefined,
+            typeof resolvedPatch.baseUpdatedAt === "string" ? resolvedPatch.baseUpdatedAt : undefined,
         });
       }
 
@@ -609,9 +626,9 @@ export async function apiPatchItem(
       finishNeonTrack(track, op, res, rawText, body, logicalOk);
       if (
         logicalOk &&
-        (patch.title !== undefined ||
-          patch.contentText !== undefined ||
-          patch.contentJson !== undefined)
+        (resolvedPatch.title !== undefined ||
+          resolvedPatch.contentText !== undefined ||
+          resolvedPatch.contentJson !== undefined)
       ) {
         scheduleVaultIndexForItem(itemId);
       }
