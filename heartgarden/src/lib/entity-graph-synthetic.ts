@@ -24,6 +24,50 @@ function mulberry32(seed: number): () => number {
   };
 }
 
+const CHARACTER_NAMES = [
+  "Aldric Vane", "Sura Morath", "Elindra Kess", "Jorath Heln", "Nyssa Fell",
+  "Calder Mourne", "Isidra Vex", "Theron Ash", "Vera Nighthollow", "Orin Strake",
+  "Malia Dusk", "Corvin Shade", "Selene Arke", "Davan Mercer", "Lyra Wynn",
+  "Brecken Solh", "Amara Tindrel", "Faolin Cross", "Tessara Gault", "Rook Havel",
+  "Indra Seyne", "Galen Mur", "Petra Voss", "Silas Wren", "Corra Blackfen",
+  "Holt Drayven", "Zara Emric", "Oswin Loch", "Nadia Crest", "Fenwick Pale",
+  "Isolde Kray", "Brennan Valt", "Mira Thorne", "Aldous Grey", "Sera Coldwell",
+  "Taren Bliss", "Cleo Narn", "Devlan Rook", "Yara Fenn", "Colum Wist",
+] as const;
+
+const FACTION_NAMES = [
+  "The Iron Covenant", "Veilborn Syndicate", "Order of the Pale Star",
+  "Ashfen Compact", "The Drowned Council", "Morathi Guild", "Sunken Court",
+  "The Lacuna", "Thornfield Alliance", "Obsidian Rite", "Sable Exchange",
+  "The Severed Hand", "Helmwatch Accord", "Fracture Collective", "Red Meridian",
+  "The Quiet Shore", "Dusk Tribunal", "Saltmark Brotherhood", "Cinderborn Oath",
+  "The Hollow Throne", "Warden Circle", "Ember Pact", "Greymantle Society",
+  "The Verdant Lock", "Nightmere Congress",
+] as const;
+
+const LOCATION_NAMES = [
+  "Ashford Crossing", "The Pale Reaches", "Coldmere Basin", "Vaunt Spire",
+  "Sunken Reliquary", "Ironfen Marsh", "The Hollow Stair", "Dusk Gate",
+  "Saltmire Docks", "Thornwall Keep", "Ember Ridge", "The Lacunae Fields",
+  "Greyveil Harbor", "Morathi Depths", "Cinderholm", "The Fracture Line",
+  "Warden's Bluff", "Pale Shore Inlet", "Undercroft of Seyne", "The Tidal Breach",
+  "Brindlemere Ruins", "Noctis Spire", "Coldfen Quarry", "Ashen Flats",
+  "The Drowned Nave", "Helm's Crossing", "Saltgrove Station", "Veilgate Pass",
+] as const;
+
+const NOTE_TITLES = [
+  "On the Pale Star Prophecy", "Trade route anomalies — Q3",
+  "Interrogation transcript: Corvin Shade", "Council session notes",
+  "Letter intercepted at Dusk Gate", "Ritual diagram — incomplete",
+  "Missing persons report: Ashford", "The Vex manifesto (partial)",
+  "Cipher from the Sunken Court", "Witness accounts of the Fracture",
+  "Expedition log: Ironfen Marsh", "Memo re: Saltmark debt",
+  "Analysis of the Ember Pact charter", "Recovered pages — unknown author",
+  "Chronicle of the Drowned Council", "Sketch: Vaunt Spire interior",
+  "Field report: Morathi Guild activity", "Bounty posting — Red Meridian",
+  "Sequence notes on the Hollow Throne", "Contract dispute — Greymantle Society",
+] as const;
+
 const ENTITY_TYPES = ["character", "faction", "location", "note"] as const;
 const ITEM_TYPES = ["lore.character", "lore.faction", "lore.location", "note"] as const;
 const LINK_TYPES = [
@@ -98,6 +142,20 @@ function buildClusterCenters(clusterCount: number, rng: () => number): Point2[] 
   return centers;
 }
 
+function toRoman(n: number): string {
+  const vals = [10, 9, 5, 4, 1] as const;
+  const syms = ["X", "IX", "V", "IV", "I"] as const;
+  let result = "";
+  let remaining = Math.max(1, Math.min(n, 39));
+  for (let i = 0; i < vals.length; i += 1) {
+    while (remaining >= vals[i]!) {
+      result += syms[i];
+      remaining -= vals[i]!;
+    }
+  }
+  return result;
+}
+
 export function buildSyntheticScenario(
   key: string,
   label: string,
@@ -106,12 +164,39 @@ export function buildSyntheticScenario(
   seed = 1,
 ): SyntheticScenario {
   const rng = mulberry32(seed);
+  const nameCounts: Record<string, number> = {};
   const nodes: GraphNode[] = [];
   for (let i = 0; i < nodeCount; i += 1) {
     const entityType = nodeTypeAt(i);
+    let title: string;
+    if (entityType === "character") {
+      const pool = CHARACTER_NAMES;
+      const idx = i % pool.length;
+      const count = (nameCounts[`character-${idx}`] ?? 0);
+      nameCounts[`character-${idx}`] = count + 1;
+      title = count === 0 ? pool[idx]! : `${pool[idx]!} ${toRoman(count + 1)}`;
+    } else if (entityType === "faction") {
+      const pool = FACTION_NAMES;
+      const idx = i % pool.length;
+      const count = (nameCounts[`faction-${idx}`] ?? 0);
+      nameCounts[`faction-${idx}`] = count + 1;
+      title = count === 0 ? pool[idx]! : `${pool[idx]!} (${count + 1})`;
+    } else if (entityType === "location") {
+      const pool = LOCATION_NAMES;
+      const idx = i % pool.length;
+      const count = (nameCounts[`location-${idx}`] ?? 0);
+      nameCounts[`location-${idx}`] = count + 1;
+      title = count === 0 ? pool[idx]! : `${pool[idx]!} (${count + 1})`;
+    } else {
+      const pool = NOTE_TITLES;
+      const idx = i % pool.length;
+      const count = (nameCounts[`note-${idx}`] ?? 0);
+      nameCounts[`note-${idx}`] = count + 1;
+      title = count === 0 ? pool[idx]! : `${pool[idx]!} (${count + 1})`;
+    }
     nodes.push({
       id: `${key}-n-${i}`,
-      title: `${entityType}-${i.toString().padStart(5, "0")}`,
+      title,
       entityType,
       itemType: itemTypeFromEntity(entityType),
     });

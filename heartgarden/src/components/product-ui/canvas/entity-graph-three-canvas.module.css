@@ -5,13 +5,14 @@
   height: 100%;
   overflow: hidden;
   cursor: grab;
-  background: #000;
+  background: #030304;
 }
 
 .webglHtmlOverlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 2;
 }
 
 .webglHtmlOverlay .pillNode {

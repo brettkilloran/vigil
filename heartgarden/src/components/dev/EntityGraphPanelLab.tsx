@@ -2,11 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Crosshair } from "@phosphor-icons/react";
-
 import { EntityGraphThreeCanvas } from "@/src/components/product-ui/canvas/EntityGraphThreeCanvas";
 import { ArchitecturalButton } from "@/src/components/foundation/ArchitecturalButton";
-import { ArchitecturalTooltip } from "@/src/components/foundation/ArchitecturalTooltip";
 import { ArchitecturalToolRail } from "@/src/components/foundation/ArchitecturalToolRail";
 import type { CameraAction, LayoutMap } from "@/src/lib/graph-canvas-types";
 import { solveStableLayoutStreamingInWorker } from "@/src/lib/entity-graph-layout-client";
@@ -61,8 +58,6 @@ export function EntityGraphPanelLab() {
     () => (selectedId ? graphNodes.find((node) => node.id === selectedId) ?? null : null),
     [graphNodes, selectedId],
   );
-  const selectedDegree = selectedNode ? model.degreeByNode.get(selectedNode.id) ?? 0 : 0;
-  const selectionConnectionCount = activeEdgeIds.size;
   const zoomInDisabled = cameraZoom === null || cameraZoom >= MAX_CAMERA_ZOOM - 0.01;
   const bottomPanelOcclusionPx = selectedNode ? Math.ceil(bottomSheetHeight + 14) : 0;
   const neighborPreview = useMemo(() => {
@@ -195,6 +190,7 @@ export function EntityGraphPanelLab() {
               }`}
               style={{
                 borderRadius: "var(--chrome-panel-radius)",
+                border: "1px solid var(--ui-glass-border)",
                 background: "var(--ui-glass-bg)",
                 backdropFilter: "var(--chrome-glass-filter)",
                 WebkitBackdropFilter: "var(--chrome-glass-filter)",
@@ -221,21 +217,13 @@ export function EntityGraphPanelLab() {
                   {selectedNode ? "Node Details" : "Details"}
                 </span>
                 {selectedNode && (
-                  <button
-                    style={{
-                      borderRadius: 999,
-                      border: "1px solid var(--sem-border-subtle)",
-                      background: "color-mix(in srgb, white 8%, transparent)",
-                      color: "var(--sem-text-primary)",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      padding: "3px 10px",
-                      cursor: "pointer",
-                    }}
+                  <ArchitecturalButton
+                    size="menu"
+                    tone="glass"
                     onClick={() => setSelectedId(null)}
                   >
                     Close
-                  </button>
+                  </ArchitecturalButton>
                 )}
               </div>
 
@@ -251,10 +239,9 @@ export function EntityGraphPanelLab() {
                       >
                         {selectedNode.title}
                       </div>
-                      <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--sem-text-secondary)", marginTop: 6 }}>
-                        {formatEntityLabel(selectedNode)}
-                        <span style={{ color: "var(--sem-text-muted)" }}> · degree {selectedDegree} · {selectionConnectionCount} edges</span>
-                      </div>
+                        <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--sem-text-secondary)", marginTop: 6 }}>
+                          {formatEntityLabel(selectedNode)}
+                        </div>
                     </div>
 
                     {/* Neighbor chips — pill node vocabulary */}
@@ -302,20 +289,6 @@ export function EntityGraphPanelLab() {
                       </div>
                     )}
 
-                    {/* Frame action */}
-                    <div style={{ borderTop: "1px solid var(--ui-glass-border)", paddingTop: 10 }}>
-                      <ArchitecturalTooltip content="Frame this node in the canvas" side="top" delayMs={420}>
-                        <ArchitecturalButton
-                          size="menu"
-                          tone="glass"
-                          aria-label="Frame selection"
-                          onClick={() => setCameraAction((c) => nextAction(c.key, "frame-selection"))}
-                        >
-                          <Crosshair size={14} />
-                          Frame
-                        </ArchitecturalButton>
-                      </ArchitecturalTooltip>
-                    </div>
                   </div>
                 ) : (
                   <p style={{ fontSize: 12, lineHeight: 1.45, color: "var(--sem-text-secondary)" }}>

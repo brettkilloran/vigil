@@ -6143,6 +6143,27 @@ button.rootDockPanel.viewportMetricsPanel {
   width: 100%;
 }
 
+/* Side rail icon tools should float on the glass strip, not as filled chips. */
+.sideTools :global(.vigil-btn[data-size="icon"]) {
+  background: transparent;
+  border-color: transparent;
+}
+
+.sideTools :global(.vigil-btn[data-size="icon"][data-active="true"]) {
+  background: transparent;
+}
+
+.sideTools :global(.vigil-btn[data-size="icon"]:hover:not(:disabled):not([data-disabled="true"])),
+.sideTools :global(.vigil-btn[data-size="icon"]:active:not(:disabled):not([data-disabled="true"])),
+.sideTools :global(.vigil-btn[data-size="icon"][data-force-state="hover"]:not(:disabled):not([data-disabled="true"])),
+.sideTools :global(.vigil-btn[data-size="icon"][data-force-state="active"]:not(:disabled):not([data-disabled="true"])),
+.sideTools
+  :global(.vigil-btn[data-size="icon"][data-active="true"]:hover:not(:disabled):not([data-disabled="true"])),
+.sideTools
+  :global(.vigil-btn[data-size="icon"][data-active="true"]:active:not(:disabled):not([data-disabled="true"])) {
+  background: transparent;
+}
+
 /* Draw pin + thread spool: layout always; recessed “well” only in draw mode. */
 .sideToolsDrawSpoolCluster {
   align-self: center;
